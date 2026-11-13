@@ -101,6 +101,8 @@ export const S = {
   graph: {
     empty: 'No agents in this run yet.',
     modelResponse: 'Model response',
+    modelShort: 'Model',
+    orchestrator: 'Orchestrator',
     earlier: (n) => `+${n} earlier ${n === 1 ? 'call' : 'calls'}`,
     calls: (n) => `${n} ${n === 1 ? 'call' : 'calls'}`,
     external: 'Another session',

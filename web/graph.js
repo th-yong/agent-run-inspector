@@ -1,10 +1,12 @@
 // Graph tab: agent cards placed by layoutGraph() (web/graph-layout.js) and the edges between them.
-// Static in this task: it redraws from the latest spans; motion (new rows, folding, growth) comes later.
+// It redraws from the latest spans but touches only what changed (cards, call rows and edges are keyed),
+// so motion (new card + edge growth, rows sliding in and folding away, finished cards folding) plays once per change.
 // Pure helpers (prepareGraph, hiddenAgents, foldedAgents) are exported for tests; the DOM part runs only in createGraph().
 import { S } from './strings.js';
 import { layoutGraph } from './graph-layout.js';
 import { cardInfo, callRows, createCard, updateCard } from './card.js';
 
+export const FOLD_DELAY_MS = 1600; // a finished agent shows its Done / Failed badge this long before it folds
 const FINISHED = new Set(['ok', 'error', 'cancelled']);
 const isFinished = (a) => FINISHED.has(a.status) && !a.external;
 
@@ -24,9 +26,9 @@ export function prepareGraph(spans) {
 
 /**
  * "Hide finished agents": finished agents leave the graph with their subtree, unless something below is still running.
- * The root and the selected agent stay.
+ * The root and the selected agent stay, and so do agents in `held` (finished a moment ago, still showing their badge).
  */
-export function hiddenAgents(agents, hide, selectedId = null) {
+export function hiddenAgents(agents, hide, selectedId = null, held = new Set()) {
   const out = new Set();
   if (!hide) return out;
   const kids = new Map();
@@ -42,7 +44,7 @@ export function hiddenAgents(agents, hide, selectedId = null) {
     if (alive.has(a.id)) return alive.get(a.id);
     if (seen.has(a.id)) return false;
     seen.add(a.id);
-    const v = a.status === 'running' || a.id === selectedId || (kids.get(a.id) ?? []).some((k) => live(k, seen));
+    const v = a.status === 'running' || held.has(a.id) || a.id === selectedId || (kids.get(a.id) ?? []).some((k) => live(k, seen));
     alive.set(a.id, v);
     return v;
   };
@@ -53,13 +55,13 @@ export function hiddenAgents(agents, hide, selectedId = null) {
   return out;
 }
 
-/** Finished agents (not the root, not the selected one) are drawn as one folded line. */
-export function foldedAgents(agents, hidden, selectedId = null) {
+/** Finished agents (not the root, not the selected one, not one in `held`) are drawn as one folded line. */
+export function foldedAgents(agents, hidden, selectedId = null, held = new Set()) {
   const byId = new Map(agents.map((a) => [a.id, a]));
   const out = new Set();
   for (const a of agents) {
     const root = a.parentId == null || !byId.has(a.parentId);
-    if (!root && !hidden.has(a.id) && isFinished(a) && a.id !== selectedId) out.add(a.id);
+    if (!root && !hidden.has(a.id) && isFinished(a) && a.id !== selectedId && !held.has(a.id)) out.add(a.id);
   }
   return out;
 }
@@ -80,6 +82,7 @@ function svgEl(tag, attrs) {
   return e;
 }
 
+const COMPACT_W = 232; // narrower cards cannot fit "Model response" beside the bar and time
 const reduceMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /**
@@ -101,6 +104,11 @@ export function createGraph({ onSelect }) {
   root.append(scroll, hint);
 
   const cards = new Map(); // id -> card parts
+  const edgeEls = new Map(); // edge key -> { path, a, b }
+  const ranRunning = new Set(); // agents seen running here, so only a live finish is held before folding
+  const finishedAt = new Map();
+  let foldTimer = 0;
+  let painted = false; // the first paint is not animated
   let props = null;
   let layout = null;
   let lastWidth = 0;
@@ -140,21 +148,44 @@ export function createGraph({ onSelect }) {
     if (below) hint.textContent = S.graph.below(below, running);
   }
 
-  function drawEdges() {
-    edges.replaceChildren();
+  /** Keyed edges: paths move with their cards; only a new edge draws itself in. */
+  function drawEdges(animate) {
     edges.setAttribute('width', String(lastWidth));
     edges.setAttribute('height', String(layout.height));
     const status = new Map([...cards].map(([id, c]) => [id, c.root.dataset.status]));
+    const live = new Set();
     for (const e of layout.edges) {
-      if (e.kind === 'watch') {
-        edges.append(svgEl('path', { class: 'e watch', d: e.d }));
-        continue;
+      const key = `${e.kind}:${e.to}`;
+      live.add(key);
+      let ed = edgeEls.get(key);
+      if (!ed) {
+        ed = { path: svgEl('path', { pathLength: '1' }), a: null, b: null };
+        if (animate) ed.path.classList.add('grow');
+        edgeEls.set(key, ed);
+        edges.append(ed.path);
+        if (e.kind !== 'watch') {
+          ed.a = svgEl('circle', { r: 3 });
+          ed.b = svgEl('circle', { r: 3 });
+          if (animate) ed.b.classList.add('late');
+          edges.append(ed.a, ed.b);
+        }
       }
+      ed.path.setAttribute('d', e.d);
+      if (e.kind === 'watch') { ed.path.setAttribute('class', 'e watch'); continue; }
       const st = status.get(e.to);
       const cls = st === 'running' ? 'run' : st === 'failed' ? 'fail' : 'done';
-      edges.append(svgEl('path', { class: `e ${cls}`, d: e.d }));
-      edges.append(svgEl('circle', { class: `dotc ${cls}`, cx: e.start.x, cy: e.start.y, r: 3 }));
-      edges.append(svgEl('circle', { class: `dotc ${cls}`, cx: e.end.x, cy: e.end.y, r: 3 }));
+      const grow = ed.path.classList.contains('grow') ? ' grow' : '';
+      ed.path.setAttribute('class', `e ${cls}${grow}`);
+      for (const [dot, p] of [[ed.a, e.start], [ed.b, e.end]]) {
+        dot.setAttribute('class', `dotc ${cls}${dot.classList.contains('late') ? ' late' : ''}`);
+        dot.setAttribute('cx', String(p.x));
+        dot.setAttribute('cy', String(p.y));
+      }
+    }
+    for (const [key, ed] of edgeEls) {
+      if (live.has(key)) continue;
+      ed.path.remove(); ed.a?.remove(); ed.b?.remove();
+      edgeEls.delete(key);
     }
   }
 
@@ -162,8 +193,22 @@ export function createGraph({ onSelect }) {
     if (!props || lastWidth <= 0) return;
     const { agents, calls } = prepareGraph(props.spans);
     const selected = props.selectedId && agents.some((a) => a.id === props.selectedId) ? props.selectedId : null;
-    const hidden = hiddenAgents(agents, props.hide, selected);
-    const folded = foldedAgents(agents, hidden, selected);
+    const now = Date.now();
+    const animate = !reduceMotion();
+    // An agent that finishes while we watch keeps its full card for FOLD_DELAY_MS, so the new badge can be read.
+    const held = new Set();
+    let wake = 0;
+    for (const a of agents) {
+      if (a.status === 'running') { ranRunning.add(a.id); finishedAt.delete(a.id); continue; }
+      if (!animate || !ranRunning.has(a.id)) continue;
+      if (!finishedAt.has(a.id)) finishedAt.set(a.id, now);
+      const left = finishedAt.get(a.id) + FOLD_DELAY_MS - now;
+      if (left > 0) { held.add(a.id); wake = Math.max(wake, left); }
+    }
+    clearTimeout(foldTimer);
+    if (wake > 0) foldTimer = setTimeout(render, wake + 20);
+    const hidden = hiddenAgents(agents, props.hide, selected, held);
+    const folded = foldedAgents(agents, hidden, selected, held);
     layout = layoutGraph(agents, { width: lastWidth, detailOpen: props.detailOpen, hidden, folded });
     root.dataset.mode = layout.mode;
     canvas.classList.toggle('dense', layout.dense);
@@ -171,7 +216,7 @@ export function createGraph({ onSelect }) {
     empty.hidden = layout.cards.length > 0;
 
     const byId = new Map(agents.map((a) => [a.id, a]));
-    const now = Date.now();
+    const motion = animate && painted;
     const seen = new Set();
     for (const box of layout.cards) {
       seen.add(box.id);
@@ -180,25 +225,28 @@ export function createGraph({ onSelect }) {
       let c = cards.get(box.id);
       if (!c) {
         c = createCard();
+        if (motion) c.root.classList.add('in');
         c.root.dataset.id = box.id;
         cards.set(box.id, c);
         canvas.append(c.root);
       }
       updateCard(c, {
         info: cardInfo(agent, own, now),
-        rows: callRows(own, box.shownCalls),
+        rows: callRows(own, box.shownCalls, box.w < COMPACT_W),
         moreCalls: box.moreCalls,
         showTask: box.showTask,
         folded: box.folded,
         selected: box.id === selected,
         box,
+        animate: motion,
       });
     }
     for (const [id, c] of cards) {
       if (!seen.has(id)) { c.root.remove(); cards.delete(id); }
     }
-    drawEdges();
+    drawEdges(motion);
     updateHint();
+    if (layout.cards.length > 0) painted = true;
   }
 
   const ro = typeof ResizeObserver === 'function'
@@ -223,6 +271,7 @@ export function createGraph({ onSelect }) {
       render();
     },
     destroy() {
+      clearTimeout(foldTimer);
       ro?.disconnect();
       scrollHost?.removeEventListener('scroll', onScroll);
     },
