@@ -108,13 +108,13 @@ export function createFileStore(roots) {
     }
   }
 
-  // Size and mtime of a registered file (never its path).
+  // Size, mtime and inode of a registered file (never its path).
   function stat(fileId) {
     const e = entry(fileId);
     const { fd } = open(e);
     try {
       const st = fstatSync(fd);
-      return { size: st.size, mtimeMs: st.mtimeMs };
+      return { size: st.size, mtimeMs: st.mtimeMs, ino: st.ino };
     } finally {
       closeSync(fd);
     }
