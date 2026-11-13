@@ -4,6 +4,7 @@
 import { basename } from 'node:path';
 import { MSG } from '../../strings.js';
 import { createToolTracker } from './tools.js';
+import { createLlmTracker } from './llm.js';
 
 export const RECENT_MS = 10 * 60 * 1000;
 
@@ -26,6 +27,7 @@ export function createCodexParser({ fileId, now = Date.now }) {
   const turns = new Map();   // turnId -> band
   const models = [];
   let tracker = null;
+  let llm = null;
   const emitted = new Map(); // span id -> JSON of last emitted
   let first = true;
 
@@ -79,6 +81,7 @@ export function createCodexParser({ fileId, now = Date.now }) {
     if (unknownFormat) return [sessionSpan()];
     const isLive = live();
     const out = [sessionSpan(), agentSpan()];
+    out.push(...llm.spans());
     for (const rec of tracker.records()) out.push(tracker.render(rec, isLive && !rec.closed));
     return out;
   }
@@ -108,6 +111,7 @@ export function createCodexParser({ fileId, now = Date.now }) {
       if (Number.isNaN(startTs)) startTs = ts(obj, 0);
       lastTs = startTs;
       tracker = createToolTracker({ sessionId, fileId, parentId: agentSpanId() });
+      llm = createLlmTracker({ sessionId, fileId, parentId: agentSpanId(), startTs });
       return diff(allSpans());
     }
     if (unknownFormat || !obj || typeof obj !== 'object') return [];
@@ -142,14 +146,26 @@ export function createCodexParser({ fileId, now = Date.now }) {
           if (currentTurn === p.turn_id) currentTurn = null;
           break;
         }
+        case 'user_message':
+          llm.onInput(t);
+          break;
+        case 'token_count':
+          llm.onTokenCount(lineNo, t, p, currentModel);
+          break;
         case 'item_completed':
           tracker.onItem(t, p);
           break;
         default:
       }
     } else if (obj.type === 'response_item') {
-      if (p.type === 'function_call' || p.type === 'custom_tool_call') tracker.onCall(lineNo, t, p, currentTurn);
-      else if (p.type === 'function_call_output' || p.type === 'custom_tool_call_output') tracker.onOutput(t, p);
+      if (p.type === 'message' && p.role === 'user') llm.onInput(t);
+      else if (p.type === 'function_call' || p.type === 'custom_tool_call') tracker.onCall(lineNo, t, p, currentTurn);
+      else if (p.type === 'function_call_output' || p.type === 'custom_tool_call_output') {
+        llm.onInput(t);
+        tracker.onOutput(t, p);
+      }
+    } else if (obj.type === 'token_usage_record') {
+      llm.onRecord(lineNo, t, p, currentModel);
     }
     return diff(allSpans());
   }
