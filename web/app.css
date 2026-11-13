@@ -56,6 +56,15 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .dot.off { background: var(--faint); }
 @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
 .icon-btn { border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; color: var(--muted); }
+.redact-btn { font-size: 12px; }
+.redact-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.redact-btn[data-mode="strict"]::before { content: "\25A0\00a0"; }
+.redact-btn:disabled { cursor: default; opacity: .8; }
+.icon-btn:focus-visible, .redact-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.auth-lost { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; background: var(--err-soft); color: var(--text); border-bottom: 1px solid var(--err); font-size: 13px; }
+.auth-lost[hidden] { display: none; }
+.auth-lost b { color: var(--err); }
+body.lost .app, body.lost .live, body.lost .redact-btn { display: none; }
 .icon-btn:hover { color: var(--text); background: var(--panel-2); }
 
 /* Layout: list column + run screen */
@@ -253,6 +262,7 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .g-edges .dotc { stroke-width: 1.6; fill: var(--panel); }
 .g-edges .dotc.run { stroke: var(--edge); } .g-edges .dotc.done { stroke: var(--faint); } .g-edges .dotc.fail { stroke: var(--err); }
 .g-card { position: absolute; z-index: 1; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 16px -10px rgba(0,0,0,.18); cursor: pointer; text-align: left; }
+.g-branch { position: absolute; z-index: 1; width: 10px; height: 26px; border-left: 1.5px solid var(--faint); border-bottom: 1.5px solid var(--faint); border-radius: 0 0 0 5px; pointer-events: none; }
 .g-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .g-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .g-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -348,19 +358,21 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .cd-ref { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 11px; color: var(--muted); }
 .cd-ref code { font-family: var(--mono); overflow-wrap: anywhere; }
 .cd-copy { font-size: 11px; color: var(--accent); }
-@media (max-width: 760px) {
+@container main (max-width: 979px) {
   .view.with-panel { display: block; }
   .g-panel { width: auto; position: static; max-height: none; border-left: 0; border-top: 1px solid var(--line); }
+}
 /* Graph motion (150-300ms). Cards, rows and edges are keyed, so each animation plays once per change. */
 .g-card { transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease, border-color .15s, box-shadow .15s; }
-.g-card.in { animation: g-card-in .25s ease-out backwards; }
+/* A new card waits .12s so the cards it pushes aside have mostly moved (they slide for .25s); no overlap flash. */
+.g-card.in { animation: g-card-in .25s ease-out .12s backwards; }
 @keyframes g-card-in { from { opacity: 0; transform: translateY(10px) scale(.96); } }
 @keyframes g-fade { from { opacity: 0; } }
 .g-edges .e { transition: d .25s ease, stroke .2s; }
-.g-edges .e.grow { animation: g-draw .25s ease-out backwards; }
+.g-edges .e.grow { animation: g-draw .25s ease-out .12s backwards; }
 @keyframes g-draw { from { stroke-dasharray: 1 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1 1; stroke-dashoffset: 0; } }
 .g-edges .dotc { transition: cx .25s ease, cy .25s ease; }
-.g-edges .dotc.late { animation: g-fade .1s ease-out .25s backwards; }
+.g-edges .dotc.late { animation: g-fade .1s ease-out .37s backwards; }
 .g-row.in { animation: g-row-in .2s ease-out backwards; }
 @keyframes g-row-in { from { height: 0; opacity: 0; transform: translateY(-6px); } }
 .g-row.out { animation: g-row-out .22s ease-in forwards; pointer-events: none; }
