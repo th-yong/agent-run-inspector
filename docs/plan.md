@@ -73,7 +73,7 @@ CSP 주의: spec §8 CSP(`default-src 'self'`)는 인라인 `<script>`·`<style>
   - WIP·"fix typo" 류는 머지 전에 정리: `git commit --fixup <sha>` → `GIT_SEQUENCE_EDITOR=: git rebase -i --autosquash main` (비대화식).
   - AI 공동 작성 표기(Co-Authored-By 등)는 넣지 않는다.
 - **머지**: 브랜치를 최신 main 에 rebase → GitHub PR(제목 Conventional, 본문에 요약 · 테스트 방법 · 작업 ID) → CI 통과 → `gh pr merge --merge`(merge commit, no-ff) → 원격·로컬 브랜치 삭제. 결과는 semi-linear 그래프(main 위에 기능마다 한 덩어리). **squash 쓰지 않음.**
-- **CI**: GitHub Actions `ci.yml` — push·PR 에서 (지원 최소 버전 · 현재 Active LTS, T01 에서 Node 릴리스 일정 확인) × ubuntu · macos, `npm test`(node:test) + `npm run lint`. T01 에 포함.
+- **CI**: (2026-12-01 까지 GitHub Actions 분 소진으로 **꺼 둠** — 머지 조건은 로컬 전체 테스트 + lint, `.github/` 는 건드리지 않음.) GitHub Actions `ci.yml` — push·PR 에서 (지원 최소 버전 · 현재 Active LTS, T01 에서 Node 릴리스 일정 확인) × ubuntu · macos, `npm test`(node:test) + `npm run lint`. T01 에 포함.
 - **버전**: 의미 있는 묶음마다 SemVer 태그 + GitHub Release + `CHANGELOG.md`(Keep a Changelog). main 에 직접 커밋하지 않으므로 릴리스마다 `chore/release-vX.Y.Z` 브랜치(`package.json` version + CHANGELOG 의 Unreleased → 버전 절)를 PR 로 머지한 뒤 그 merge commit 에 태그.
   - `v0.1.0` — 서버 + 두 어댑터 + 실시간 API (T23 뒤, 화면 없이 API 로 확인 가능)
   - `v0.2.0` — 웹 UI 전체 (T36 뒤)
