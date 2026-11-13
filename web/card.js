@@ -44,7 +44,7 @@ export function toolLabel(call) {
   return String(call.name ?? '').replace(/^mcp__(.+?)__/, '$1 · ');
 }
 
-function callIcon(call) {
+export function callIcon(call) {
   if (call.kind === 'llm') {
     const slug = providerSlugs([call.model ?? call.name])[0];
     return call.status === 'error' ? { type: 'err' } : slug ? { type: 'brand', slug } : { type: 'other' };
@@ -99,7 +99,7 @@ function symbol(key, cls = '') {
   return svg;
 }
 
-function iconNode(icon) {
+export function iconNode(icon) {
   if (icon.type === 'brand') return iconEl(icon.slug);
   if (icon.type === 'err') return symbol('err', 'k-err');
   if (icon.type === 'other') return symbol('other', 'k-other');
