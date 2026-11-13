@@ -13,6 +13,7 @@ async function getJson(path) {
 }
 
 export const fetchSessions = async () => (await getJson('/api/sessions')).sessions;
+export const fetchRoots = async () => (await getJson('/api/roots')).roots;
 export const fetchSession = (id) => getJson(`/api/sessions/${encodeURIComponent(id)}`);
 
 /** A newer (higher seq) span replaces the stored one; stale or repeated events are ignored. Returns true if applied. */
