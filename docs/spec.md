@@ -30,7 +30,7 @@ Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록(JSONL)
 3-1. **그래프 탭**(기본)
    - 에이전트 하나 = 카드 하나. 오케스트레이터 카드가 맨 위 가운데, 하위 에이전트 카드가 아래 단계로 갈라지고 둥글게 꺾인 선(양 끝 연결점)으로 잇는다. 선 색: 진행 중 = 강조색, 끝남 = 옅은 회색, 실패 = 빨강.
    - 감시 역할 에이전트(§4 `role: 'watcher'`)는 오케스트레이터 옆에 점선 테두리 카드 + 점선 가로선.
-   - 카드: 출처 표식(Claude Code / Codex, 상표 그림 아닌 중립 기호) · 이름 · 모델(작게) · 상태 배지(진행 중 = 강조색 + 도는 원, 끝남 = 회색, 실패 = 빨강) / 한 줄 과제 설명(Agent 호출의 description) / 구분선 / **최근 호출 5개**(도구 종류 아이콘, 이름, 작은 막대, 걸린 시간 — 진행 중이면 막대가 흐르고 시간 자리에 "…") / 아래 "비용 · 걸린 시간" 과 "호출 N".
+   - 카드: 모델 제공사 로고(§4 `provider`, §12) · 이름 · 모델(작게) · 상태 배지(진행 중 = 강조색 + 도는 원, 끝남 = 회색, 실패 = 빨강) / 한 줄 과제 설명(Agent 호출의 description) / 구분선 / **최근 호출 5개**(도구 종류 아이콘, 이름, 작은 막대, 걸린 시간 — 진행 중이면 막대가 흐르고 시간 자리에 "…") / 아래 "비용 · 걸린 시간" 과 "호출 N".
    - 새 호출은 목록 아래에 붙고, 5개를 넘으면 가장 오래된 줄이 위로 접히며 사라져 맨 위 "+n 이전 호출" 로 합쳐진다.
    - 에이전트가 끝나면 배지가 끝남/실패로 바뀌고 1.6초 뒤 카드가 한 줄(이름 · 배지 · 비용 · 시간 · 호출 수)로 접힌다. 접힌 카드를 누르면 다시 펼침. "끝난 에이전트 숨기기" 를 켜면 접힌 카드를 아예 숨긴다(진행 중인 하위가 있으면 안 숨김).
    - 새 하위 에이전트가 생기면 부모에서 선이 자라나고 카드가 아래에서 살짝 떠오르며 나타난다.
@@ -53,10 +53,13 @@ Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록(JSONL)
 
 ### 3.1 그래프 배치 규칙 (카드가 많을 때)
 
-- **단계별 가로 줄**: 깊이 0(오케스트레이터 + 감시) / 깊이 1 / 깊이 2 … 를 위에서 아래로. 한 단계 안은 가운데 정렬, 카드 사이 18px, 단계 사이 40px.
+근거(이 기계 실측, 2026-11-13): Claude Code 하위 에이전트 meta 37개 전부 `spawnDepth` 1, Codex 세션 553개 중 하위 1 · 손자 0. 실제로는 **깊이 1(오케스트레이터 → 하위 여러 개)** 이 거의 전부라서 배치는 그 경우에 맞추고, 손자는 드문 예외로만 처리한다.
+
+- **단계별 가로 줄**: 깊이 0(오케스트레이터 + 감시) / 깊이 1 / (드물게) 깊이 2 … 를 위에서 아래로. 한 줄 안은 가운데 정렬, 카드 사이 18px, 단계 사이 40px. 한 줄 안 순서는 부모 순서 → 시작 순서.
 - **넘치면 줄바꿈**: 가로 스크롤을 만들지 않는다. 한 단계가 폭을 넘으면 다음 줄로 감싼다(줄 사이 40px). 선은 "자식 줄 바로 위 틈" 높이에서 꺾으므로 가로선이 카드 위를 지나지 않는다(세로 줄기는 카드 뒤로 지나감).
-- **손자 단계는 부모별 묶음**: 깊이 2 이상은 부모마다 점선 묶음 상자("<부모> 아래")로 모아 부모 순서대로 놓는다. 묶음 안에서도 같은 줄바꿈 규칙.
-- **많으면 축소**: 화면에 보이는 카드가 8개를 넘으면 카드 폭 272 → 216px, 과제 설명 줄 숨김, 최근 호출 5 → 3개.
+- **손자는 따로 꾸미지 않는다**: 묶음 상자 없이 다음 줄에 일반 카드로 놓고, 선은 부모 카드에서 바로 잇는다.
+- **화면 아래로 잘리면**: 첫 화면에서 아래 카드가 잘리면 그래프 아래쪽에 "아래에 에이전트 N개 (진행 중 M) ↓" 안내 단추를 고정해 두고, 누르면 스크롤한다.
+- **많으면 축소**: 화면에 보이는 카드가 8개를 넘으면 카드 폭 248 → 216px(248 이면 1440 화면에서 하위 4개가 한 줄), 과제 설명 줄 숨김, 최근 호출 5 → 3개.
 - **끝난 카드 접기**: 끝난 카드는 한 줄로 접히므로 오래 돈 실행에서도 진행 중인 카드가 위쪽에 크게 남는다. 그래도 많으면 "끝난 에이전트 숨기기".
 - 상세 칸을 열면 그래프 영역이 360px 줄어들고 같은 규칙으로 다시 배치.
 - **좁은 폭(≤ 760px)**: 그래프 대신 세로 목록. 카드를 깊이 우선 순서(부모 → 감시 → 자식들)로 한 줄씩, 깊이당 18px 들여쓰기 + 왼쪽 세로 꺾은 선(└). 선 SVG 는 그리지 않는다. 상세 칸은 목록 아래로.
@@ -103,12 +106,28 @@ interface RunSpan {
   depth?: number;          // agent: 오케스트레이터 0, 하위 1, 손자 2 …
   role?: 'orchestrator' | 'worker' | 'watcher'; // watcher 는 기록에 표준 필드가 없어 설정(이름 규칙)으로만 붙임, 기본 없음
   task?: string;           // agent: 한 줄 과제 설명 (Claude Code Agent input.description / meta.description, Codex agent_nickname·role). 마스킹 대상
-  provider?: 'anthropic' | 'openai' | 'other'; // 카드 표식용 (출처·모델 이름에서 추정)
-  toolCategory?: 'search' | 'web' | 'db' | 'git' | 'shell' | 'file' | 'edit' | 'agent' | 'mcp' | 'other'; // tool: 아이콘용, 어댑터가 도구 이름으로 분류
+  provider?: 'anthropic' | 'openai' | 'google' | 'other'; // agent·llm: 모델 제공사 (아래 규칙)
+  toolCategory?: 'search' | 'web' | 'db' | 'git' | 'shell' | 'file' | 'edit' | 'agent' | 'mcp' | 'other'; // tool: 브랜드가 없을 때의 범주 기호
+  toolBrand?: string;      // tool: simple-icons slug (아래 규칙, 표는 brand-map.json). 있으면 범주 기호 대신 브랜드 아이콘
+  command?: string;        // tool(Bash·exec): 명령 문자열 — 첫 단어로 브랜드 판별, 화면 표시는 마스킹 대상
   spawnsAgentId?: string;  // tool(Agent/spawn_agent): 이 호출로 생긴 agent span id
   lastActivity: number;    // 이 span(과 자식)의 마지막 줄 시각 — 진행 중 판정·정렬
   seq: number;             // 서버가 매기는 변경 번호. 화면은 seq 가 커질 때만 반영(SSE 재연결 시 Last-Event-ID)
 }
+// provider 규칙 (모델 이름을 소문자로, 'vendor/' 접두어는 떼고):
+//   claude-* 또는 이름 안의 '-claude', opus·sonnet·haiku·fable 로 시작 → 'anthropic'
+//   gpt-*, o1·o3·o4(-*), codex(-*) 로 시작                         → 'openai'
+//   'gemini' 포함                                                   → 'google'
+//   그 밖                                                            → 'other' (중립 기호: 빈 원)
+// 표시: 그래프 카드 머리, 카드 안 "모델 응답" 줄, 상세 칸 호출 목록, 타임라인 에이전트 줄(모델 옆)·LLM 호출 줄, 호출 상세 '이름', 세션 목록(쓰인 제공사들).
+// toolBrand 규칙 (대소문자 무시, 표 하나 = brand-map.json 의 tools[]: { slug, names[], cmds[] }):
+//   1) MCP 도구 mcp__<server>__<tool> → <server> 를 names 와 비교 (예: mcp__github__*, mcp__notion__*, mcp__claude-in-chrome__*)
+//   2) 그 밖 도구 → 이름 앞부분(github.pr → github, notion.page → notion)을 names 와 비교
+//   3) Bash · exec · exec_command · shell → 명령 첫 단어(앞의 VAR=값 · sudo · env · time 건너뜀, 경로는 떼고)를 cmds 와 비교
+//      (예: gh → github, git → git, docker → docker, kubectl → kubernetes, psql → postgresql, npm/npx → npm, python/pip → python, uv → uv, gcloud → googlecloud)
+//   4) 맞는 게 없거나 simple-icons 에 아이콘이 없으면 → 지금의 범주 기호(읽기 · 쓰기 · 검색 · 웹 · 실행 · DB · 에이전트)
+//   오류 난 호출은 브랜드와 관계없이 오류 기호.
+// 세션 목록의 CC/CX 배지는 '도구'(Claude Code / Codex CLI) 표식으로 그대로 두고 툴팁에 "도구:" 를 밝혀 제공사 로고와 섞이지 않게 한다.
 // 진행 중 호출은 end=null, status='running'. 끝날 예정 시각은 알 수 없으므로 막대는 "흐르는 막대"(진척도 없음)로 그린다.
 // 토큰은 끝난 llm span 에만 있다(진행 중엔 미정) → 합계는 끝난 호출만 더하고, 화면 숫자는 그만큼 굴러 오른다.
 
@@ -263,3 +282,26 @@ interface SessionSummary {
 5. Codex 하위 rollout ↔ `spawn_agent` 호출 시간 기반 짝짓기의 정확도(동시에 여러 개 띄울 때).
 6. Codex 구버전(0.4x~0.6x) `token_count` 의 `info` 가 null 인 줄 처리.
 7. 파일 회전·압축(Claude Code `compact_boundary` 이후 파일이 바뀌는지) 때 tail 위치 처리.
+
+## 12. 제3자 자산
+
+**브랜드 아이콘** — 출처 simple-icons (npm `simple-icons`) **15.22.0**, 라이선스 **CC0-1.0**. 쓰는 것만 path 를 뽑아 인라인(런타임 외부 요청 없음, simple-icons 를 의존성으로 넣지 않음 → 런타임 의존성 0 유지).
+
+| 용도 | slug |
+|---|---|
+| 모델 제공사 | `claude`(anthropic), `openai`, `googlegemini`(google) |
+| 코드·저장소 | `github`, `git` |
+| 협업·문서 | `notion`, `figma`, `slack`, `linear`, `jira`, `atlassian`, `confluence`, `googledrive`, `googledocs`, `gmail`, `googlecalendar` |
+| 클라우드·인프라 | `googlecloud`, `docker`, `kubernetes`, `postgresql`, `redis`, `vercel`, `supabase`, `sentry`, `stripe` |
+| 런타임·패키지 | `npm`, `pnpm`, `yarn`, `nodedotjs`, `python`, `uv` |
+| 브라우저 | `googlechrome` |
+| **simple-icons 에 없음 → 범주 기호** | Microsoft Azure(`az`), AWS(`aws`), Playwright |
+
+- 매핑 표: `docs/brand-map.json` (구현 때 패키지의 `brand-map.json` 으로). 아이콘 path 와 테마별 색은 이 표와 simple-icons 에서 스크립트로 만들어 넣는다(손으로 고치지 않음).
+- **색 규칙**: 기본은 브랜드 고유색(simple-icons `hex`). 그 색과 카드 배경(라이트 `#ffffff`, 다크 `#17181b`)의 **명암비가 3:1 미만**이면
+  - 채도 있는 색(HSL 채도 ≥ 0.25)은 같은 색상에서 밝기를 최대 0.25 까지 옮겨 3:1 을 맞춘다(예: 다크에서 Slack 보라를 밝게, 라이트에서 pnpm·Supabase 를 조금 어둡게).
+  - 그래도 안 되거나 무채색(검정·회색)이면 **글자색 단색**(라이트 검정 / 다크 흰색). 예: GitHub · Notion · Vercel 은 다크에서 흰색, Confluence · Sentry(진남색)도 다크에서 흰색.
+  - 예외: OpenAI 는 요청에 따라 두 테마 모두 글자색 단색. Claude 주황(`#D97757`)은 두 테마 모두 3:1 이상이라 그대로.
+- **상표는 각 회사 소유.** 아이콘은 "어느 제공사 모델 / 어느 서비스 도구인가" 를 알아보게 하는 식별 용도로만 쓰고, 우리 도구의 로고·이름·홍보물에는 쓰지 않는다.
+- **공개 배포 전 확인 필요**: 각 사 브랜드 가이드(Anthropic, OpenAI `https://openai.com/brand`, GitHub `https://github.com/logos`, Google 등)를 확인할 것.
+- **주의**: `openai` 아이콘은 simple-icons **16.0.0 에서 빠졌다**(최신 16.37.0 에는 없음, 15.22.0 까지 있음). 그래서 모든 아이콘을 15.22.0 에서 가져왔다. 빠진 이유(상표권자 요청 여부)를 공개 배포 전에 확인하고, 문제가 되면 OpenAI 는 중립 기호 + "OpenAI" 글자로 바꾼다. 같은 이유로 Azure·AWS 처럼 이미 빠진 브랜드는 다른 출처에서 가져오지 않는다.
