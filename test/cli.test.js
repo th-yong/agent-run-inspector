@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, realpa
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runAndStop } from './helpers/launch.js';
 
 const cli = fileURLToPath(new URL('../bin/cli.js', import.meta.url));
 const tmp = () => realpathSync(mkdtempSync(join(tmpdir(), 'ari-cli-')));
@@ -43,14 +44,14 @@ test('bad option values -> exit 2', () => {
   }
 });
 
-test('valid option set parses (reaches root discovery)', () => {
+test('valid option set parses and the server starts', async () => {
   const h = tmp();
   mkdirSync(join(h, 'r'));
   writeFileSync(join(h, 'p.json'), '{}');
-  const r = run(['--port', '0', '--no-open', '--root', join(h, 'r'), '--source', 'claude', '--since', '7d', '--redact', '--prices', join(h, 'p.json'), '--session', 's1'], h);
-  assert.equal(r.status, 0, r.stderr);
-  const r2 = run(['--redact=strict', '--root', join(h, 'r')], h);
-  assert.equal(r2.status, 0, r2.stderr);
+  const r = await runAndStop(['--port', '0', '--no-open', '--root', join(h, 'r'), '--source', 'claude', '--since', '7d', '--redact', '--prices', join(h, 'p.json'), '--session', 's1'], h);
+  assert.equal(r.code, 0, r.out.stderr);
+  const r2 = await runAndStop(['--redact=strict', '--root', join(h, 'r')], h);
+  assert.equal(r2.code, 0, r2.out.stderr);
 });
 
 test('no log folders -> message and exit 1', () => {
@@ -59,11 +60,11 @@ test('no log folders -> message and exit 1', () => {
   assert.match(r.stderr, /No run logs found/);
 });
 
-test('missing --root folder warns', () => {
+test('missing --root folder warns', async () => {
   const h = tmp();
   mkdirSync(join(h, '.claude', 'projects'), { recursive: true });
-  const r = run(['--root', join(h, 'gone')], h);
-  assert.match(r.stderr, /folder not found/);
+  const r = await runAndStop(['--root', join(h, 'gone')], h);
+  assert.match(r.out.stderr, /folder not found/);
 });
 
 test('roots add/list/remove changes only the config file', () => {
@@ -107,15 +108,15 @@ test('roots usage errors -> exit 2', () => {
   assert.equal(run(['roots', 'zap', 'x'], h).status, 2);
 });
 
-test('XDG_CONFIG_HOME is honored and configured roots are used', () => {
+test('XDG_CONFIG_HOME is honored and configured roots are used', async () => {
   const h = tmp();
   const xdg = join(h, 'xdg');
   const logs = join(h, 'logs');
   mkdirSync(logs);
   assert.equal(run(['roots', 'add', logs], h, { XDG_CONFIG_HOME: xdg }).status, 0);
   assert.ok(existsSync(join(xdg, 'agent-run-inspector', 'config.json')));
-  const r = run([], h, { XDG_CONFIG_HOME: xdg });
-  assert.equal(r.status, 0, r.stderr);
+  const r = await runAndStop([], h, { XDG_CONFIG_HOME: xdg });
+  assert.equal(r.code, 0, r.out.stderr);
 });
 
 test('invalid config file -> exit 2', () => {
