@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-13
+
+Open in Orca, packaging and an end-to-end check against real run records.
+
+### Added
+- `--open` opens the address as a new Orca browser tab inside Orca and in the default browser elsewhere; `--no-open` only prints it.
+- English and Korean README.
+- `scripts/e2e-check.js`: starts the server with `--redact=strict` against this machine's records and prints counts, times and pass/fail only.
+
+### Fixed
+- A Codex rollout file with no parsable line (empty or only a cut line) made opening that session fail with a 500.
+
+### Verified
+End-to-end check on one machine (942 sessions: 397 Claude Code, 545 Codex; 99,496 spans):
+- First session list 447 ms (cached list 72 ms).
+- Opening every session: 0 failures; median 2 ms, 95th percentile 104 ms, slowest 2.9 s.
+- Per-session totals equal the sum of their spans in all 942 sessions.
+- Claude Code sub-agents: 514 of 514 files with metadata attached to their parent call (100%).
+- Codex sub-agents: 9 of 553 links inferred by time (1.6%).
+- Live updates on a session being written: 31 events in 75 s, first after 11 s.
+- Peak server memory (RSS) 2.2 GB while opening all 942 sessions in a row; the live heap after collection was 7 MB, so it is freed memory not yet returned, not a leak.
+
 ## [0.2.0] - 2026-11-13
 
 The web UI. Open the printed address to browse sessions, an agent graph, a timeline and call details.
