@@ -1,6 +1,7 @@
 import { S } from './strings.js';
 import { parseState, toSearch } from './state.js';
-import { fetchSession, fetchRoots, watchList, watchSession, mergeSpan, upsertSession, ApiError } from './api.js';
+import { fetchSession, fetchRoots, watchList, watchSession, mergeSpan, trimSpans, upsertSession, ApiError } from './api.js';
+import { liveState, createFlushGate } from './live-follow.js';
 import { mount, emptyBlock } from './session-list.js';
 import { createRunHeader } from './run-header.js';
 import { createTimeline } from './timeline.js';
@@ -45,6 +46,9 @@ function applyTheme() {
 }
 
 // ---- connection indicator ----
+const conn = {}; // stream name -> 'connected' | 'reconnecting'
+const setConn = (name, status) => { conn[name] = status; setLive(liveState(conn)); };
+
 function setLive(kind) {
   const text = { connected: S.live.connected, reconnecting: S.live.reconnecting, connecting: S.live.connecting }[kind] ?? S.live.reconnecting;
   $('liveText').textContent = text;
@@ -172,6 +176,8 @@ function closeAgent() {
 }
 
 function stopRun() {
+  delete conn.run;
+  setLive(liveState(conn));
   stopStream?.();
   stopStream = null;
 }
@@ -181,6 +187,7 @@ async function fetchRun(id, { first }) {
     const data = await fetchSession(id);
     if (state.s !== id) return;
     run = { id, status: 'ready', data, spans: new Map(data.spans.map((s) => [s.id, s])) };
+    trimSpans(run.spans);
     if (first && !stopStream) startStream(id);
   } catch (e) {
     if (state.s !== id) return;
@@ -192,9 +199,10 @@ async function fetchRun(id, { first }) {
 function startStream(id) {
   let opened = false;
   stopStream = watchSession(id, {
-    onSpan: (span) => { if (run.id === id && run.status === 'ready' && mergeSpan(run.spans, span)) renderMain(); },
-    onTotals: (totals) => { if (run.id === id && run.status === 'ready') { run.data = { ...run.data, totals }; renderMain(); } },
+    onSpan: (span) => { if (run.id === id && run.status === 'ready' && mergeSpan(run.spans, span)) { trimSpans(run.spans); gate.request(); } },
+    onTotals: (totals) => { if (run.id === id && run.status === 'ready') { run.data = { ...run.data, totals }; gate.request(); } },
     // The first connect right after the load needs no second load; later connects and resync reload everything.
+    onStatus: (s) => setConn('run', s),
     onReset: () => { if (opened) fetchRun(id, { first: false }); opened = true; },
   });
 }
@@ -208,6 +216,11 @@ async function loadRun() {
   renderMain();
   await fetchRun(id, { first: true });
 }
+
+// While the tab is hidden, stream updates are only stored; one redraw happens when it is shown again.
+const gate = createFlushGate(() => document.hidden, () => { renderList(); renderMain(); });
+const listGate = createFlushGate(() => document.hidden, renderList);
+document.addEventListener('visibilitychange', () => { gate.resume(); listGate.resume(); });
 
 function render() {
   applyTheme();
@@ -243,9 +256,9 @@ window.addEventListener('popstate', () => {
 
 watchList({
   onList: (all) => { sessions = all; listError = false; renderList(); renderMain(); },
-  onSession: (summary) => { sessions = upsertSession(sessions ?? [], summary); renderList(); },
+  onSession: (summary) => { sessions = upsertSession(sessions ?? [], summary); listGate.request(); },
   onStatus: (s) => {
-    if (s === 'list-error') { listError = true; renderList(); } else setLive(s);
+    if (s === 'list-error') { listError = true; renderList(); } else setConn('list', s);
   },
 });
 render();

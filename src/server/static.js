@@ -22,6 +22,7 @@ export const WEB_FILES = [
   'graph-layout.js',
   'graph.js',
   'icons.js',
+  'live-follow.js',
   'redact-toggle.js',
   'run-header.js',
   'session-list.js',
