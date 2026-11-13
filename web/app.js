@@ -5,6 +5,7 @@ import { mount, emptyBlock } from './session-list.js';
 import { createRunHeader } from './run-header.js';
 import { createTimeline } from './timeline.js';
 import { createGraph } from './graph.js';
+import { createAgentPanel } from './agent-panel.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -90,6 +91,7 @@ function ensureHead() {
   head = { id: state.s, header };
   view = el('div', 'view');
   graph?.graph.destroy();
+  graph?.panel.destroy();
   graph = null;
   return header;
 }
@@ -102,6 +104,7 @@ function renderMain() {
     timeline?.destroy();
     head = null;
     graph?.graph.destroy();
+    graph?.panel.destroy();
     graph = null;
     if (listEmpty()) {
       loadRoots();
@@ -120,11 +123,19 @@ function renderMain() {
   if (ready && state.tab === 'graph') {
     if (graph?.id !== state.s) {
       graph?.graph.destroy();
-      graph = { id: state.s, graph: createGraph({ onSelect: selectAgent }) };
+      graph?.panel.destroy();
+      graph = {
+        id: state.s,
+        graph: createGraph({ onSelect: selectAgent }),
+        panel: createAgentPanel({ onOpen: openCall, onClose: closeAgent }),
+      };
     }
-    if (view.firstChild !== graph.graph.el) view.replaceChildren(graph.graph.el);
+    if (view.firstChild !== graph.graph.el || view.lastChild !== graph.panel.el) view.replaceChildren(graph.graph.el, graph.panel.el);
     if (main.firstChild !== header.el) main.replaceChildren(header.el, header.tabs, view);
-    graph.graph.update({ spans, selectedId: state.gsel, hide: state.hide, detailOpen: false });
+    const agent = state.gsel ? spans.find((s) => s.id === state.gsel && s.kind === 'agent' && !s.external) : null;
+    view.classList.toggle('with-panel', Boolean(agent));
+    graph.panel.update({ agent, spans, totals: agent ? run.data?.totals?.byAgent?.[agent.id] : null, sessionId: state.s, openId: state.gopen });
+    graph.graph.update({ spans, selectedId: state.gsel, hide: state.hide, detailOpen: Boolean(agent) });
     return;
   }
   const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : S.views[state.tab];
@@ -141,6 +152,18 @@ function renderMain() {
 
 function selectAgent(id) {
   state = { ...state, gsel: state.gsel === id ? null : id, gopen: null };
+  writeUrl(false);
+  renderMain();
+}
+
+function openCall(id) {
+  state = { ...state, gopen: id };
+  writeUrl(false);
+  renderMain();
+}
+
+function closeAgent() {
+  state = { ...state, gsel: null, gopen: null };
   writeUrl(false);
   renderMain();
 }
