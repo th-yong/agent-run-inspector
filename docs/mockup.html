@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run Inspector 시안</title>
+<!-- 정적 시안. 가짜 데이터. 외부 요청 없음.
+     주소 상태: ?theme=dark|light  ?state=empty  ?s=<세션번호>  ?sel=<agent id>  ?open=<span id>  ?view=list|run(좁은 폭)  ?exp=a,b -->
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --panel-2: #f1f1ee; --line: #e3e3de; --line-2: #ececE8;
+  --text: #1b1c1e; --muted: #6b6d72; --faint: #9a9ca1;
+  --accent: #3b5bdb; --accent-soft: #e7ecfd;
+  --llm: #4c6ef5; --llm-soft: #dbe3ff; --tool: #0c8599; --tool-soft: #d3f0f3;
+  --err: #d6336c; --err-soft: #fde5ee; --ok: #2b8a3e; --run: #e8590c; --run-soft: #fff0e6;
+  --sel: #eef2ff; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", "Noto Sans KR", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --dark: 1; } }
+:root[data-theme="dark"], :root.auto-dark {
+  --bg: #111214; --panel: #17181b; --panel-2: #1d1f23; --line: #2a2c31; --line-2: #24262a;
+  --text: #e6e7ea; --muted: #9a9ca3; --faint: #6c6e75;
+  --accent: #7c93ff; --accent-soft: #232a45;
+  --llm: #7c93ff; --llm-soft: #26305a; --tool: #3bc9db; --tool-soft: #143a40;
+  --err: #ff6b9a; --err-soft: #3d1a27; --ok: #69db7c; --run: #ff922b; --run-soft: #3a2614;
+  --sel: #1f2540; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 13px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 12px; }
+
+/* 머리 */
+.top { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+.brand { font-weight: 650; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+.brand i { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(135deg, var(--llm), var(--tool)); display: inline-block; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg button { padding: 4px 10px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--panel-2); color: var(--text); font-weight: 600; }
+.spacer { flex: 1; }
+.live { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--run); display: inline-block; }
+.dot.pulse { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.icon-btn { border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; color: var(--muted); }
+.icon-btn[aria-pressed="true"] { color: var(--text); background: var(--panel-2); }
+
+/* 배치 */
+.app { display: grid; grid-template-columns: 320px 1fr; height: calc(100% - 48px); }
+.list { border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
+.main { overflow: auto; min-width: 0; }
+
+/* 세션 목록 */
+.list-head { padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid var(--line-2); }
+.search { width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; background: var(--bg); color: var(--text); font: inherit; }
+.row-flex { display: flex; gap: 6px; align-items: center; }
+.chip { font-size: 11px; padding: 2px 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.group-label { padding: 10px 14px 4px; font-size: 11px; color: var(--faint); font-weight: 600; letter-spacing: .02em; }
+.sess { display: block; width: 100%; text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line-2); }
+.sess:hover { background: var(--panel-2); }
+.sess[aria-current="true"] { background: var(--sel); box-shadow: inset 3px 0 0 var(--accent); }
+.sess .t { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.sess .t span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess .m { color: var(--muted); font-size: 12px; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+.badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .02em; flex: none; }
+.badge.cc { background: #f3e8dd; color: #9a4f16; } .badge.cx { background: #e3eefc; color: #1f5fa8; }
+:root[data-theme="dark"] .badge.cc, :root.auto-dark .badge.cc { background: #3a2a1c; color: #f0b27a; }
+:root[data-theme="dark"] .badge.cx, :root.auto-dark .badge.cx { background: #1a2b40; color: #8cc0ff; }
+.st-err { color: var(--err); } .st-run { color: var(--run); }
+
+/* 실행 화면 머리 */
+.run-head { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.run-title { font-size: 17px; font-weight: 650; display: flex; align-items: center; gap: 8px; letter-spacing: -0.01em; }
+.run-meta { color: var(--muted); margin-top: 3px; display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; }
+.totals { margin-top: 12px; display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--bg); }
+.scope { padding: 8px 12px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 150px; }
+.scope .lbl { font-size: 11px; color: var(--faint); }
+.scope .v { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.scope .clear { font-size: 11px; color: var(--accent); }
+.stat { padding: 8px 14px; border-right: 1px solid var(--line-2); }
+.stat:last-child { border-right: 0; }
+.stat .lbl { font-size: 11px; color: var(--faint); }
+.stat .v { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .sub { font-size: 11px; color: var(--muted); }
+.stat.err .v { color: var(--err); }
+.basis { font-size: 10px; color: var(--faint); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px; vertical-align: 2px; }
+
+/* 트리 + 시간축 */
+.grid { --name: 360px; --tl: 1fr; }
+.ghead, .r { display: grid; grid-template-columns: var(--name) var(--tl) 72px 76px 84px; align-items: center; }
+.ghead { position: sticky; top: 0; z-index: 3; background: var(--panel); border-bottom: 1px solid var(--line); height: 30px; font-size: 11px; color: var(--faint); }
+.ghead > div { padding: 0 10px; }
+.ghead .ruler { position: relative; height: 100%; padding: 0; border-left: 1px solid var(--line-2); }
+.ruler span { position: absolute; top: 8px; transform: translateX(-50%); font-family: var(--mono); font-size: 10px; }
+.ruler span::after { content: ""; position: absolute; left: 50%; top: 14px; height: 8px; border-left: 1px solid var(--line); }
+.r { min-height: 30px; border-bottom: 1px solid var(--line-2); background: var(--panel); }
+.r:hover { background: var(--panel-2); }
+.r.sel { background: var(--sel); }
+.r > .c { padding: 0 10px; }
+.r .right { text-align: right; color: var(--muted); }
+.nm { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.nm .label { overflow: hidden; text-overflow: ellipsis; }
+.tw { width: 16px; height: 16px; display: inline-grid; place-items: center; color: var(--faint); border-radius: 4px; flex: none; }
+.tw:hover { background: var(--line-2); color: var(--text); }
+.tw svg { transition: transform .12s; } .tw[aria-expanded="true"] svg { transform: rotate(90deg); }
+.kind { font-size: 10px; width: 14px; text-align: center; flex: none; }
+.k-llm { color: var(--llm); } .k-tool { color: var(--tool); } .k-err { color: var(--err); }
+.agent-name { font-weight: 600; }
+.atype { font-size: 11px; color: var(--muted); }
+.model { font-size: 11px; color: var(--faint); font-family: var(--mono); }
+.r.call .nm { color: var(--muted); }
+.r.call .nm .label { color: var(--text); font-family: var(--mono); font-size: 12px; }
+.lane { position: relative; height: 30px; border-left: 1px solid var(--line-2); }
+.lane .gridline { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--line-2); }
+.span-bg { position: absolute; top: 12px; height: 6px; border-radius: 3px; background: var(--line); }
+.span-bg.running { background: linear-gradient(90deg, var(--line) 70%, var(--run-soft)); }
+.span-bg.running::after { content: ""; position: absolute; right: -3px; top: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--run); animation: pulse 1.8s ease-in-out infinite; }
+.b { position: absolute; top: 9px; height: 12px; border-radius: 2px; min-width: 2px; }
+.b.llm { background: var(--llm); }
+.b.tool { background: var(--tool-soft); box-shadow: inset 0 0 0 1px var(--tool); }
+.b.err { background: var(--err); box-shadow: none; }
+.b.err::before { content: ""; position: absolute; left: 50%; top: -5px; transform: translateX(-50%); border: 3px solid transparent; border-bottom-color: var(--err); }
+.b.run { background: linear-gradient(90deg, var(--llm), transparent); }
+.r.call .b { top: 8px; height: 14px; }
+.now { position: absolute; top: 0; bottom: 0; border-left: 1.5px solid var(--run); opacity: .7; }
+.status-err { color: var(--err); font-weight: 600; }
+
+/* 호출 상세 */
+.detail { background: var(--panel-2); border-bottom: 1px solid var(--line); padding: 14px 20px 16px 52px; display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
+.r.grp { min-height: 26px; background: var(--bg); }
+.grp-l { font-size: 12px; color: var(--muted); }
+.r .du { white-space: nowrap; }
+.detail dl { margin: 0; align-content: start; display: grid; grid-template-columns: 92px 1fr; gap: 5px 10px; font-size: 12px; }
+.detail dt { color: var(--faint); } .detail dd { margin: 0; font-variant-numeric: tabular-nums; }
+.errbox { border: 1px solid var(--err); background: var(--err-soft); color: var(--text); border-radius: 7px; padding: 8px 10px; font-family: var(--mono); font-size: 12px; margin-bottom: 10px; }
+.errbox b { color: var(--err); font-family: var(--sans); }
+.pv h4 { margin: 0 0 4px; font-size: 11px; color: var(--faint); font-weight: 600; display: flex; justify-content: space-between; }
+.pv pre { margin: 0 0 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; font: 12px/1.5 var(--mono); white-space: pre-wrap; max-height: 140px; overflow: auto; }
+.pv pre.redacted { color: var(--faint); font-style: italic; font-family: var(--sans); }
+.ref { font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.copy { font-size: 11px; color: var(--accent); }
+.newcalls { position: sticky; bottom: 12px; margin: 10px auto; display: block; background: var(--text); color: var(--bg); border-radius: 99px; padding: 6px 14px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+.legend { display: flex; gap: 12px; color: var(--muted); font-size: 11px; padding: 8px 20px; border-bottom: 1px solid var(--line); background: var(--panel); align-items: center; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; vertical-align: 0; margin-right: 4px; }
+
+/* 빈 상태 */
+.empty { max-width: 520px; margin: 80px auto; padding: 0 16px; }
+.empty h2 { font-size: 18px; margin: 0 0 6px; }
+.empty p { color: var(--muted); margin: 0 0 14px; }
+.empty ul { margin: 0 0 16px; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+.empty li { padding: 8px 12px; border-bottom: 1px solid var(--line-2); font-family: var(--mono); font-size: 12px; display: flex; justify-content: space-between; gap: 10px; }
+.empty li:last-child { border-bottom: 0; }
+.empty code { font-family: var(--mono); background: var(--panel-2); border: 1px solid var(--line); padding: 8px 10px; border-radius: 7px; display: block; font-size: 12px; }
+
+/* 좁은 폭 */
+.back { display: none; }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; }
+  body[data-view="run"] .list { display: none; }
+  body[data-view="list"] .main { display: none; }
+  .list { border-right: 0; }
+  .back { display: inline-flex; color: var(--accent); font-size: 12px; margin-bottom: 6px; }
+  .top .seg, .top .live span { display: none; }
+  .run-head { padding: 12px 16px; }
+  .totals { flex-wrap: wrap; }
+  .scope { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); flex-direction: row; align-items: center; justify-content: space-between; }
+  .stat { flex: 1 1 33%; border-bottom: 1px solid var(--line-2); padding: 6px 10px; }
+  .stat .v { font-size: 14px; }
+  .ghead { display: none; }
+  .r { grid-template-columns: 1fr 64px; grid-template-areas: "nm du" "ln ln"; padding: 4px 0 6px; }
+  .r > .c.nmc { grid-area: nm; padding: 0 16px; }
+  .r > .lanec { grid-area: ln; padding: 0 16px; }
+  .r > .c.du { grid-area: du; padding-right: 16px; }
+  .r > .c.tk, .r > .c.co { display: none; }
+  .lane { height: 12px; border-left: 0; background: var(--panel-2); border-radius: 3px; }
+  .lane .gridline { display: none; }
+  .span-bg { top: 3px; } .b, .r.call .b { top: 2px; height: 8px; }
+  .detail { grid-template-columns: 1fr; padding: 12px 16px; }
+  .legend { padding: 8px 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .dot.pulse, .span-bg.running::after { animation: none; } .tw svg { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i></i>Run Inspector</div>
+  <div class="seg" role="group" aria-label="출처">
+    <button aria-pressed="true">전체</button><button aria-pressed="false">Claude Code</button><button aria-pressed="false">Codex</button>
+  </div>
+  <div class="spacer"></div>
+  <span class="live"><span class="dot pulse"></span><span>실시간 · 127.0.0.1</span></span>
+  <button class="icon-btn" id="redactBtn" aria-pressed="false" title="본문 가리기">가리기</button>
+  <button class="icon-btn" id="themeBtn" title="밝게/어둡게">◐</button>
+</header>
+<div class="app">
+  <aside class="list" id="list"></aside>
+  <main class="main" id="main"></main>
+</div>
+<script>
+(() => {
+const Q = new URLSearchParams(location.search);
+const root = document.documentElement;
+const theme = Q.get('theme');
+if (theme) root.dataset.theme = theme;
+else if (matchMedia('(prefers-color-scheme: dark)').matches) root.classList.add('auto-dark');
+const isNarrow = () => matchMedia('(max-width: 760px)').matches;
+document.body.dataset.view = Q.get('view') || (Q.get('s') || Q.get('open') || Q.get('sel') ? 'run' : 'list');
+
+// ---------- 가짜 데이터 ----------
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const NOW = 1083; // 세션 시작 후 초
+const sessions = [
+  { id: 'ses-1', src: 'cc', title: '결제 모듈 환불 흐름 정리', project: 'acme-shop', start: '오늘 14:02', dur: NOW, status: 'running', agents: 6, tokens: 0, models: ['opus', 'sonnet'] },
+  { id: 'ses-2', src: 'cx', title: '주문 내보내기 CSV 버그', project: 'acme-shop', start: '오늘 13:20', dur: 1742, status: 'error', agents: 2, tokens: 812000 },
+  { id: 'ses-3', src: 'cc', title: '디자인 토큰 이전', project: 'acme-design', start: '오늘 10:41', dur: 2290, status: 'ok', agents: 3, tokens: 2140000 },
+  { id: 'ses-4', src: 'cx', title: '(제목 없음)', project: 'infra-scripts', start: '어제 18:12', dur: 402, status: 'ok', agents: 1, tokens: 96000 },
+  { id: 'ses-5', src: 'cc', title: '로그인 화면 접근성 점검', project: 'acme-web', start: '어제 16:03', dur: 3011, status: 'ok', agents: 4, tokens: 3480000 },
+  { id: 'ses-6', src: 'cc', title: '주간 보고서 초안', project: 'notes', start: '11월 10일', dur: 640, status: 'ok', agents: 1, tokens: 120000 },
+];
+// 에이전트 트리
+const agents = [
+  { id: 'main', parent: null, name: '오케스트레이터', type: 'main', model: 'claude-opus', start: 0, end: null, status: 'running' },
+  { id: 'plan', parent: 'main', name: 'planner', type: 'product-planner', model: 'claude-opus', start: 40, end: 310, status: 'ok' },
+  { id: 'api', parent: 'main', name: 'dev-refund-api', type: 'developer', model: 'claude-sonnet', start: 330, end: null, status: 'running' },
+  { id: 'fetch', parent: 'api', name: 'web-fetch', type: 'web-fetch', model: 'claude-haiku', start: 520, end: 604, status: 'ok' },
+  { id: 'web', parent: 'main', name: 'dev-refund-web', type: 'developer', model: 'claude-sonnet', start: 345, end: 905, status: 'error' },
+  { id: 'rev', parent: 'main', name: 'reviewer', type: 'code-reviewer', model: 'claude-opus', start: 920, end: null, status: 'running' },
+];
+const TOOLS = ['Bash', 'Read', 'Edit', 'Grep', 'Write', 'Bash', 'Read'];
+const calls = [];
+for (const a of agents) {
+  let t = a.start + 2; const end = a.end ?? NOW; let i = 0;
+  while (t < end - 4) {
+    const ld = 3 + rnd() * (a.type === 'main' ? 14 : 9);
+    const llm = { id: `${a.id}-l${i}`, agent: a.id, kind: 'llm', name: a.model, start: t, end: Math.min(t + ld, end), tin: Math.round(800 + rnd() * 6000), tout: Math.round(80 + rnd() * 1400), cr: Math.round(20000 + rnd() * 60000) };
+    calls.push(llm); t = llm.end + 0.4;
+    if (t >= end - 2) break;
+    const n = rnd() < 0.3 ? 2 : 1;
+    for (let k = 0; k < n && t < end - 2; k++) {
+      const name = TOOLS[Math.floor(rnd() * TOOLS.length)];
+      const td = name === 'Bash' ? 2 + rnd() * 20 : 0.3 + rnd() * 2;
+      calls.push({ id: `${a.id}-t${i}${k}`, agent: a.id, kind: 'tool', name, start: t, end: Math.min(t + td, end) }); t += td + 0.3;
+    }
+    t += 1 + rnd() * (a.type === 'main' ? 40 : 6); i++;
+  }
+}
+// 하위 에이전트를 띄우는 Agent 호출 (트리에서는 이 자리에 하위 에이전트 줄이 들어감)
+for (const ch of agents.filter(x => x.parent)) {
+  calls.push({ id: `${ch.parent}-spawn-${ch.id}`, agent: ch.parent, kind: 'tool', name: 'Agent', start: ch.start - 1.5, end: ch.start, spawn: ch.id });
+}
+// 오류 하나, 진행 중 호출 하나
+const errCall = calls.filter(c => c.agent === 'web' && c.kind === 'tool').pop();
+errCall.name = 'Bash'; errCall.err = true; errCall.errMsg = 'Exit code 1 · npm test — 3 failed, 41 passed';
+const webAgentLast = calls.filter(c => c.agent === 'web'); webAgentLast.forEach(c => { if (c.start > errCall.start) c.dropped = true; });
+for (let i = calls.length - 1; i >= 0; i--) if (calls[i].dropped) calls.splice(i, 1);
+const runCall = calls.filter(c => c.agent === 'api').pop(); runCall.running = true; runCall.end = NOW;
+calls.sort((x, y) => x.start - y.start);
+
+// ---------- 도우미 ----------
+const fmtTok = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(n);
+const fmtDur = s => s < 1 ? Math.round(s * 1000) + 'ms' : s < 60 ? s.toFixed(1) + 's' : Math.floor(s / 60) + 'm ' + String(Math.round(s % 60)).padStart(2, '0') + 's';
+const PRICE = { 'claude-opus': [15, 75, 1.5], 'claude-sonnet': [3, 15, 0.3], 'claude-haiku': [1, 5, 0.1] }; // 시안용 가짜 단가
+const costOf = c => c.kind !== 'llm' ? 0 : (c.tin * PRICE[c.name][0] + c.tout * PRICE[c.name][1] + c.cr * PRICE[c.name][2]) / 1e6;
+const fmtUsd = v => '$' + (v < 1 ? v.toFixed(4) : v.toFixed(2));
+const kids = id => agents.filter(a => a.parent === id);
+const desc = id => [id, ...kids(id).flatMap(k => desc(k.id))];
+const pct = s => (s / NOW * 100) + '%';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let state = {
+  s: Q.get('s') || 'ses-1',
+  sel: Q.get('sel') || null,
+  open: Q.get('open') || null,
+  exp: new Set((Q.get('exp') || 'main,api').split(',').filter(Boolean)),
+  redact: Q.get('redact') === '1',
+  empty: Q.get('state') === 'empty',
+  withSub: true,
+};
+// 시안 바로가기: ?open=err | run | llm
+if (state.open === 'err') state.open = errCall.id;
+if (state.open === 'run') state.open = runCall.id;
+if (state.open === 'llm') state.open = calls.find(c => c.agent === 'web' && c.kind === 'llm').id;
+if (state.open) { const c = calls.find(x => x.id === state.open); if (c) { state.exp.add('c:' + c.agent); let a = agents.find(x => x.id === c.agent); while (a) { state.exp.add(a.id); a = agents.find(x => x.id === a.parent); } } }
+const syncUrl = () => {
+  const p = new URLSearchParams();
+  if (theme) p.set('theme', theme);
+  if (state.empty) p.set('state', 'empty');
+  p.set('s', state.s); if (state.sel) p.set('sel', state.sel); if (state.open) p.set('open', state.open);
+  p.set('exp', [...state.exp].join(',')); if (state.redact) p.set('redact', '1');
+  p.set('view', document.body.dataset.view);
+  history.replaceState(null, '', '?' + p);
+};
+
+function totals(scopeIds) {
+  const cs = calls.filter(c => scopeIds.includes(c.agent));
+  const llm = cs.filter(c => c.kind === 'llm');
+  const tin = llm.reduce((s, c) => s + c.tin, 0), tout = llm.reduce((s, c) => s + c.tout, 0), cr = llm.reduce((s, c) => s + c.cr, 0);
+  const usd = llm.reduce((s, c) => s + costOf(c), 0);
+  const ags = agents.filter(a => scopeIds.includes(a.id));
+  const st = Math.min(...ags.map(a => a.start)), en = Math.max(...ags.map(a => a.end ?? NOW));
+  return { tin, tout, cr, usd, n: cs.length, nl: llm.length, nt: cs.length - llm.length, err: cs.filter(c => c.err).length, dur: en - st };
+}
+sessions[0].tokens = (() => { const t = totals(agents.map(a => a.id)); return t.tin + t.tout + t.cr; })();
+
+// ---------- 그리기: 목록 ----------
+function renderList() {
+  const el = document.getElementById('list');
+  if (state.empty) { el.innerHTML = `<div class="list-head"><input class="search" placeholder="제목 · 프로젝트 검색" disabled></div><div class="group-label">세션 없음</div>`; return; }
+  const item = s => `<button class="sess" data-s="${s.id}" aria-current="${s.id === state.s}">
+      <div class="t"><span class="badge ${s.src}">${s.src === 'cc' ? 'CC' : 'CX'}</span><span class="name">${state.redact ? '(숨김)' : esc(s.title)}</span>
+        ${s.status === 'running' ? '<span class="dot pulse" title="진행 중"></span>' : ''}</div>
+      <div class="m"><span>${state.redact ? '••••' : esc(s.project)}</span><span>${s.start}</span><span class="num">${fmtDur(s.dur)}</span>
+        <span>에이전트 ${s.agents}</span><span class="num">${fmtTok(s.tokens)} tok</span>
+        ${s.status === 'error' ? '<span class="st-err">▲ 오류</span>' : ''}${s.status === 'running' ? '<span class="st-run">진행 중</span>' : ''}</div>
+    </button>`;
+  el.innerHTML = `<div class="list-head"><input class="search" placeholder="제목 · 프로젝트 검색">
+      <div class="row-flex"><button class="chip" aria-pressed="true">오늘</button><button class="chip" aria-pressed="false">7일</button><button class="chip" aria-pressed="false">30일</button></div></div>
+    <div class="group-label">진행 중</div>${sessions.filter(s => s.status === 'running').map(item).join('')}
+    <div class="group-label">최근</div>${sessions.filter(s => s.status !== 'running').map(item).join('')}`;
+}
+
+// ---------- 그리기: 실행 화면 ----------
+function rulerHtml() {
+  const ticks = []; for (let s = 0; s <= NOW; s += 120) ticks.push(s);
+  return ticks.map(s => `<span style="left:${pct(s)}">${Math.floor(s / 60)}m</span>`).join('');
+}
+function gridlines() { let h = ''; for (let s = 120; s < NOW; s += 120) h += `<div class="gridline" style="left:${pct(s)}"></div>`; return h; }
+function bar(c) {
+  const cls = c.err ? 'err' : c.running ? (c.kind === 'llm' ? 'llm run' : 'tool') : c.kind;
+  return `<div class="b ${cls}" style="left:${pct(c.start)};width:max(2px, ${pct(c.end - c.start)})" title="${esc(c.name)} · ${fmtDur(c.end - c.start)}"></div>`;
+}
+function agentRow(a, depth) {
+  const cs = calls.filter(c => c.agent === a.id);
+  const t = totals([a.id]);
+  const hasKids = cs.length > 0;
+  const ex = state.exp.has(a.id);
+  const running = a.end == null;
+  let h = `<div class="r agent ${state.sel === a.id ? 'sel' : ''}" data-agent="${a.id}">
+    <div class="c nmc"><div class="nm" style="padding-left:${depth * 16}px">
+      <button class="tw" data-tw="${a.id}" aria-expanded="${ex}" aria-label="펼치기" ${hasKids ? '' : 'disabled'}><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg></button>
+      <span class="label"><span class="agent-name">${esc(a.name)}</span> <span class="atype">${a.type === 'main' ? '' : esc(a.type)}</span></span>
+      <span class="model">${esc(a.model.replace('claude-', ''))}</span>
+      ${running ? '<span class="dot pulse" title="진행 중"></span>' : a.status === 'error' ? '<span class="k-err" title="오류">▲</span>' : ''}
+    </div></div>
+    <div class="lanec"><div class="lane">${gridlines()}<div class="span-bg ${running ? 'running' : ''}" style="left:${pct(a.start)};width:${pct((a.end ?? NOW) - a.start)}"></div>${cs.map(bar).join('')}${running ? `<div class="now" style="left:${pct(NOW)}"></div>` : ''}</div></div>
+    <div class="c right num tk">${fmtTok(t.tin + t.tout + t.cr)}</div><div class="c right num co">${fmtUsd(t.usd)}</div><div class="c right num du">${fmtDur(t.dur)}</div>
+  </div>`;
+  if (ex) {
+    // 하위 에이전트 먼저(트리 구조가 한눈에), 그 다음 이 에이전트 자신의 호출은 접힌 묶음
+    for (const c of cs) if (c.spawn) h += agentRow(agents.find(x => x.id === c.spawn), depth + 1);
+    const own = cs.filter(c => !c.spawn);
+    const cex = state.exp.has('c:' + a.id);
+    h += `<div class="r grp" data-tw-row="c:${a.id}"><div class="c nmc"><div class="nm" style="padding-left:${(depth + 1) * 16}px">
+        <button class="tw" data-tw="c:${a.id}" aria-expanded="${cex}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg></button>
+        <span class="label grp-l">${esc(a.name)} 호출 ${own.length}개 <span class="atype">LLM ${own.filter(c => c.kind === 'llm').length} · 도구 ${own.filter(c => c.kind === 'tool').length}${own.some(c => c.err) ? ' · <span class="k-err">오류 ' + own.filter(c => c.err).length + '</span>' : ''}</span></span></div></div>
+        <div class="lanec"></div><div class="c tk"></div><div class="c co"></div><div class="c du"></div></div>`;
+    if (cex) for (const c of own) {
+      h += callRow(c, depth + 1);
+      if (state.open === c.id) h += detail(c);
+    }
+  }
+  return h;
+}
+function callRow(c, depth) {
+  const sym = c.err ? '<span class="kind k-err">▲</span>' : c.kind === 'llm' ? '<span class="kind k-llm">◆</span>' : '<span class="kind k-tool">▪</span>';
+  const tok = c.kind === 'llm' ? fmtTok(c.tin + c.tout + c.cr) : '—';
+  return `<div class="r call ${state.open === c.id ? 'sel' : ''}" data-call="${c.id}" role="button" tabindex="0" aria-expanded="${state.open === c.id}">
+    <div class="c nmc"><div class="nm" style="padding-left:${depth * 16 + 22}px">${sym}<span class="label">${esc(c.kind === 'llm' ? c.name.replace('claude-', '') : c.name)}</span>
+      ${c.running ? '<span class="st-run" style="font-size:11px">실행 중</span>' : ''}${c.err ? '<span class="status-err" style="font-size:11px">실패</span>' : ''}</div></div>
+    <div class="lanec"><div class="lane">${gridlines()}${bar(c)}</div></div>
+    <div class="c right num tk">${tok}</div><div class="c right num co">${c.kind === 'llm' ? fmtUsd(costOf(c)) : '—'}</div><div class="c right num du">${c.running ? '…' : fmtDur(c.end - c.start)}</div>
+  </div>`;
+}
+function detail(c) {
+  const a = agents.find(x => x.id === c.agent);
+  const clock = s => { const d = new Date(2026, 10, 13, 14, 2, 0); d.setSeconds(d.getSeconds() + s); return d.toTimeString().slice(0, 8); };
+  const red = n => `<pre class="redacted">(${n.toLocaleString()}자 숨김)</pre>`;
+  const inp = c.kind === 'llm'
+    ? (state.redact ? red(5120) : `<pre>system + 34개 메시지 (마지막: tool_result · Bash)\n도구 정의 18개 · 캐시 적중 ${fmtTok(c.cr)}</pre>`)
+    : (state.redact ? `<pre class="redacted">{ command, description, timeout } — 값 숨김</pre>` : `<pre>{\n  "command": "npm test -- refund",\n  "description": "환불 테스트 실행",\n  "timeout": 120000\n}</pre>`);
+  const out = c.kind === 'llm'
+    ? (state.redact ? red(860) : `<pre>thinking 1블록 · text 1블록 · tool_use 1블록 (Bash)\nstop_reason: tool_use</pre>`)
+    : (state.redact ? red(2310) : `<pre>${c.err ? 'FAIL  src/refund/refund.test.ts\n  ✕ 부분 환불 금액이 원 주문을 넘지 않는다 (12 ms)\n  ✕ 취소된 주문은 환불하지 않는다 (4 ms)\n…\nTests: 3 failed, 41 passed, 44 total' : 'PASS  src/refund/policy.test.ts\nTests: 12 passed, 12 total'}</pre>`);
+  return `<div class="detail" data-detail="${c.id}">
+    <dl>
+      <dt>종류</dt><dd>${c.kind === 'llm' ? 'LLM 호출' : '도구 호출'}</dd>
+      <dt>이름</dt><dd class="num">${esc(c.name)}</dd>
+      <dt>에이전트</dt><dd>${esc(a.name)}</dd>
+      <dt>상태</dt><dd>${c.err ? '<span class="status-err">오류</span>' : c.running ? '<span class="st-run">실행 중</span>' : '정상'}</dd>
+      <dt>시작</dt><dd class="num">${clock(c.start)}</dd>
+      <dt>끝</dt><dd class="num">${c.running ? '—' : clock(c.end)}</dd>
+      <dt>걸린 시간</dt><dd class="num">${c.running ? fmtDur(NOW - c.start) + ' 지남' : fmtDur(c.end - c.start)}</dd>
+      ${c.kind === 'llm' ? `<dt>입력</dt><dd class="num">${c.tin.toLocaleString()}</dd><dt>출력</dt><dd class="num">${c.tout.toLocaleString()}</dd>
+        <dt>캐시 읽기</dt><dd class="num">${c.cr.toLocaleString()}</dd><dt>비용</dt><dd class="num">${fmtUsd(costOf(c))}<span class="basis">단가표 2026-11</span></dd>` : `<dt>토큰</dt><dd>— (도구 호출)</dd>`}
+    </dl>
+    <div class="pv">
+      ${c.err ? `<div class="errbox"><b>오류</b> · ${esc(c.errMsg)}</div>` : ''}
+      <h4><span>입력 미리보기</span><span>${state.redact ? '가림' : '최대 2KB'}</span></h4>${inp}
+      <h4><span>출력 미리보기</span></h4>${out}
+      <div class="ref">원본: ${state.redact ? 'subagents/agent-••••.jsonl' : 'subagents/agent-a7f3….jsonl'} : 줄 ${412 + c.id.length * 7} <button class="copy">위치 복사</button></div>
+    </div>
+  </div>`;
+}
+function renderMain() {
+  const el = document.getElementById('main');
+  if (state.empty) {
+    el.innerHTML = `<div class="empty"><h2>실행 기록을 찾지 못했어요</h2>
+      <p>아래 폴더를 찾아봤지만 세션 파일이 없었어요. Claude Code 나 Codex 로 한 번 작업한 뒤 다시 열거나, 기록 폴더를 직접 알려 주세요.</p>
+      <ul><li><span>$CLAUDE_CONFIG_DIR/projects</span><span style="color:var(--faint)">설정 안 됨</span></li>
+        <li><span>~/.claude/projects</span><span style="color:var(--faint)">없음</span></li>
+        <li><span>~/.codex/sessions</span><span style="color:var(--faint)">없음</span></li></ul>
+      <code>npx agent-run-inspector --root ~/my-claude-profile/projects</code></div>`;
+    return;
+  }
+  const s = sessions.find(x => x.id === state.s) || sessions[0];
+  const scopeIds = state.sel ? (state.withSub ? desc(state.sel) : [state.sel]) : agents.map(a => a.id);
+  const t = totals(scopeIds);
+  const selA = state.sel && agents.find(a => a.id === state.sel);
+  el.innerHTML = `<div class="run-head">
+      <button class="back" id="backBtn">← 세션 목록</button>
+      <div class="run-title"><span class="badge cc">CC</span>${state.redact ? '(숨김)' : esc(s.title)}<span class="dot pulse" title="진행 중"></span></div>
+      <div class="run-meta"><span>${state.redact ? '••••' : esc(s.project)}</span><span>${s.start} 시작</span><span>모델 opus · sonnet · haiku</span><span>에이전트 ${agents.length}</span></div>
+      <div class="totals">
+        <div class="scope"><div><div class="lbl">합계 범위</div><div class="v">${selA ? esc(selA.name) : '실행 전체'}</div></div>
+          ${selA ? `<div style="display:flex;gap:8px;align-items:center"><label style="font-size:11px;color:var(--muted)"><input type="checkbox" id="withSub" ${state.withSub ? 'checked' : ''}> 하위 포함</label><button class="clear" id="clearSel">전체로</button></div>` : ''}</div>
+        <div class="stat"><div class="lbl">입력</div><div class="v">${fmtTok(t.tin)}</div><div class="sub">캐시 읽기 ${fmtTok(t.cr)}</div></div>
+        <div class="stat"><div class="lbl">출력</div><div class="v">${fmtTok(t.tout)}</div><div class="sub">추론 포함</div></div>
+        <div class="stat"><div class="lbl">비용</div><div class="v">${fmtUsd(t.usd)}</div><div class="sub">${selA ? '단가표 2026-11' : '보고값 + 단가표'}</div></div>
+        <div class="stat"><div class="lbl">시간</div><div class="v">${fmtDur(t.dur)}</div><div class="sub">${selA && selA.end == null ? '진행 중' : selA ? '끝남' : '진행 중'}</div></div>
+        <div class="stat"><div class="lbl">호출</div><div class="v">${t.n}</div><div class="sub">LLM ${t.nl} · 도구 ${t.nt}</div></div>
+        <div class="stat ${t.err ? 'err' : ''}"><div class="lbl">오류</div><div class="v">${t.err}</div><div class="sub">${t.err ? '도구 1' : '없음'}</div></div>
+      </div>
+    </div>
+    <div class="legend"><span><i style="background:var(--llm)"></i>LLM</span><span><i style="background:var(--tool-soft);box-shadow:inset 0 0 0 1px var(--tool)"></i>도구</span><span><i style="background:var(--err)"></i>오류</span><span><i style="background:var(--line)"></i>에이전트 수명</span><span style="margin-left:auto">이름을 누르면 합계 범위 · 호출을 누르면 상세</span></div>
+    <div class="grid">
+      <div class="ghead"><div>에이전트 · 호출</div><div class="ruler">${rulerHtml()}</div><div style="text-align:right">토큰</div><div style="text-align:right">비용</div><div style="text-align:right">시간</div></div>
+      ${agentRow(agents[0], 0)}
+    </div>
+    <button class="newcalls">새 호출 3개 ↓</button>`;
+}
+function render() { renderList(); renderMain(); syncUrl(); }
+
+// ---------- 이벤트 ----------
+document.addEventListener('click', e => {
+  const tw = e.target.closest('[data-tw]');
+  if (tw) { const id = tw.dataset.tw; state.exp.has(id) ? state.exp.delete(id) : state.exp.add(id); render(); return; }
+  const call = e.target.closest('[data-call]');
+  if (call) { state.open = state.open === call.dataset.call ? null : call.dataset.call; render(); return; }
+  const ag = e.target.closest('[data-agent]');
+  if (ag && !e.target.closest('.tw')) { state.sel = state.sel === ag.dataset.agent ? null : ag.dataset.agent; render(); return; }
+  const sess = e.target.closest('[data-s]');
+  if (sess) { state.s = sess.dataset.s; document.body.dataset.view = 'run'; render(); return; }
+  if (e.target.id === 'clearSel') { state.sel = null; render(); return; }
+  if (e.target.id === 'backBtn') { document.body.dataset.view = 'list'; render(); return; }
+  if (e.target.id === 'withSub') { state.withSub = e.target.checked; render(); return; }
+  if (e.target.id === 'redactBtn') { state.redact = !state.redact; e.target.setAttribute('aria-pressed', state.redact); render(); return; }
+  if (e.target.id === 'themeBtn') { const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && root.classList.contains('auto-dark')); root.classList.remove('auto-dark'); root.dataset.theme = dark ? 'light' : 'dark'; return; }
+});
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-call]')) { e.preventDefault(); e.target.click(); } });
+document.getElementById('redactBtn').setAttribute('aria-pressed', state.redact);
+render();
+})();
+</script>
+</body>
+</html>
