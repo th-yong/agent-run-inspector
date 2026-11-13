@@ -11,6 +11,23 @@ export function openEnd(span, now) {
   return Math.max(span.start, quiet ? span.lastActivity : now);
 }
 
+/**
+ * Agents with no end that can no longer be running get one: when the session has stopped, or the agent itself is not
+ * running, they end at their own last activity (else the session end). Keeps the orange "now" line off a finished run.
+ * Returns a new list; spans that need no change are the same objects.
+ */
+export function settleAgents(spans) {
+  const list = spans ?? [];
+  const sess = list.find((s) => s.kind === 'session');
+  const stopped = sess != null && sess.status !== 'running';
+  return list.map((s) => {
+    if (s.kind !== 'agent' || known(s.end)) return s;
+    if (!stopped && s.status === 'running') return s;
+    const end = known(s.lastActivity) ? s.lastActivity : known(sess?.end) ? sess.end : s.start;
+    return { ...s, end: Math.max(s.start ?? 0, end) };
+  });
+}
+
 /** Time window of the run: earliest start to latest end; running spans reach `now`. */
 export function domainOf(spans, now) {
   let t0 = Infinity;

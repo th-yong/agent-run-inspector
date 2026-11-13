@@ -92,3 +92,35 @@ test('a running span in a quiet log stops at its last activity', () => {
   const live = call('c', 'a', 'tool', 1000, null, { lastActivity: 9000 });
   assert.equal(domainOf([live], 10_000).t1, 10_000);
 });
+
+test('settleAgents closes an agent with no end once its session has stopped', async () => {
+  const { settleAgents } = await import('../web/timeline-scale.js');
+  const sess = { id: 's', kind: 'session', status: 'ok', start: 0, end: 9000, lastActivity: 9000 };
+  const main = { id: 'm', parentId: 's', kind: 'agent', status: 'running', start: 1000, end: null, lastActivity: 9000 };
+  const sub = { id: 'w', parentId: 'm', kind: 'agent', status: 'unknown', start: 2000, end: null, lastActivity: 4000 };
+  const out = settleAgents([sess, main, sub]);
+  assert.equal(out.find((s) => s.id === 'm').end, 9000);
+  assert.equal(out.find((s) => s.id === 'w').end, 4000);
+  assert.equal(main.end, null, 'input is not changed');
+});
+
+test('settleAgents leaves running sessions, finished agents and calls alone', async () => {
+  const { settleAgents } = await import('../web/timeline-scale.js');
+  const live = { id: 's', kind: 'session', status: 'running', start: 0, end: null };
+  const run = { id: 'm', kind: 'agent', status: 'running', start: 1, end: null, lastActivity: 5 };
+  const idle = { id: 'w', kind: 'agent', status: 'unknown', start: 1, end: null, lastActivity: 5 };
+  const done = { id: 'd', kind: 'agent', status: 'ok', start: 1, end: 3 };
+  const c = { id: 'c', kind: 'llm', status: 'running', start: 1, end: null };
+  const spans = [live, run, idle, done, c];
+  const out = settleAgents(spans);
+  assert.equal(out.find((s) => s.id === 'm').end, null);
+  assert.equal(out.find((s) => s.id === 'w').end, 5, 'a non-running agent never keeps an open end');
+  assert.equal(out.find((s) => s.id === 'd').end, 3);
+  assert.equal(out.find((s) => s.id === 'c').end, null);
+});
+
+test('settleAgents never ends before the start', async () => {
+  const { settleAgents } = await import('../web/timeline-scale.js');
+  const out = settleAgents([{ id: 'w', kind: 'agent', status: 'unknown', start: 50, end: null }]);
+  assert.equal(out[0].end, 50);
+});
