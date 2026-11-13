@@ -1,4 +1,5 @@
 // Pure helpers for the timeline tab: time -> position, ruler ticks, row order. No DOM.
+import { summarizeCalls, foldCalls } from './timeline-group.js';
 const known = (n) => typeof n === 'number' && Number.isFinite(n);
 const STEPS = [100, 200, 500, 1000, 2000, 5000, 10_000, 15_000, 30_000, 60_000, 120_000, 300_000, 600_000, 900_000, 1_800_000, 3_600_000, 7_200_000, 14_400_000, 21_600_000, 43_200_000, 86_400_000];
 
@@ -81,8 +82,9 @@ export function callsByAgent(spans) {
 }
 
 /**
- * Rows in display order: an agent, and when it is expanded its sub-agents first, then its own calls.
- * `expanded` holds agent ids. Rows: { type: 'agent' | 'call', span, depth }.
+ * Rows in display order: an agent, and when it is expanded its sub-agents first, then one "Calls N" group row.
+ * `expanded` holds agent ids, `calls:<agentId>` for an open group and `run:<firstCallId>` for an open folded run.
+ * Rows: { type: 'agent' | 'group' | 'run' | 'call', span (agent for 'group'), depth, key, ... }.
  */
 export function timelineRows(spans, expanded) {
   const agents = (spans ?? []).filter((s) => s.kind === 'agent');
@@ -101,10 +103,21 @@ export function timelineRows(spans, expanded) {
   const walk = (a, depth) => {
     if (seen.has(a.id)) return;
     seen.add(a.id);
-    rows.push({ type: 'agent', span: a, depth });
+    rows.push({ type: 'agent', span: a, depth, key: a.id });
     if (!expanded.has(a.id)) return;
     for (const k of (kids.get(a.id) ?? []).sort(byStart)) walk(k, depth + 1);
-    for (const c of calls.get(a.id) ?? []) rows.push({ type: 'call', span: c, depth: depth + 1 });
+    const own = calls.get(a.id) ?? [];
+    if (!own.length) return;
+    const key = `calls:${a.id}`;
+    rows.push({ type: 'group', span: a, depth: depth + 1, key, calls: own, summary: summarizeCalls(own) });
+    if (!expanded.has(key)) return;
+    for (const it of foldCalls(own)) {
+      if (it.type === 'call') rows.push({ type: 'call', span: it.span, depth: depth + 2, key: it.span.id });
+      else {
+        rows.push({ type: 'run', span: it.spans[0], depth: depth + 2, key: it.key, run: it });
+        if (expanded.has(it.key)) for (const c of it.spans) rows.push({ type: 'call', span: c, depth: depth + 3, key: c.id });
+      }
+    }
   };
   for (const r of roots.sort(byStart)) walk(r, 0);
   // A parent loop leaves no root: show those agents at the top level.
