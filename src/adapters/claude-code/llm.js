@@ -83,6 +83,16 @@ export class LlmCollector {
     g.seq = this.ctx.nextSeq();
   }
 
+  /** Model of the newest real (non-synthetic) response, if any. */
+  lastModel() {
+    let model;
+    for (const g of this.groups.values()) {
+      const m = g.msg?.model;
+      if (typeof m === 'string' && m !== SYNTHETIC_MODEL) model = m;
+    }
+    return model;
+  }
+
   /** @returns {import('../../model/types.js').RunSpan[]} */
   spans() {
     const out = [];
