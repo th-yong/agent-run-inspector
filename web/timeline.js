@@ -4,7 +4,8 @@ import { S } from './strings.js';
 import { fmtDuration, fmtTokens, fmtUsd } from './format.js';
 import { providerSlugs, iconEl } from './session-list.js';
 import { hasIcon } from './icons.js';
-import { openEnd, domainOf, ticksFor, boxOf, timelineRows, callsByAgent } from './timeline-scale.js';
+import { openEnd, domainOf, ticksFor, boxOf, timelineRows, callsByAgent, settleAgents } from './timeline-scale.js';
+import { createCallDetail } from './call-detail.js';
 
 const known = (n) => typeof n === 'number' && Number.isFinite(n);
 const GLYPH = { llm: '◆', tool: '▪', error: '▲' };
@@ -123,16 +124,18 @@ function overlay(domain, ticks, markers, turns) {
 
 /**
  * createTimeline({ onSelect(agentId | null) }) -> { el, update(props), destroy() }
- * props: { spans, totals, markers, turns, sel, status, now? }. Open agents / groups are remembered per view.
+ * props: { spans, totals, markers, turns, sel, status, openId, sessionId, now? }. A call row opens its detail right below it (onOpen(id | null)). Open agents / groups are remembered per view.
  * Rows are kept by key: a row whose inputs did not change keeps its DOM node, so a refresh only touches what moved.
  */
-export function createTimeline({ onSelect } = {}) {
+export function createTimeline({ onSelect, onOpen, loadDetail } = {}) {
   const root = el('div', 'timeline');
   const expanded = new Set();
   const cache = new Map(); // row key -> { node, sig }
   let seeded = false;
   let last = null;
   let timer = 0;
+  let detail = null; // { id, node, cd } the one open call detail, kept across refreshes
+  let revealed = null; // the openId whose rows were already made visible
   let parts = null; // { legend, grid, head, headSig, overlay, overlaySig }
   const stats = { built: 0, reused: 0 };
 
@@ -265,8 +268,10 @@ export function createTimeline({ onSelect } = {}) {
   function callRow(row, ctx) {
     const c = row.span;
     const err = c.status === 'error';
-    const r = el('div', `r call${err ? ' is-err' : ''}`);
+    const isOpen = ctx.openId === c.id;
+    const r = el('div', `r call${err ? ' is-err' : ''}${isOpen ? ' open' : ''}`);
     r.dataset.call = c.id;
+    r.addEventListener('click', () => onOpen?.(last?.openId === c.id ? null : c.id));
     const nmc = el('div', 'c nmc');
     const nm = el('div', 'nm');
     nm.style.paddingLeft = `${row.depth * 16 + 22}px`;
@@ -275,7 +280,11 @@ export function createTimeline({ onSelect } = {}) {
     nm.append(g);
     const ic = callIcon(c);
     if (ic) nm.append(ic);
-    nm.append(el('span', 'label', c.kind === 'llm' ? modelLabel(c.model) || c.name : c.name));
+    const pick = el('button', 'label callpick', c.kind === 'llm' ? modelLabel(c.model) || c.name : c.name);
+    pick.type = 'button';
+    pick.setAttribute('aria-expanded', String(isOpen));
+    pick.title = isOpen ? S.timeline.closeCall : S.timeline.openCall;
+    nm.append(pick);
     if (c.end == null) nm.append(el('span', 'st-run small', S.timeline.running));
     if (err) nm.append(el('span', 'status-err small', S.timeline.failed));
     nmc.append(nm);
@@ -295,10 +304,36 @@ export function createTimeline({ onSelect } = {}) {
     run: (row, ctx) => fp(row.depth, expanded.has(row.key), row.run.count, row.run.start, row.run.end),
     call: (row, ctx) => {
       const c = row.span;
-      return fp(row.depth, c.name, c.model, c.kind, c.status, c.start, c.end, c.lastActivity, c.tokens?.input, c.tokens?.output, c.cost?.usd);
+      return fp(row.depth, ctx.openId === c.id, c.name, c.model, c.kind, c.status, c.start, c.end, c.lastActivity, c.tokens?.input, c.tokens?.output, c.cost?.usd);
     },
   };
   const build = { agent: agentRow, group: groupRow, run: runRow, call: callRow };
+
+  function makeDetail(id) {
+    const cd = createCallDetail(loadDetail ? { load: loadDetail } : {});
+    const node = el('div', 'r-detail');
+    node.dataset.detail = id;
+    node.append(cd.el);
+    return { id, node, cd };
+  }
+
+  function dropDetail() {
+    if (!detail) return;
+    detail.cd.destroy();
+    detail.node.remove();
+    detail = null;
+  }
+
+  /** A call named in the address may sit in a closed agent, Calls group or folded run: open the way to it. */
+  function reveal(spans, id) {
+    const c = spans.find((x) => x.id === id && (x.kind === 'llm' || x.kind === 'tool'));
+    if (!c) return;
+    const byId = new Map(spans.map((x) => [x.id, x]));
+    for (let a = byId.get(c.parentId), n = 0; a && a.kind === 'agent' && n < 50; a = byId.get(a.parentId), n++) expanded.add(a.id);
+    expanded.add(`calls:${c.parentId}`);
+    const run = timelineRows(spans, expanded).find((r) => r.type === 'run' && r.run.spans.some((x) => x.id === id));
+    if (run) expanded.add(run.key);
+  }
 
   function legend() {
     const l = el('div', 'legend');
@@ -330,8 +365,10 @@ export function createTimeline({ onSelect } = {}) {
 
   function render() {
     if (!last) return;
-    const { spans = [], totals = null, markers = [], turns = [], sel = null, status = 'ready' } = last;
+    const { spans: raw = [], totals = null, markers = [], turns = [], sel = null, status = 'ready' } = last;
     const now = last.now ?? Date.now();
+    const spans = settleAgents(raw);
+    const openId = last.openId ?? null;
     clearInterval(timer);
     const agents = spans.filter((s) => s.kind === 'agent');
     if (!seeded && agents.length) {
@@ -342,6 +379,7 @@ export function createTimeline({ onSelect } = {}) {
     if (!agents.length) {
       parts = null;
       cache.clear();
+      dropDetail();
       root.replaceChildren(el('div', 'placeholder', status === 'ready' ? S.timeline.none : S.timeline.waiting));
       return;
     }
@@ -353,6 +391,7 @@ export function createTimeline({ onSelect } = {}) {
       dsig: `${domain.t0},${domain.t1}`,
       psig: `${domain.t0},${domain.t1},${now}`, // what moves a bar that is still open
       pos: null,
+      openId,
       calls: callsByAgent(spans),
       hasSubAgents: new Set(agents.filter((a) => a.parentId != null).map((a) => a.parentId)),
     };
@@ -370,6 +409,10 @@ export function createTimeline({ onSelect } = {}) {
       p.overlay = o; p.overlaySig = overlaySig;
     }
 
+    if (openId !== revealed) { revealed = openId; if (openId) reveal(spans, openId); }
+    const openSpan = openId ? spans.find((x) => x.id === openId && (x.kind === 'llm' || x.kind === 'tool')) : null;
+
+    let shown = false;
     const seen = new Set();
     let cur = p.overlay.nextSibling;
     for (const row of timelineRows(spans, expanded)) {
@@ -393,7 +436,15 @@ export function createTimeline({ onSelect } = {}) {
       }
       if (ent.node === cur) cur = cur.nextSibling;
       else p.grid.insertBefore(ent.node, cur);
+      if (row.type === 'call' && openSpan && row.span.id === openId) {
+        if (detail?.id !== openId) { dropDetail(); detail = makeDetail(openId); }
+        detail.cd.update({ span: openSpan, sessionId: last.sessionId });
+        shown = true;
+        if (detail.node === cur) cur = cur.nextSibling;
+        else p.grid.insertBefore(detail.node, cur);
+      }
     }
+    if (!shown) dropDetail();
     while (cur) { const next = cur.nextSibling; cur.remove(); cur = next; }
     for (const k of cache.keys()) if (!seen.has(k)) cache.delete(k);
     if (spans.some((s) => s.kind !== 'session' && s.end == null && s.status === 'running')) timer = setInterval(render, 1000);
@@ -402,7 +453,7 @@ export function createTimeline({ onSelect } = {}) {
   return {
     el: root,
     update(props) { last = props; render(); },
-    destroy() { clearInterval(timer); },
+    destroy() { clearInterval(timer); dropDetail(); },
     stats,
   };
 }
