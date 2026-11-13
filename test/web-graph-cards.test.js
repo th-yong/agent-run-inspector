@@ -74,3 +74,27 @@ test('toolLabel: shell command, MCP names, plain names', () => {
   assert.equal(toolLabel(tool('t', 'a', { name: 'mcp__github__create_issue' })), 'github · create_issue');
   assert.equal(toolLabel(tool('t', 'a', { name: 'Bash' })), 'Bash');
 });
+
+test('a just-finished agent in `held` is neither hidden nor folded yet', () => {
+  const spans = [agent('r', null), agent('a', 'r'), agent('b', 'r')];
+  const { agents } = prepareGraph(spans);
+  const held = new Set(['a']);
+  assert.deepEqual([...foldedAgents(agents, new Set(), null, held)], ['b']);
+  assert.deepEqual([...hiddenAgents(agents, true, null, held)], ['b']);
+  assert.deepEqual([...foldedAgents(agents, new Set())].sort(), ['a', 'b']);
+});
+
+test('cardInfo: the root agent is named Orchestrator and keeps its model beside the name', () => {
+  const root = agent('r', null, { name: 'claude-opus-x', model: 'claude-opus-x', role: 'orchestrator', depth: 0 });
+  const info = cardInfo(root, [], 0);
+  assert.equal(info.name, 'Orchestrator');
+  assert.equal(info.model, 'claude-opus-x');
+  const kid = cardInfo(agent('k', 'r', { name: 'helper', role: 'worker' }), [llm('x', 'k')], 0);
+  assert.equal(kid.name, 'helper');
+});
+
+test('callRows: a compact card gets the short model-call label', () => {
+  const rows = callRows([llm('x', 'a')], 3, true);
+  assert.equal(rows[0].label, 'Model');
+  assert.equal(callRows([llm('x', 'a')], 3)[0].label, 'Model response');
+});

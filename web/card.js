@@ -24,9 +24,11 @@ export function cardInfo(agent, calls, now) {
   const model = agent.model ?? real?.model ?? null;
   const priced = llms.filter((c) => known(c.cost?.usd));
   const end = known(agent.end) ? agent.end : agent.status === 'running' ? now : null;
+  // The root agent's own name can be a model id; the card says what it is and keeps the model beside it.
+  const name = agent.role === 'orchestrator' && !agent.external ? S.graph.orchestrator : agent.name;
   return {
-    name: agent.name,
-    model: model && model !== agent.name ? model : null,
+    name,
+    model: model && model !== name ? model : null,
     modelForIcon: model ?? agent.name,
     status: statusKey(agent.status),
     task: agent.task ?? '',
@@ -55,7 +57,7 @@ export function callIcon(call) {
 }
 
 /** The last `shown` calls as display rows. Bars scale to the agent's longest finished call. */
-export function callRows(calls, shown) {
+export function callRows(calls, shown, compact = false) {
   const maxMs = Math.max(1, ...calls.filter((c) => known(c.end)).map((c) => c.end - c.start));
   return calls.slice(Math.max(0, calls.length - shown)).map((c) => {
     const running = !known(c.end) && c.status === 'running';
@@ -63,7 +65,7 @@ export function callRows(calls, shown) {
     return {
       id: c.id,
       kind: c.kind,
-      label: c.kind === 'llm' ? S.graph.modelResponse : toolLabel(c),
+      label: c.kind === 'llm' ? (compact ? S.graph.modelShort : S.graph.modelResponse) : toolLabel(c),
       icon: callIcon(c),
       error: c.status === 'error',
       running,
@@ -151,15 +153,85 @@ export function createCard() {
   body.append(task, calls, foot);
   const mini = el('div', 'g-mini num');
   root.append(head, body, mini);
-  return { root, head, tile, name, model, badge, task, calls, more, cost, count, body, mini, sig: '' };
+  return { root, head, tile, name, model, badge, task, calls, more, cost, count, body, mini, sig: '', iconKey: null, badgeKey: null, rows: new Map(), leaving: new Set() };
+}
+
+export const ROW_OUT_MS = 240;
+
+function makeRow(r) {
+  const row = el('div', 'g-row');
+  const ic = el('span', 'g-ic');
+  const label = el('span', 'g-rn');
+  const bar = el('span', 'g-bar');
+  const fill = el('i');
+  bar.append(fill);
+  const time = el('span', 'g-rt num');
+  row.append(ic, label, bar, time);
+  return { el: row, ic, label, fill, time, iconKey: null };
+}
+
+/** Writes one call row's fields. Only touches what differs, so a flowing bar keeps flowing. */
+function paintRow(row, r) {
+  const cls = `g-row${r.error ? ' err' : ''}${r.kind === 'llm' ? ' llm' : ''}${r.running ? ' running' : ''}`;
+  const keep = [...row.el.classList].filter((k) => k === 'in' || k === 'out');
+  const next = [cls, ...keep].join(' ');
+  if (row.el.className !== next) row.el.className = next;
+  const iconKey = JSON.stringify(r.icon);
+  if (row.iconKey !== iconKey) { row.iconKey = iconKey; row.ic.replaceChildren(iconNode(r.icon)); }
+  if (row.label.textContent !== r.label) { row.label.textContent = r.label; row.label.title = r.label; }
+  const w = `${r.pct}%`;
+  if (row.fill.style.width !== w) row.fill.style.width = w;
+  const t = r.running ? '…' : r.ms == null ? '—' : fmtDuration(r.ms);
+  if (row.time.textContent !== t) row.time.textContent = t;
+}
+
+/** Puts `nodes` into `parent` in order, moving only nodes that are out of place (a moved node would restart its animation). */
+function place(parent, nodes) {
+  let ref = parent.firstChild;
+  for (const n of nodes) {
+    if (n === ref) ref = ref.nextSibling;
+    else parent.insertBefore(n, ref);
+  }
+  while (ref) { const next = ref.nextSibling; ref.remove(); ref = next; }
+}
+
+function syncRows(c, rows, moreCalls, animate) {
+  const want = new Set(rows.map((r) => r.id));
+  for (const [id, row] of c.rows) {
+    if (want.has(id)) continue;
+    c.rows.delete(id);
+    if (!animate) { row.el.remove(); continue; }
+    row.el.classList.remove('in');
+    row.el.classList.add('out');
+    c.leaving.add(row.el);
+    setTimeout(() => { c.leaving.delete(row.el); row.el.remove(); }, ROW_OUT_MS);
+  }
+  const nodes = [];
+  if (moreCalls > 0) {
+    if (!c.more.isConnected && animate) c.more.classList.add('in'); else if (!c.more.isConnected) c.more.classList.remove('in');
+    nodes.push(c.more);
+  }
+  nodes.push(...c.leaving);
+  for (const r of rows) {
+    let row = c.rows.get(r.id);
+    if (!row) {
+      row = makeRow(r);
+      if (animate) row.el.classList.add('in');
+      c.rows.set(r.id, row);
+    }
+    paintRow(row, r);
+    nodes.push(row.el);
+  }
+  place(c.calls, nodes);
 }
 
 /**
- * Fills a card. `d` = { info, rows, moreCalls, showTask, folded, selected, box:{x,y,w,h}, indent? }.
- * Skips DOM work when nothing visible changed, so a running bar is not restarted by an unrelated update.
+ * Fills a card. `d` = { info, rows, moreCalls, showTask, folded, selected, box:{x,y,w,h}, animate }.
+ * Only what changed is written to the DOM, so a running bar keeps flowing and finished rows do not replay.
+ * `animate` false (first paint, reduced motion) drops rows at once instead of folding them away.
  */
 export function updateCard(c, d) {
-  const { info, rows, moreCalls, showTask, folded, selected, box } = d;
+  const { info, rows, moreCalls, showTask, folded, selected, box, animate = false } = d;
   const root = c.root;
   root.style.left = `${box.x}px`;
   root.style.top = `${box.y}px`;
@@ -180,32 +252,21 @@ export function updateCard(c, d) {
   if (sig === c.sig) return;
   c.sig = sig;
 
-  c.tile.replaceChildren(providerTile(info.modelForIcon));
+  if (c.iconKey !== info.modelForIcon) { c.iconKey = info.modelForIcon; c.tile.replaceChildren(providerTile(info.modelForIcon)); }
   c.name.textContent = info.name;
   c.name.title = info.name;
   c.model.textContent = info.model ?? '';
   c.model.hidden = !info.model;
-  c.badge.className = `g-badge ${info.status}`;
-  c.badge.replaceChildren(...(info.status === 'running' ? [el('i', 'spin'), S.status.running] : [BADGE[info.status]]));
+  if (c.badgeKey !== info.status) {
+    c.badgeKey = info.status;
+    c.badge.className = `g-badge ${info.status}`;
+    c.badge.replaceChildren(...(info.status === 'running' ? [el('i', 'spin'), S.status.running] : [BADGE[info.status]]));
+  }
 
   c.task.textContent = info.watcher && !info.task ? S.graph.watcher : info.task;
   c.task.hidden = !showTask || (!info.task && !info.watcher);
 
-  const rowEls = rows.map((r) => {
-    const row = el('div', `g-row${r.error ? ' err' : ''}${r.kind === 'llm' ? ' llm' : ''}${r.running ? ' running' : ''}`);
-    const ic = el('span', 'g-ic');
-    ic.append(iconNode(r.icon));
-    const label = el('span', 'g-rn', r.label);
-    label.title = r.label;
-    const bar = el('span', 'g-bar');
-    const fill = el('i');
-    fill.style.width = `${r.pct}%`;
-    bar.append(fill);
-    row.append(ic, label, bar, el('span', 'g-rt num', r.running ? '…' : r.ms == null ? '—' : fmtDuration(r.ms)));
-    return row;
-  });
-  c.more.textContent = moreCalls > 0 ? S.graph.earlier(moreCalls) : '';
-  c.calls.replaceChildren(...(moreCalls > 0 ? [c.more] : []), ...rowEls);
+  if (!folded) syncRows(c, rows, moreCalls, animate); // a folded card keeps its rows hidden under the fold
   c.calls.hidden = info.external;
 
   c.cost.textContent = info.external ? S.graph.external : `${usd} · ${dur}`;
