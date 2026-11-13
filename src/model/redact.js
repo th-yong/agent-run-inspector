@@ -59,7 +59,7 @@ export function createRedactor({ mode = 'off' } = {}) {
 
   /**
    * The one function every API response goes through.
-   * kind: 'sessions' | 'session' | 'detail' | 'roots'
+   * kind: 'sessions' | 'session' | 'detail' | 'roots' | 'event'
    */
   function apply(kind, body) {
     if (!isOn()) return body;
@@ -81,6 +81,10 @@ export function createRedactor({ mode = 'off' } = {}) {
           output: hidePreview(body.output),
           ...(body.error ? { error: { ...body.error, message: hiddenText(body.error.message), hidden: true } } : {}),
         };
+      case 'event': // one SSE payload: { type: 'span' | 'session' | 'totals' | 'resync', ... }
+        if (body.type === 'span') return { ...body, span: span(body.span) };
+        if (body.type === 'session') return { ...body, summary: summary(body.summary) };
+        return body;
       case 'roots':
         return isStrict() ? { ...body, roots: body.roots.map(({ path, ...rest }) => rest) } : body;
       default:
