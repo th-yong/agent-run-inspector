@@ -95,7 +95,7 @@ function el(tag, cls, text) {
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
-function iconEl(slug) {
+export function iconEl(slug) {
   const icon = getIcon(slug);
   const svg = document.createElementNS(SVG, 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
