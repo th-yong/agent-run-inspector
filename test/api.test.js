@@ -86,3 +86,12 @@ test('no response contains a record-file path', async () => {
     assert.ok(!/\.jsonl\b/.test(body), '.jsonl name leaked');
   }
 });
+
+test('session detail carries totals that match the summary', async () => {
+  const body = JSON.parse((await get(`/api/sessions/${A1}`)).body);
+  assert.equal(body.totals.total.usd, null);
+  for (const k of ['input', 'output', 'cacheRead', 'cacheWrite']) assert.equal(body.totals.total[k], body.summary.totals[k]);
+  assert.equal(body.totals.total.errors, body.summary.errorCount);
+  assert.equal(body.totals.total.modelCalls + body.totals.total.toolCalls, body.summary.callCount);
+  assert.equal(body.totals.total.agents, body.summary.agentCount);
+});
