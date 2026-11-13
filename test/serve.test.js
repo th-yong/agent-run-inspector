@@ -96,7 +96,7 @@ test('--session puts the id in the address; SIGINT exits 0', async () => {
 
 test('--source codex hides Claude Code sessions', async () => {
   const { home, root } = setup();
-  const run = launch(['--root', root, '--source', 'codex'], home);
+  const run = launch(['--no-open', '--root', root, '--source', 'codex'], home);
   try {
     const addr = await addressOf(run);
     const cookie = await login(addr);
@@ -114,7 +114,7 @@ test('port already in use -> clear message, exit 2', async () => {
   const blocker = net.createServer();
   await new Promise((resolve) => blocker.listen(0, '127.0.0.1', resolve));
   try {
-    const run = launch(['--root', root, '--port', String(blocker.address().port)], home);
+    const run = launch(['--no-open', '--root', root, '--port', String(blocker.address().port)], home);
     assert.equal(await run.exited, 2);
     assert.match(run.out.stderr, /already in use/);
   } finally {
