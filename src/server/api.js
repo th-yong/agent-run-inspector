@@ -1,6 +1,8 @@
 // JSON API for the session views. Plug into startServer({ handler }).
 // Sessions and spans are addressed by opaque ids only; no response carries a record-file path.
 import { computeTotals } from '../model/totals.js';
+import { createRedactor } from '../model/redact.js';
+import { createDetailRoutes } from './api-detail.js';
 
 const json = (res, status, body) => {
   const data = JSON.stringify(body);
@@ -18,7 +20,10 @@ const fail = (res, status, error) => json(res, status, { error });
  *   roots: { claude?: {path:string, origin?:string}[], codex?: {path:string, origin?:string}[] } }} opts
  * @returns {(req, res) => Promise<boolean>}
  */
-export function createApiHandler({ index, roots = {} }) {
+export function createApiHandler({ index, roots = {}, redactor = createRedactor() }) {
+  // Every response is serialized here, so redaction cannot be skipped by a route.
+  const send = (res, status, kind, body) => json(res, status, redactor.apply(kind, body));
+  const detail = createDetailRoutes({ index, redactor, send });
   const rootsBody = () => ({
     roots: [
       ...(roots.claude ?? []).map((r) => ({ source: 'claude-code', path: r.path, origin: r.origin ?? 'default' })),
@@ -27,14 +32,16 @@ export function createApiHandler({ index, roots = {} }) {
   });
 
   return async function handler(req, res) {
-    const { pathname } = new URL(req.url, 'http://127.0.0.1');
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const { pathname } = url;
+    if (detail.matches(pathname)) return detail.handle(req, res, url);
     if (pathname !== '/api/roots' && pathname !== '/api/sessions' && !pathname.startsWith('/api/sessions/')) return false;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD');
       return fail(res, 405, 'method_not_allowed');
     }
-    if (pathname === '/api/roots') return json(res, 200, rootsBody());
-    if (pathname === '/api/sessions') return json(res, 200, { sessions: index.list() });
+    if (pathname === '/api/roots') return send(res, 200, 'roots', rootsBody());
+    if (pathname === '/api/sessions') return send(res, 200, 'sessions', { sessions: index.list() });
 
     let id;
     try { id = decodeURIComponent(pathname.slice('/api/sessions/'.length)); } catch { return fail(res, 400, 'bad_id'); }
@@ -51,6 +58,7 @@ export function createApiHandler({ index, roots = {} }) {
       }
     }
     const { summary, spans, markers, turns } = opened;
-    return json(res, 200, { summary, spans, markers, turns, totals: computeTotals(spans) }); // usd stays null until T18
+    detail.remember(summary.id, spans);
+    return send(res, 200, 'session', { summary, spans, markers, turns, totals: computeTotals(spans) }); // usd stays null until T18
   };
 }
