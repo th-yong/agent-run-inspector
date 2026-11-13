@@ -1,7 +1,8 @@
 import { S } from './strings.js';
 import { parseState, toSearch } from './state.js';
-import { fetchSession, fetchRoots, watchList, upsertSession, ApiError } from './api.js';
+import { fetchSession, fetchRoots, watchList, watchSession, mergeSpan, upsertSession, ApiError } from './api.js';
 import { mount, emptyBlock } from './session-list.js';
+import { createRunHeader } from './run-header.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -12,7 +13,7 @@ let sessions = null; // null = not loaded yet
 let listError = false;
 let rootsTried = false;
 let roots = null; // folders searched, fetched only when the list is empty
-let run = { id: null, status: 'idle', data: null };
+let run = { id: null, status: 'idle', data: null, spans: new Map() };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -66,42 +67,85 @@ async function loadRoots() {
   if (listEmpty()) renderMain();
 }
 
-// ---- run screen (header and tabs arrive in later tasks) ----
+// ---- run screen: head (title, totals strip, tabs) + the view for the chosen tab ----
+let head = null; // { id, header } - rebuilt per session so numbers do not roll in from another run
+let view = null;
+let stopStream = null;
+
+function ensureHead() {
+  if (head?.id === state.s) return head.header;
+  head?.header.destroy();
+  const header = createRunHeader({
+    onBack: () => select(null),
+    onTab: (tab) => { state = { ...state, tab }; writeUrl(false); renderMain(); },
+    onShowAll: () => { state = { ...state, gsel: null, gopen: null, sel: null, open: null }; writeUrl(false); renderMain(); },
+    onHide: (hide) => { state = { ...state, hide }; writeUrl(false); renderMain(); },
+  });
+  head = { id: state.s, header };
+  view = el('div', 'view');
+  return header;
+}
+
 function renderMain() {
   const main = $('main');
   document.body.dataset.view = state.s ? 'run' : listEmpty() ? 'empty' : 'list';
-  if (!state.s && listEmpty()) {
-    loadRoots();
-    return void main.replaceChildren(emptyBlock(roots));
+  if (!state.s) {
+    head?.header.destroy();
+    head = null;
+    if (listEmpty()) {
+      loadRoots();
+      return void main.replaceChildren(emptyBlock(roots));
+    }
+    return void main.replaceChildren(el('div', 'placeholder', S.run.choose));
   }
-  if (!state.s) return void main.replaceChildren(el('div', 'placeholder', S.run.choose));
+  const header = ensureHead();
   const full = run.id === state.s ? run.data?.summary : null; // the detail summary has the title; the list one may not
-  const summary = full ?? sessions?.find((s) => s.id === state.s);
-  const head = el('div', 'run-head');
-  const back = el('button', 'back', S.run.back);
-  back.type = 'button';
-  back.id = 'backBtn';
-  head.append(back, el('div', 'run-title', summary?.title || (summary ? S.list.untitled : '')));
-  if (summary) head.append(el('div', 'run-meta', summary.project ?? ''));
-  const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : null;
-  main.replaceChildren(head, ...(note ? [el('div', 'placeholder', note)] : []));
+  const fromList = sessions?.find((s) => s.id === state.s);
+  const summary = full ? { ...full, ...(fromList ? { status: fromList.status, end: fromList.end } : {}) } : fromList;
+  const spans = run.id === state.s ? [...run.spans.values()] : [];
+  const scopeId = state.tab === 'timeline' ? state.sel : state.gsel;
+  header.update({ summary, totals: run.id === state.s ? run.data?.totals : null, spans, scopeId, tab: state.tab, hide: state.hide });
+  const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : S.views[state.tab];
+  view.replaceChildren(el('div', 'placeholder', note));
+  if (main.firstChild !== header.el) main.replaceChildren(header.el, header.tabs, view);
+}
+
+function stopRun() {
+  stopStream?.();
+  stopStream = null;
+}
+
+async function fetchRun(id, { first }) {
+  try {
+    const data = await fetchSession(id);
+    if (state.s !== id) return;
+    run = { id, status: 'ready', data, spans: new Map(data.spans.map((s) => [s.id, s])) };
+    if (first && !stopStream) startStream(id);
+  } catch (e) {
+    if (state.s !== id) return;
+    if (first) run = { id, status: e instanceof ApiError && e.status === 404 ? 'missing' : 'error', data: null, spans: new Map() };
+  }
+  renderMain();
+}
+
+function startStream(id) {
+  let opened = false;
+  stopStream = watchSession(id, {
+    onSpan: (span) => { if (run.id === id && run.status === 'ready' && mergeSpan(run.spans, span)) renderMain(); },
+    onTotals: (totals) => { if (run.id === id && run.status === 'ready') { run.data = { ...run.data, totals }; renderMain(); } },
+    // The first connect right after the load needs no second load; later connects and resync reload everything.
+    onReset: () => { if (opened) fetchRun(id, { first: false }); opened = true; },
+  });
 }
 
 async function loadRun() {
   const id = state.s;
-  if (!id) { run = { id: null, status: 'idle', data: null }; return; }
-  if (run.id === id && run.status === 'ready') return;
-  run = { id, status: 'loading', data: null };
+  if (!id) { stopRun(); run = { id: null, status: 'idle', data: null, spans: new Map() }; return; }
+  if (run.id === id && (run.status === 'ready' || run.status === 'loading')) return;
+  stopRun();
+  run = { id, status: 'loading', data: null, spans: new Map() };
   renderMain();
-  try {
-    const data = await fetchSession(id);
-    if (state.s !== id) return;
-    run = { id, status: 'ready', data };
-  } catch (e) {
-    if (state.s !== id) return;
-    run = { id, status: e instanceof ApiError && e.status === 404 ? 'missing' : 'error', data: null };
-  }
-  renderMain();
+  await fetchRun(id, { first: true });
 }
 
 function render() {
@@ -124,9 +168,6 @@ setLive('connecting');
 $('list').addEventListener('click', (e) => {
   const row = e.target.closest('.sess');
   if (row) select(row.dataset.id);
-});
-$('main').addEventListener('click', (e) => {
-  if (e.target.closest('#backBtn')) select(null);
 });
 $('themeBtn').addEventListener('click', () => {
   state = { ...state, theme: effectiveTheme() === 'dark' ? 'light' : 'dark' };

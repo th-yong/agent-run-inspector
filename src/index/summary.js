@@ -59,6 +59,12 @@ function quickClaude(entry, store, now) {
       totals.cacheWrite += num(u?.cacheCreationInputTokens);
     }
     if (Number.isFinite(cost.totalCostUSD)) totals.usd = cost.totalCostUSD;
+  } else {
+    // No cost-state: the list still needs model names (provider icons), so take them from the tail's assistant lines.
+    for (const r of tail) {
+      const m = r.type === 'assistant' ? r.message?.model : null;
+      if (typeof m === 'string' && m && !m.startsWith('<') && !models.includes(m)) models.push(m);
+    }
   }
   const running = now - last < RUNNING_MS && now >= last;
   return base(entry, {

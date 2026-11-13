@@ -45,7 +45,9 @@
       "cacheWrite": 0,
       "usd": null
     },
-    "models": [],
+    "models": [
+      "synthetic-model-a"
+    ],
     "inferredLinks": 0,
     "detail": false,
     "cwd": "/synthetic/demo-app",
