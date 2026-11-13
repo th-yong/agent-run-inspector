@@ -44,8 +44,11 @@ export function createCodexParser({ fileId, now = Date.now }) {
     }));
   }
 
+  // A file with no parsable line never reaches push(), so it looks like an unknown format too.
+  const unknown = () => unknownFormat || !meta;
+
   function sessionSpan() {
-    if (unknownFormat) {
+    if (unknown()) {
       const id = `cx:unknown:${fileId}`;
       return {
         id, parentId: null, sessionId: id, source: 'codex', kind: 'session', name: MSG.unknownFormat,
@@ -79,7 +82,7 @@ export function createCodexParser({ fileId, now = Date.now }) {
   }
 
   function allSpans() {
-    if (unknownFormat) return [sessionSpan()];
+    if (unknown()) return [sessionSpan()];
     const isLive = live();
     const out = [sessionSpan(), agentSpan()];
     out.push(...llm.spans());
@@ -185,7 +188,7 @@ export function createCodexParser({ fileId, now = Date.now }) {
     /** spawn_agent calls of this session (agents.js pairs them with child rollouts). */
     spawns: () => (tracker ? tracker.records().filter((r) => r.name === 'spawn_agent') : []),
     activities: () => activities,
-    meta: () => (unknownFormat ? null : {
+    meta: () => (unknown() ? null : {
       id: sessionId, cwd: meta.cwd, cliVersion: meta.cli_version, provider: meta.model_provider,
       branch: meta.git?.branch, models: [...models],
       parentThreadId: meta.parent_thread_id ?? spawnInfo()?.parent_thread_id,
