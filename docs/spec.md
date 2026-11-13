@@ -297,7 +297,7 @@ interface SessionSummary {
 | 브라우저 | `googlechrome` |
 | **simple-icons 에 없음 → 범주 기호** | Microsoft Azure(`az`), AWS(`aws`), Playwright |
 
-- 매핑 표: `docs/brand-map.json` (구현 때 패키지의 `brand-map.json` 으로). 아이콘 path 와 테마별 색은 이 표와 simple-icons 에서 스크립트로 만들어 넣는다(손으로 고치지 않음).
+- 매핑 표: 레포 루트 `brand-map.json`(패키지에 포함, 원본 하나). 아이콘 path 와 테마별 색은 이 표와 simple-icons 에서 스크립트로 만들어 넣는다(손으로 고치지 않음).
 - **색 규칙**: 기본은 브랜드 고유색(simple-icons `hex`). 그 색과 카드 배경(라이트 `#ffffff`, 다크 `#17181b`)의 **명암비가 3:1 미만**이면
   - 채도 있는 색(HSL 채도 ≥ 0.25)은 같은 색상에서 밝기를 최대 0.25 까지 옮겨 3:1 을 맞춘다(예: 다크에서 Slack 보라를 밝게, 라이트에서 pnpm·Supabase 를 조금 어둡게).
   - 그래도 안 되거나 무채색(검정·회색)이면 **글자색 단색**(라이트 검정 / 다크 흰색). 예: GitHub · Notion · Vercel 은 다크에서 흰색, Confluence · Sentry(진남색)도 다크에서 흰색.
