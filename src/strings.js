@@ -44,5 +44,7 @@ export const MSG = {
   noRoots: 'No run logs found. Pass --root <dir>, or run: ari roots add <dir>',
   unknownFormat: 'Unknown format',
   codexSession: 'Codex session',
+  hidden: '(hidden)',
+  charsHidden: (n) => `(${n.toLocaleString('en-US')} chars hidden)`,
   serverNotReady: 'Server is not available in this build yet.',
 };
