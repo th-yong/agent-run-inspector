@@ -1,7 +1,7 @@
 import { S } from './strings.js';
 import { parseState, toSearch } from './state.js';
-import { fetchSession, watchList, upsertSession, ApiError } from './api.js';
-import { fmtDuration, fmtTokens } from './format.js';
+import { fetchSession, fetchRoots, watchList, upsertSession, ApiError } from './api.js';
+import { mount, emptyBlock } from './session-list.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -10,6 +10,8 @@ const dark = window.matchMedia('(prefers-color-scheme: dark)');
 let state = parseState(location.search);
 let sessions = null; // null = not loaded yet
 let listError = false;
+let rootsTried = false;
+let roots = null; // folders searched, fetched only when the list is empty
 let run = { id: null, status: 'idle', data: null };
 
 function el(tag, cls, text) {
@@ -46,43 +48,32 @@ function setLive(kind) {
 }
 
 // ---- list ----
-const sortKey = (s) => (s.status === 'running' ? 1e15 : 0) + (s.lastWrite || s.end || s.start || 0);
-
-function sessionRow(s) {
-  const row = el('button', 'sess');
-  row.type = 'button';
-  row.dataset.id = s.id;
-  if (s.id === state.s) row.setAttribute('aria-current', 'true');
-  const t = el('div', 't');
-  const badge = el('span', `badge ${s.source === 'codex' ? 'cx' : 'cc'}`, S.sourceBadge[s.source] ?? '?');
-  badge.title = S.sourceTip(S.source[s.source] ?? s.source);
-  t.append(badge, el('span', 'name', s.title || S.list.untitled));
-  const m = el('div', 'm');
-  m.append(el('span', '', s.project ?? ''));
-  if (s.start && s.end) m.append(el('span', 'num', fmtDuration(s.end - s.start)));
-  m.append(el('span', '', S.list.agents(s.agentCount ?? 0)));
-  const tokens = (s.totals?.input ?? 0) + (s.totals?.output ?? 0) + (s.totals?.cacheRead ?? 0);
-  m.append(el('span', 'num', `${fmtTokens(tokens)} tok`));
-  if (s.status === 'running' || s.status === 'error') {
-    m.append(el('span', s.status === 'error' ? 'st-err' : 'st-run', S.status[s.status]));
-  }
-  row.append(t, m);
-  return row;
-}
+const list = mount($('list'), {
+  onSelect: (id) => select(id),
+  getSelected: () => state.s,
+});
 
 function renderList() {
-  const box = $('list');
-  box.replaceChildren(el('div', 'list-head', S.list.heading));
-  if (listError && !sessions) return void box.append(el('div', 'note', S.list.loadFailed));
-  if (!sessions) return void box.append(el('div', 'note', S.list.loading));
-  if (!sessions.length) return void box.append(el('div', 'note', S.list.none));
-  for (const s of [...sessions].sort((a, b) => sortKey(b) - sortKey(a))) box.append(sessionRow(s));
+  list.update({ sessions, error: listError });
+}
+
+const listEmpty = () => sessions !== null && sessions.length === 0;
+
+async function loadRoots() {
+  if (rootsTried) return;
+  rootsTried = true;
+  try { roots = await fetchRoots(); } catch { roots = null; }
+  if (listEmpty()) renderMain();
 }
 
 // ---- run screen (header and tabs arrive in later tasks) ----
 function renderMain() {
   const main = $('main');
-  document.body.dataset.view = state.s ? 'run' : 'list';
+  document.body.dataset.view = state.s ? 'run' : listEmpty() ? 'empty' : 'list';
+  if (!state.s && listEmpty()) {
+    loadRoots();
+    return void main.replaceChildren(emptyBlock(roots));
+  }
   if (!state.s) return void main.replaceChildren(el('div', 'placeholder', S.run.choose));
   const full = run.id === state.s ? run.data?.summary : null; // the detail summary has the title; the list one may not
   const summary = full ?? sessions?.find((s) => s.id === state.s);
@@ -149,7 +140,7 @@ window.addEventListener('popstate', () => {
 });
 
 watchList({
-  onList: (list) => { sessions = list; listError = false; renderList(); renderMain(); },
+  onList: (all) => { sessions = all; listError = false; renderList(); renderMain(); },
   onSession: (summary) => { sessions = upsertSession(sessions ?? [], summary); renderList(); },
   onStatus: (s) => {
     if (s === 'list-error') { listError = true; renderList(); } else setLive(s);
