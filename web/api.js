@@ -80,3 +80,21 @@ export function watchSession(id, { onSpan, onTotals, onReset, onStatus }) {
     },
   });
 }
+
+/** Most calls kept in the browser for one run. A tab left open for days would otherwise grow without end. */
+export const MAX_CALLS = 5000;
+
+/**
+ * Drops the oldest finished calls beyond `max`. Agents and calls still running stay; the totals come from the
+ * server, so they do not change. Returns how many were dropped.
+ */
+export function trimSpans(spans, max = MAX_CALLS) {
+  const calls = [];
+  for (const s of spans.values()) if (s.kind === 'llm' || s.kind === 'tool') calls.push(s);
+  const extra = calls.length - max;
+  if (extra <= 0) return 0;
+  const old = calls.filter((s) => s.end != null).sort((a, b) => (a.end - b.end) || (a.start - b.start));
+  let n = 0;
+  for (const s of old.slice(0, extra)) { spans.delete(s.id); n++; }
+  return n;
+}
