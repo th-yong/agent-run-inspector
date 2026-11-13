@@ -67,15 +67,15 @@ test('callsByAgent groups llm and tool spans by parent in time order', () => {
   assert.deepEqual(m.get('b').map((c) => c.id), ['x']);
 });
 
-test('timelineRows: sub-agents first, then own calls; collapsed agents show only the row', () => {
+test('timelineRows: sub-agents first, then the Calls group; collapsed agents show only the row', () => {
   const spans = [
     ag('m', null, 0, 100), ag('w', 'm', 10, 50), ag('v', 'm', 5, 20),
     call('c1', 'm', 'llm', 1, 2), call('c2', 'm', 'tool', 3, 4), call('w1', 'w', 'llm', 11, 12),
   ];
-  const ids = (rows) => rows.map((r) => `${r.type}:${r.span.id}:${r.depth}`);
+  const ids = (rows) => rows.map((r) => `${r.type}:${r.key}:${r.depth}`);
   assert.deepEqual(ids(timelineRows(spans, new Set())), ['agent:m:0']);
-  assert.deepEqual(ids(timelineRows(spans, new Set(['m']))), ['agent:m:0', 'agent:v:1', 'agent:w:1', 'call:c1:1', 'call:c2:1']);
-  assert.deepEqual(ids(timelineRows(spans, new Set(['m', 'w']))), ['agent:m:0', 'agent:v:1', 'agent:w:1', 'call:w1:2', 'call:c1:1', 'call:c2:1']);
+  assert.deepEqual(ids(timelineRows(spans, new Set(['m']))), ['agent:m:0', 'agent:v:1', 'agent:w:1', 'group:calls:m:1']);
+  assert.deepEqual(ids(timelineRows(spans, new Set(['m', 'w', 'calls:w']))), ['agent:m:0', 'agent:v:1', 'agent:w:1', 'group:calls:w:2', 'call:w1:3', 'group:calls:m:1']);
 });
 
 test('timelineRows survives parent loops and unknown parents', () => {

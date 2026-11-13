@@ -56,11 +56,21 @@ function barTitle(span) {
   return `${name} · ${dur}`;
 }
 
-function bar(span, domain, now) {
+/** Put a node on the time axis. It is remembered in `ctx.pos` so a moving axis can reposition it without a rebuild. span null = the "now" line. */
+function place(ctx, node, span) {
+  ctx.pos.push({ node, span });
+  setBox(node, span ? boxOf(span, ctx.domain, ctx.now) : boxOf({ start: ctx.now, end: ctx.now }, ctx.domain, ctx.now));
+}
+
+function bar(span, ctx) {
   const b = el('div', barClass(span));
-  setBox(b, boxOf(span, domain, now));
+  place(ctx, b, span);
   b.title = barTitle(span);
   return b;
+}
+
+function reposition(pos, ctx) {
+  for (const { node, span } of pos) setBox(node, span ? boxOf(span, ctx.domain, ctx.now) : boxOf({ start: ctx.now, end: ctx.now }, ctx.domain, ctx.now));
 }
 
 const tokensOf = (t) => (t && known(t.input) && known(t.output) ? t.input + t.output : null);
@@ -71,31 +81,86 @@ function cells(row, tk, co, du) {
   row.append(c('tk', tk), c('co', co), c('du', du));
 }
 
-function lane(domain, ticks) {
-  const l = el('div', 'lane');
+const lane = () => el('div', 'lane');
+
+const fp = (...parts) => parts.join('|');
+const sumOf = (calls, pick) => {
+  let n = 0; let any = false;
+  for (const c of calls) { const v = pick(c); if (known(v)) { n += v; any = true; } }
+  return any ? n : null;
+};
+
+/** Ruler gridlines, context markers (Claude Code compactions) and turn bands (Codex), drawn once over the lane column. */
+function overlay(domain, ticks, markers, turns) {
+  const o = el('div', 'overlay');
+  o.setAttribute('aria-hidden', 'true');
+  const total = domain.t1 - domain.t0;
+  const pct = (ms) => Math.min(100, Math.max(0, ((ms - domain.t0) / total) * 100));
   for (const t of ticks) {
     if (t.pct === 0 || t.pct >= 100) continue;
     const g = el('div', 'gridline');
     g.style.left = `${t.pct}%`;
-    l.append(g);
+    o.append(g);
   }
-  return l;
+  for (const tr of turns ?? []) {
+    if (tr.approx || !known(tr.start) || !known(tr.end) || tr.end < domain.t0 || tr.start > domain.t1) continue;
+    const left = pct(tr.start);
+    const b = el('div', `turn${tr.status === 'error' || tr.status === 'cancelled' ? ' bad' : ''}`);
+    b.style.left = `${left}%`;
+    b.style.width = `${Math.max(0.2, pct(tr.end) - left)}%`;
+    b.title = S.timeline.turnTip(fmtDuration(tr.end - tr.start), tr.status === 'ok' ? '' : S.status[tr.status] ?? '');
+    o.append(b);
+  }
+  for (const m of markers ?? []) {
+    if (m.kind !== 'compact' || !known(m.ts) || m.ts < domain.t0 || m.ts > domain.t1) continue;
+    const mk = el('div', 'mark');
+    mk.style.left = `${pct(m.ts)}%`;
+    mk.title = S.timeline.compactTip(m.preTokens != null ? fmtTokens(m.preTokens) : null, m.postTokens != null ? fmtTokens(m.postTokens) : null);
+    o.append(mk);
+  }
+  return o;
 }
 
 /**
  * createTimeline({ onSelect(agentId | null) }) -> { el, update(props), destroy() }
- * props: { spans, totals, sel, status, now? }. Expanded agents are remembered per view.
+ * props: { spans, totals, markers, turns, sel, status, now? }. Open agents / groups are remembered per view.
+ * Rows are kept by key: a row whose inputs did not change keeps its DOM node, so a refresh only touches what moved.
  */
 export function createTimeline({ onSelect } = {}) {
   const root = el('div', 'timeline');
   const expanded = new Set();
+  const cache = new Map(); // row key -> { node, sig }
   let seeded = false;
   let last = null;
   let timer = 0;
+  let parts = null; // { legend, grid, head, headSig, overlay, overlaySig }
+  const stats = { built: 0, reused: 0 };
 
-  function toggle(id) {
-    if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+  function toggle(key) {
+    if (expanded.has(key)) expanded.delete(key); else expanded.add(key);
     render();
+  }
+
+  function twisty(key, open, can, label) {
+    const tw = el('button', 'tw');
+    tw.type = 'button';
+    tw.setAttribute('aria-expanded', String(open));
+    tw.setAttribute('aria-label', label);
+    tw.disabled = !can;
+    tw.append(chevron());
+    tw.addEventListener('click', (e) => { e.stopPropagation(); toggle(key); });
+    return tw;
+  }
+
+  function agentSig(row, ctx) {
+    const a = row.span;
+    const own = ctx.calls.get(a.id) ?? [];
+    const t = ctx.totals?.byAgent?.[a.id];
+    let calls = '';
+    for (const c of own) calls += `${c.start},${c.end},${c.status},${c.kind};`;
+    return fp(row.depth, ctx.sel === a.id, expanded.has(a.id), ctx.hasSubAgents.has(a.id), own.length > 0,
+      a.name, a.agentType, a.model, a.status, a.start, a.end, a.lastActivity, a.end == null ? Math.floor(ctx.now / 1000) : '',
+      t?.input, t?.output, t?.usd, t?.durationMs, calls);
   }
 
   function agentRow(row, ctx) {
@@ -108,13 +173,6 @@ export function createTimeline({ onSelect } = {}) {
     const nmc = el('div', 'c nmc');
     const nm = el('div', 'nm');
     nm.style.paddingLeft = `${row.depth * 16}px`;
-    const tw = el('button', 'tw');
-    tw.type = 'button';
-    tw.setAttribute('aria-expanded', String(open));
-    tw.setAttribute('aria-label', open ? S.timeline.collapse : S.timeline.expand);
-    tw.disabled = !hasKids;
-    tw.append(chevron());
-    tw.addEventListener('click', (e) => { e.stopPropagation(); toggle(a.id); });
     const pick = el('button', 'label pick');
     pick.type = 'button';
     pick.title = S.timeline.pickTip;
@@ -122,8 +180,8 @@ export function createTimeline({ onSelect } = {}) {
     pick.append(el('span', 'agent-name', a.name || a.id));
     const type = a.agentType && a.agentType !== 'main' ? a.agentType : '';
     if (type) pick.append(' ', el('span', 'atype', type));
-    pick.addEventListener('click', () => onSelect?.(ctx.sel === a.id ? null : a.id));
-    nm.append(tw, pick);
+    pick.addEventListener('click', () => onSelect?.(last?.sel === a.id ? null : a.id));
+    nm.append(twisty(a.id, open, hasKids, open ? S.timeline.collapse : S.timeline.expand), pick);
     if (a.model) {
       const m = el('span', 'model');
       const ic = modelIcon(a.model);
@@ -136,20 +194,71 @@ export function createTimeline({ onSelect } = {}) {
     nmc.append(nm);
 
     const lc = el('div', 'lanec');
-    const ln = lane(ctx.domain, ctx.ticks);
+    const ln = lane();
     const bg = el('div', `span-bg${a.end == null ? ' running' : ''}`);
-    setBox(bg, boxOf(a, ctx.domain, ctx.now));
+    place(ctx, bg, a);
     ln.append(bg);
-    for (const c of own) ln.append(bar(c, ctx.domain, ctx.now));
+    for (const c of own) ln.append(bar(c, ctx));
     if (a.end == null) {
       const n = el('div', 'now');
-      n.style.left = `${boxOf({ start: ctx.now, end: ctx.now }, ctx.domain, ctx.now).left}%`;
+      place(ctx, n, null);
       ln.append(n);
     }
     lc.append(ln);
     r.append(nmc, lc);
     const t = ctx.totals?.byAgent?.[a.id];
     cells(r, fmtTokens(tokensOf(t)), fmtUsd(t?.usd), fmtDuration(known(t?.durationMs) && a.end != null ? t.durationMs : spanMs(a, ctx.now)));
+    return r;
+  }
+
+  function groupRow(row, ctx) {
+    const s = row.summary;
+    const open = expanded.has(row.key);
+    const r = el('div', 'r group');
+    r.dataset.group = row.span.id;
+    const nmc = el('div', 'c nmc');
+    const nm = el('div', 'nm');
+    nm.style.paddingLeft = `${row.depth * 16}px`;
+    const label = el('button', 'label calls-label');
+    label.type = 'button';
+    label.setAttribute('aria-expanded', String(open));
+    label.append(el('span', 'calls-n', S.timeline.calls(s.total)));
+    label.addEventListener('click', () => toggle(row.key));
+    nm.append(twisty(row.key, open, true, open ? S.timeline.collapseCalls : S.timeline.expandCalls), label,
+      el('span', 'small calls-split', S.timeline.callsSplit(s.llm, s.tool)));
+    if (s.error) nm.append(el('span', 'small status-err', S.timeline.callsErrors(s.error)));
+    nmc.append(nm);
+    const lc = el('div', 'lanec');
+    lc.append(lane());
+    r.append(nmc, lc);
+    const llm = row.calls.filter((c) => c.kind === 'llm');
+    cells(r, fmtTokens(sumOf(llm, (c) => tokensOf(c.tokens))), fmtUsd(sumOf(llm, (c) => c.cost?.usd)), '');
+    return r;
+  }
+
+  function runRow(row, ctx) {
+    const run = row.run;
+    const open = expanded.has(row.key);
+    const r = el('div', 'r call run');
+    r.dataset.run = run.key;
+    const nmc = el('div', 'c nmc');
+    const nm = el('div', 'nm');
+    nm.style.paddingLeft = `${row.depth * 16}px`;
+    nm.append(twisty(row.key, open, true, open ? S.timeline.collapseRun : S.timeline.expandRun), el('span', 'kind k-tool', GLYPH.tool));
+    const first = run.spans[0];
+    const ic = callIcon(first);
+    if (ic) nm.append(ic);
+    nm.append(el('span', 'label', run.name), el('span', 'small run-n', S.timeline.times(run.count)));
+    nmc.append(nm);
+    const lc = el('div', 'lanec');
+    const ln = lane();
+    const b = el('div', 'b tool fold');
+    place(ctx, b, { start: run.start, end: run.end });
+    b.title = `${run.name} ${S.timeline.times(run.count)} · ${fmtDuration(run.end - run.start)}`;
+    ln.append(b);
+    lc.append(ln);
+    r.append(nmc, lc);
+    cells(r, '—', '—', fmtDuration(run.end - run.start));
     return r;
   }
 
@@ -171,14 +280,25 @@ export function createTimeline({ onSelect } = {}) {
     if (err) nm.append(el('span', 'status-err small', S.timeline.failed));
     nmc.append(nm);
     const lc = el('div', 'lanec');
-    const ln = lane(ctx.domain, ctx.ticks);
-    ln.append(bar(c, ctx.domain, ctx.now));
+    const ln = lane();
+    ln.append(bar(c, ctx));
     lc.append(ln);
     r.append(nmc, lc);
     const llm = c.kind === 'llm';
     cells(r, llm ? fmtTokens(tokensOf(c.tokens)) : '—', llm ? fmtUsd(c.cost?.usd) : '—', c.end == null ? '…' : fmtDuration(c.end - c.start));
     return r;
   }
+
+  const sigOf = {
+    agent: agentSig,
+    group: (row, ctx) => fp(row.depth, expanded.has(row.key), row.calls.length, row.summary.llm, row.summary.error, sumOf(row.calls, (c) => (c.kind === 'llm' ? tokensOf(c.tokens) : null)), sumOf(row.calls, (c) => (c.kind === 'llm' ? c.cost?.usd : null))),
+    run: (row, ctx) => fp(row.depth, expanded.has(row.key), row.run.count, row.run.start, row.run.end),
+    call: (row, ctx) => {
+      const c = row.span;
+      return fp(row.depth, c.name, c.model, c.kind, c.status, c.start, c.end, c.lastActivity, c.tokens?.input, c.tokens?.output, c.cost?.usd);
+    },
+  };
+  const build = { agent: agentRow, group: groupRow, run: runRow, call: callRow };
 
   function legend() {
     const l = el('div', 'legend');
@@ -201,34 +321,81 @@ export function createTimeline({ onSelect } = {}) {
     return h;
   }
 
+  function ensureParts() {
+    if (parts) return parts;
+    parts = { legend: legend(), grid: el('div', 'grid'), head: null, headSig: '', overlay: null, overlaySig: '' };
+    root.replaceChildren(parts.legend, parts.grid);
+    return parts;
+  }
+
   function render() {
     if (!last) return;
-    const { spans = [], totals = null, sel = null, status = 'ready' } = last;
+    const { spans = [], totals = null, markers = [], turns = [], sel = null, status = 'ready' } = last;
     const now = last.now ?? Date.now();
     clearInterval(timer);
     const agents = spans.filter((s) => s.kind === 'agent');
     if (!seeded && agents.length) {
       seeded = true;
-      // Start with the main agents open so their sub-agents show; calls open by choice.
+      // Start with the main agents open so their sub-agents and Calls group show; calls open by choice.
       for (const a of agents) if (a.parentId == null || !agents.some((x) => x.id === a.parentId)) expanded.add(a.id);
     }
     if (!agents.length) {
+      parts = null;
+      cache.clear();
       root.replaceChildren(el('div', 'placeholder', status === 'ready' ? S.timeline.none : S.timeline.waiting));
       return;
     }
+    const p = ensureParts();
     const domain = domainOf(spans, now);
     const ticks = ticksFor(domain, 6);
     const ctx = {
       domain, ticks, now, sel, totals,
+      dsig: `${domain.t0},${domain.t1}`,
+      psig: `${domain.t0},${domain.t1},${now}`, // what moves a bar that is still open
+      pos: null,
       calls: callsByAgent(spans),
       hasSubAgents: new Set(agents.filter((a) => a.parentId != null).map((a) => a.parentId)),
     };
-    const grid = el('div', 'grid');
-    grid.append(head(ticks));
-    const frag = document.createDocumentFragment();
-    for (const row of timelineRows(spans, expanded)) frag.append(row.type === 'agent' ? agentRow(row, ctx) : callRow(row, ctx));
-    grid.append(frag);
-    root.replaceChildren(legend(), grid);
+
+    const headSig = ticks.map((t) => t.label).join(',');
+    if (headSig !== p.headSig) {
+      const h = head(ticks);
+      if (p.head) p.head.replaceWith(h); else p.grid.prepend(h);
+      p.head = h; p.headSig = headSig;
+    }
+    const overlaySig = fp(ctx.dsig, JSON.stringify(markers), JSON.stringify(turns));
+    if (overlaySig !== p.overlaySig) {
+      const o = overlay(domain, ticks, markers, turns);
+      if (p.overlay) p.overlay.replaceWith(o); else p.head.after(o);
+      p.overlay = o; p.overlaySig = overlaySig;
+    }
+
+    const seen = new Set();
+    let cur = p.overlay.nextSibling;
+    for (const row of timelineRows(spans, expanded)) {
+      const key = `${row.type}:${row.key}`;
+      const sig = sigOf[row.type](row, ctx);
+      seen.add(key);
+      let ent = cache.get(key);
+      if (ent && ent.sig === sig) {
+        stats.reused++;
+        const ps = ent.dyn ? ctx.psig : ctx.dsig;
+        if (ent.ps !== ps) { reposition(ent.pos, ctx); ent.ps = ps; }
+      } else {
+        const old = ent?.node;
+        ctx.pos = [];
+        const node = build[row.type](row, ctx);
+        const dyn = ctx.pos.some((x) => !x.span || x.span.end == null);
+        ent = { node, sig, pos: ctx.pos, dyn, ps: dyn ? ctx.psig : ctx.dsig };
+        cache.set(key, ent);
+        stats.built++;
+        if (old) { if (old === cur) cur = cur.nextSibling; old.remove(); } // swap in place, so the rows after it stay put
+      }
+      if (ent.node === cur) cur = cur.nextSibling;
+      else p.grid.insertBefore(ent.node, cur);
+    }
+    while (cur) { const next = cur.nextSibling; cur.remove(); cur = next; }
+    for (const k of cache.keys()) if (!seen.has(k)) cache.delete(k);
     if (spans.some((s) => s.kind !== 'session' && s.end == null && s.status === 'running')) timer = setInterval(render, 1000);
   }
 
@@ -236,5 +403,6 @@ export function createTimeline({ onSelect } = {}) {
     el: root,
     update(props) { last = props; render(); },
     destroy() { clearInterval(timer); },
+    stats,
   };
 }

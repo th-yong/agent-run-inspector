@@ -61,7 +61,7 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 /* Layout: list column + run screen */
 .app { display: grid; grid-template-columns: 320px 1fr; height: calc(100% - 48px); }
 .list { border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
-.main { overflow: auto; min-width: 0; }
+.main { overflow: auto; min-width: 0; container: main / inline-size; }
 
 /* Session list */
 .list-head { padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 0; z-index: 1; background: var(--panel); border-bottom: 1px solid var(--line-2); }
@@ -156,7 +156,7 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .legend .lg-llm { background: var(--llm); } .legend .lg-err { background: var(--err); } .legend .lg-life { background: var(--line); }
 .legend .lg-tool { background: var(--tool-soft); box-shadow: inset 0 0 0 1px var(--tool); }
 .legend .hint { margin-left: auto; }
-.grid { --name: 360px; --tl: 1fr; min-width: 720px; }
+.grid { --name: 360px; --tl: 1fr; position: relative; }
 .ghead, .r { display: grid; grid-template-columns: var(--name) var(--tl) 72px 76px 84px; align-items: center; }
 .ghead { position: sticky; top: 0; z-index: 3; background: var(--panel); border-bottom: 1px solid var(--line); height: 30px; font-size: 11px; color: var(--faint); }
 .ghead > div { padding: 0 10px; }
@@ -190,7 +190,7 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .small { font-size: 11px; }
 .status-err { color: var(--err); font-weight: 600; }
 .lane { position: relative; height: 30px; border-left: 1px solid var(--line-2); }
-.lane .gridline { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--line-2); }
+.overlay .gridline { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--line-2); }
 .span-bg { position: absolute; top: 12px; height: 6px; border-radius: 3px; background: var(--line); }
 .span-bg.running { background: linear-gradient(90deg, var(--line) 70%, var(--run-soft)); }
 .b { position: absolute; top: 9px; height: 12px; border-radius: 2px; min-width: 2px; }
@@ -201,16 +201,28 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .b.run { background: linear-gradient(90deg, var(--llm), transparent); }
 .r.call .b { top: 8px; height: 14px; }
 .now { position: absolute; top: 0; bottom: 0; border-left: 1.5px solid var(--run); opacity: .7; }
-@media (max-width: 760px) {
-  .grid { min-width: 0; }
-  .ghead { display: none; }
+.r.group .nm { color: var(--muted); }
+.calls-label { font-weight: 600; color: var(--text); }
+.calls-label:hover { text-decoration: underline; }
+.calls-split { color: var(--faint); }
+.run-n { color: var(--muted); font-family: var(--mono); }
+.b.fold { background: repeating-linear-gradient(90deg, var(--tool-soft) 0 3px, transparent 3px 4px); }
+/* Turn bands (Codex) and compaction lines sit over the lane column, under the pointer. */
+.overlay { position: absolute; top: 30px; bottom: 0; left: var(--name); right: 232px; pointer-events: none; z-index: 1; }
+.turn { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--accent) 7%, transparent); border-left: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); pointer-events: auto; }
+.turn.bad { background: color-mix(in srgb, var(--err) 8%, transparent); border-left-color: color-mix(in srgb, var(--err) 35%, transparent); }
+.mark { position: absolute; top: 0; bottom: 0; width: 9px; margin-left: -4px; pointer-events: auto; }
+.mark::before { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; border-left: 2px dashed var(--flow); }
+.mark::after { content: ""; position: absolute; left: 1px; top: 0; border: 4px solid transparent; border-top-color: var(--flow); }
+/* The wide grid needs about 720px; below that (by the width of the run column, not the window) rows take two lines. */
+@container main (max-width: 720px) {
+  .ghead, .overlay { display: none; }
   .r { grid-template-columns: 1fr 64px; grid-template-areas: "nm du" "ln ln"; padding: 4px 0 6px; }
   .r > .c.nmc { grid-area: nm; padding: 0 16px; }
   .r > .lanec { grid-area: ln; padding: 0 16px; }
   .r > .c.du { grid-area: du; padding-right: 16px; }
   .r > .c.tk, .r > .c.co { display: none; }
   .lane { height: 12px; border-left: 0; background: var(--panel-2); border-radius: 3px; }
-  .lane .gridline { display: none; }
   .span-bg { top: 3px; } .b, .r.call .b { top: 2px; height: 8px; }
   .legend { padding: 8px 16px; }
   .legend .hint { display: none; }
