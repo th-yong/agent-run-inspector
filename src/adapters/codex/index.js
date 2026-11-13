@@ -30,6 +30,7 @@ export function createCodexParser({ fileId, now = Date.now }) {
   let llm = null;
   const emitted = new Map(); // span id -> JSON of last emitted
   let first = true;
+  const activities = []; // SubAgentActivity items: { kind, agentThreadId, ts }
 
   const sessionSpanId = () => `cx:${sessionId}`;
   const agentSpanId = () => `cx:${sessionId}:main`;
@@ -154,6 +155,9 @@ export function createCodexParser({ fileId, now = Date.now }) {
           break;
         case 'item_completed':
           tracker.onItem(t, p);
+          if (/^subagentactivity$/i.test(p.item?.type) && typeof p.item.agent_thread_id === 'string') {
+            activities.push({ kind: p.item.kind, agentThreadId: p.item.agent_thread_id, ts: t });
+          }
           break;
         default:
       }
@@ -170,15 +174,23 @@ export function createCodexParser({ fileId, now = Date.now }) {
     return diff(allSpans());
   }
 
+  const spawnInfo = () => meta?.source?.subagent?.thread_spawn;
+
   return {
     push,
     /** Current full state, in stable order. */
     spans: () => allSpans(),
     /** Turn bands for the time axis (not spans). */
     turns: turnList,
+    /** spawn_agent calls of this session (agents.js pairs them with child rollouts). */
+    spawns: () => (tracker ? tracker.records().filter((r) => r.name === 'spawn_agent') : []),
+    activities: () => activities,
     meta: () => (unknownFormat ? null : {
       id: sessionId, cwd: meta.cwd, cliVersion: meta.cli_version, provider: meta.model_provider,
-      branch: meta.git?.branch, models: [...models], parentThreadId: meta.parent_thread_id,
+      branch: meta.git?.branch, models: [...models],
+      parentThreadId: meta.parent_thread_id ?? spawnInfo()?.parent_thread_id,
+      nickname: meta.agent_nickname ?? spawnInfo()?.agent_nickname,
+      role: meta.agent_role ?? spawnInfo()?.agent_role,
     }),
   };
 }
