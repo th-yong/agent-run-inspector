@@ -38,5 +38,7 @@ export const MSG = {
   rootLine: (kind, p, how) => `${kind.padEnd(7)} ${p}  (${how})`,
   badConfig: (p) => `Error: cannot read config file ${p}`,
   noRoots: 'No run logs found. Pass --root <dir>, or run: ari roots add <dir>',
+  unknownFormat: 'Unknown format',
+  codexSession: 'Codex session',
   serverNotReady: 'Server is not available in this build yet.',
 };
