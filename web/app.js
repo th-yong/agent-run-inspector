@@ -4,6 +4,7 @@ import { fetchSession, fetchRoots, watchList, watchSession, mergeSpan, upsertSes
 import { mount, emptyBlock } from './session-list.js';
 import { createRunHeader } from './run-header.js';
 import { createTimeline } from './timeline.js';
+import { createGraph } from './graph.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -72,6 +73,7 @@ async function loadRoots() {
 let head = null; // { id, header } - rebuilt per session so numbers do not roll in from another run
 let view = null;
 let timeline = null; // rebuilt per session, like the head
+let graph = null; // { id, graph } - one per session, like the head
 let stopStream = null;
 
 function ensureHead() {
@@ -87,6 +89,8 @@ function ensureHead() {
   });
   head = { id: state.s, header };
   view = el('div', 'view');
+  graph?.graph.destroy();
+  graph = null;
   return header;
 }
 
@@ -97,6 +101,8 @@ function renderMain() {
     head?.header.destroy();
     timeline?.destroy();
     head = null;
+    graph?.graph.destroy();
+    graph = null;
     if (listEmpty()) {
       loadRoots();
       return void main.replaceChildren(emptyBlock(roots));
@@ -110,6 +116,17 @@ function renderMain() {
   const spans = run.id === state.s ? [...run.spans.values()] : [];
   const scopeId = state.tab === 'timeline' ? state.sel : state.gsel;
   header.update({ summary, totals: run.id === state.s ? run.data?.totals : null, spans, scopeId, tab: state.tab, hide: state.hide });
+  const ready = run.status === 'ready' && run.id === state.s;
+  if (ready && state.tab === 'graph') {
+    if (graph?.id !== state.s) {
+      graph?.graph.destroy();
+      graph = { id: state.s, graph: createGraph({ onSelect: selectAgent }) };
+    }
+    if (view.firstChild !== graph.graph.el) view.replaceChildren(graph.graph.el);
+    if (main.firstChild !== header.el) main.replaceChildren(header.el, header.tabs, view);
+    graph.graph.update({ spans, selectedId: state.gsel, hide: state.hide, detailOpen: false });
+    return;
+  }
   const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : S.views[state.tab];
   if (state.tab === 'timeline' && run.status === 'ready' && run.id === state.s) {
     timeline ??= createTimeline({ onSelect: (id) => { state = { ...state, sel: id }; writeUrl(false); renderMain(); } });
@@ -120,6 +137,12 @@ function renderMain() {
     view.replaceChildren(el('div', 'placeholder', note));
   }
   if (main.firstChild !== header.el) main.replaceChildren(header.el, header.tabs, view);
+}
+
+function selectAgent(id) {
+  state = { ...state, gsel: state.gsel === id ? null : id, gopen: null };
+  writeUrl(false);
+  renderMain();
 }
 
 function stopRun() {
