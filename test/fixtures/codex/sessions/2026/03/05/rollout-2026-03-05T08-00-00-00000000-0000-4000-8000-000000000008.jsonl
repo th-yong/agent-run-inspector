@@ -1,0 +1,3 @@
+{"timestamp":"2026-03-05T08:00:00.000Z","type":"event_msg","payload":{"type":"user_message","message":"SECRET-MARKER-CX-40 orphan","kind":"plain"}}
+{"timestamp":"2026-03-05T08:00:01.000Z","type":"session_meta","payload":{"id":"00000000-0000-4000-8000-000000000008","timestamp":"2026-03-05T08:00:01.000Z","cwd":"/work/synthetic-project","cli_version":"0.40.0"}}
+{"timestamp":"2026-03-05T08:00:02.000Z","type":"future_unknown_type","payload":{"note":"SECRET-MARKER-CX-41"}}
