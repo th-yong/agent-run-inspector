@@ -10,6 +10,7 @@
 import { TotalsTree } from '../model/totals.js';
 
 export const PING_MS = 15000;
+export const SWEEP_MS = 30000; // how often to re-check whether a running session has gone quiet
 const BUFFER_MAX = 500;
 const STATE_MAX = 32;
 const SLOW_CLIENT_BYTES = 4 * 1024 * 1024;
@@ -29,9 +30,9 @@ class Feed {
 
 /**
  * @param {{ index: { list(): object[], open(id: string): object }, redactor: { apply(kind: string, body: object): object },
- *   pingMs?: number, seqBase?: number }} opts
+ *   pingMs?: number, sweepMs?: number, seqBase?: number }} opts
  */
-export function createLiveHub({ index, redactor, pingMs = PING_MS, seqBase = Date.now() }) {
+export function createLiveHub({ index, redactor, pingMs = PING_MS, sweepMs = SWEEP_MS, seqBase = Date.now() }) {
   // Starting from the clock keeps ids of a restarted server above the ones clients remember.
   let seq = seqBase;
   const listFeed = new Feed(seq);
@@ -102,12 +103,23 @@ export function createLiveHub({ index, redactor, pingMs = PING_MS, seqBase = Dat
     };
   }
 
+  let hasRunning = false;
+  // The index drops a session from "running" by the clock, so no file change announces it.
+  const sweep = setInterval(() => {
+    if (!closed && hasRunning && listFeed.clients.size) {
+      try { diffList(); } catch { /* the next tick tries again */ }
+    }
+  }, sweepMs);
+  sweep.unref?.();
+
   function diffList() {
     const summaries = index.list();
     const first = listSeen.size === 0;
     const now = new Set();
+    hasRunning = false;
     for (const summary of summaries) {
       now.add(summary.id);
+      if (summary.status === 'running') hasRunning = true;
       const json = JSON.stringify(summary);
       if (listSeen.get(summary.id) === json) continue;
       listSeen.set(summary.id, json);
@@ -178,6 +190,7 @@ export function createLiveHub({ index, redactor, pingMs = PING_MS, seqBase = Dat
 
   function close() {
     closed = true;
+    clearInterval(sweep);
     for (const feed of [listFeed, ...[...states.values()].map((s) => s.feed)]) {
       for (const res of feed.clients) res.end();
       feed.clients.clear();

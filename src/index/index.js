@@ -4,7 +4,7 @@ import { scanRoots, readEnds } from './scan.js';
 import { loadPrices, applyCosts, reportedUsdOf } from '../cost.js';
 import { computeTotals } from '../model/totals.js';
 import { applyRoles } from '../model/roles.js';
-import { openEntry, quickSummary } from './summary.js';
+import { openEntry, quickSummary, RUNNING_MS } from './summary.js';
 
 const MAX_OPEN = 16;
 
@@ -33,8 +33,10 @@ export function createIndex({ roots, source = 'all', since, watcherNamePatterns 
     return found.map((e) => {
       const sig = signature(e);
       const hit = quick.get(e.id);
-      if (hit && hit.sig === sig) return hit.summary;
-      const summary = quickSummary(e, store, now());
+      const t = now();
+      // A running summary goes stale by the clock alone, with no file change to tell us.
+      if (hit && hit.sig === sig && (hit.summary.status !== 'running' || t - e.lastWrite < RUNNING_MS)) return hit.summary;
+      const summary = quickSummary(e, store, t);
       quick.set(e.id, { sig, summary });
       return summary;
     });

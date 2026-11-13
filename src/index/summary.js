@@ -13,7 +13,7 @@ import { buildSessionTree } from '../adapters/claude-code/agents.js';
 import { mapUsage } from '../adapters/codex/llm.js';
 import { MSG } from '../strings.js';
 
-const RUNNING_MS = 10 * 60 * 1000;
+export const RUNNING_MS = 10 * 60 * 1000;
 const lastSeg = (p) => (typeof p === 'string' ? basename(p.replace(/[\\/]+$/, '')) : '');
 const ts = (o) => {
   const t = typeof o?.timestamp === 'string' ? Date.parse(o.timestamp) : NaN;
