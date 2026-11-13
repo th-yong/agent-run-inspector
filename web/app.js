@@ -1,6 +1,7 @@
 import { S } from './strings.js';
 import { parseState, toSearch } from './state.js';
-import { fetchSession, fetchRoots, watchList, watchSession, mergeSpan, trimSpans, upsertSession, ApiError } from './api.js';
+import { mountRedactToggle } from './redact-toggle.js';
+import { onAuthLost, fetchSession, fetchRoots, watchList, watchSession, mergeSpan, trimSpans, upsertSession, ApiError } from './api.js';
 import { liveState, createFlushGate } from './live-follow.js';
 import { mount, emptyBlock } from './session-list.js';
 import { createRunHeader } from './run-header.js';
@@ -236,6 +237,14 @@ function select(id) {
 }
 
 // ---- boot ----
+onAuthLost(() => {
+  const box = $('authLost');
+  box.replaceChildren(el('b', '', S.auth.restarted), el('span', '', S.auth.detail));
+  box.hidden = false;
+  document.body.classList.add('lost'); // hides the screen for good; later redraws cannot bring it back
+  stopRun();
+});
+mountRedactToggle($('redactBtn'));
 $('appName').textContent = S.appName;
 setLive('connecting');
 
