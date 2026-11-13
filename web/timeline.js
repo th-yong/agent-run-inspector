@@ -6,6 +6,7 @@ import { providerSlugs, iconEl } from './session-list.js';
 import { hasIcon } from './icons.js';
 import { openEnd, domainOf, ticksFor, boxOf, timelineRows, callsByAgent, settleAgents } from './timeline-scale.js';
 import { createCallDetail } from './call-detail.js';
+import { nearBottom, freshCalls } from './live-follow.js';
 
 const known = (n) => typeof n === 'number' && Number.isFinite(n);
 const GLYPH = { llm: '◆', tool: '▪', error: '▲' };
@@ -138,6 +139,40 @@ export function createTimeline({ onSelect, onOpen, loadDetail } = {}) {
   let revealed = null; // the openId whose rows were already made visible
   let parts = null; // { legend, grid, head, headSig, overlay, overlaySig }
   const stats = { built: 0, reused: 0 };
+  // New calls: while the reader is at the end the view follows; scrolled up, it stays put and a button counts what arrived.
+  const knownCalls = new Set();
+  let calmed = false; // the first update only seeds knownCalls
+  let pending = 0;
+  let scroller = null;
+  const newBtn = el('button', 'new-calls');
+  newBtn.type = 'button';
+  newBtn.hidden = true;
+  newBtn.addEventListener('click', () => {
+    scroller?.scrollTo({ top: scroller.scrollHeight });
+    setPending(0);
+  });
+  const onScroll = () => { if (pending && nearBottom(scroller)) setPending(0); };
+
+  function setPending(n) {
+    pending = n;
+    newBtn.hidden = n === 0;
+    if (n) newBtn.textContent = S.timeline.newCalls(n);
+  }
+
+  function follow(spans) {
+    if (!scroller) {
+      scroller = root.closest('.main');
+      scroller?.addEventListener('scroll', onScroll, { passive: true });
+    }
+    const atEnd = !scroller || nearBottom(scroller);
+    const fresh = freshCalls(knownCalls, spans);
+    if (!calmed) { calmed = true; return () => {}; }
+    if (!fresh.length) return () => {};
+    return () => {
+      if (atEnd && !last?.openId) scroller?.scrollTo({ top: scroller.scrollHeight });
+      else if (!atEnd) setPending(pending + fresh.length);
+    };
+  }
 
   function toggle(key) {
     if (expanded.has(key)) expanded.delete(key); else expanded.add(key);
@@ -359,7 +394,7 @@ export function createTimeline({ onSelect, onOpen, loadDetail } = {}) {
   function ensureParts() {
     if (parts) return parts;
     parts = { legend: legend(), grid: el('div', 'grid'), head: null, headSig: '', overlay: null, overlaySig: '' };
-    root.replaceChildren(parts.legend, parts.grid);
+    root.replaceChildren(parts.legend, parts.grid, newBtn);
     return parts;
   }
 
@@ -447,13 +482,18 @@ export function createTimeline({ onSelect, onOpen, loadDetail } = {}) {
     if (!shown) dropDetail();
     while (cur) { const next = cur.nextSibling; cur.remove(); cur = next; }
     for (const k of cache.keys()) if (!seen.has(k)) cache.delete(k);
-    if (spans.some((s) => s.kind !== 'session' && s.end == null && s.status === 'running')) timer = setInterval(render, 1000);
+    if (spans.some((s) => s.kind !== 'session' && s.end == null && s.status === 'running')) timer = setInterval(() => { if (!document.hidden) render(); }, 1000);
   }
 
   return {
     el: root,
-    update(props) { last = props; render(); },
-    destroy() { clearInterval(timer); dropDetail(); },
+    update(props) {
+      last = props;
+      const after = follow(props.spans ?? []);
+      render();
+      after();
+    },
+    destroy() { clearInterval(timer); dropDetail(); scroller?.removeEventListener('scroll', onScroll); scroller = null; },
     stats,
   };
 }
