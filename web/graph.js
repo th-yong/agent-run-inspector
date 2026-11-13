@@ -3,7 +3,7 @@
 // so motion (new card + edge growth, rows sliding in and folding away, finished cards folding) plays once per change.
 // Pure helpers (prepareGraph, hiddenAgents, foldedAgents) are exported for tests; the DOM part runs only in createGraph().
 import { S } from './strings.js';
-import { layoutGraph } from './graph-layout.js';
+import { layoutGraph, panelBeside } from './graph-layout.js';
 import { cardInfo, callRows, createCard, updateCard } from './card.js';
 
 export const FOLD_DELAY_MS = 1600; // a finished agent shows its Done / Failed badge this long before it folds
@@ -104,6 +104,7 @@ export function createGraph({ onSelect }) {
   root.append(scroll, hint);
 
   const cards = new Map(); // id -> card parts
+  const branches = new Map(); // id -> the └ mark in front of an indented card (list mode only)
   const edgeEls = new Map(); // edge key -> { path, a, b }
   const ranRunning = new Set(); // agents seen running here, so only a live finish is held before folding
   const finishedAt = new Map();
@@ -209,7 +210,7 @@ export function createGraph({ onSelect }) {
     if (wake > 0) foldTimer = setTimeout(render, wake + 20);
     const hidden = hiddenAgents(agents, props.hide, selected, held);
     const folded = foldedAgents(agents, hidden, selected, held);
-    layout = layoutGraph(agents, { width: lastWidth, detailOpen: props.detailOpen, hidden, folded });
+    layout = layoutGraph(agents, { width: lastWidth, detailOpen: props.detailOpen && panelBeside(lastWidth), hidden, folded });
     root.dataset.mode = layout.mode;
     canvas.classList.toggle('dense', layout.dense);
     canvas.style.height = `${layout.height}px`;
@@ -245,6 +246,16 @@ export function createGraph({ onSelect }) {
       if (!seen.has(id)) { c.root.remove(); cards.delete(id); }
     }
     drawEdges(motion);
+    const wantBranch = new Set();
+    for (const box of layout.cards) {
+      if (layout.mode !== 'list' || !(box.indent > 0)) continue;
+      wantBranch.add(box.id);
+      let b = branches.get(box.id);
+      if (!b) { b = el('span', 'g-branch'); b.setAttribute('aria-hidden', 'true'); branches.set(box.id, b); canvas.append(b); }
+      b.style.left = `${box.x - 12}px`;
+      b.style.top = `${box.y - 8}px`;
+    }
+    for (const [id, b] of branches) if (!wantBranch.has(id)) { b.remove(); branches.delete(id); }
     updateHint();
     if (layout.cards.length > 0) painted = true;
   }

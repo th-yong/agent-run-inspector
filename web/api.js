@@ -6,8 +6,19 @@ export class ApiError extends Error {
   }
 }
 
+// A 401 means the server was restarted (new token): the cookie of this tab no longer matches.
+let authLostHandler = () => {};
+let authLost = false;
+export const onAuthLost = (fn) => { authLostHandler = fn; };
+function lost() {
+  if (authLost) return;
+  authLost = true;
+  authLostHandler();
+}
+
 async function getJson(path) {
   const res = await fetch(path, { headers: { accept: 'application/json' } });
+  if (res.status === 401) lost();
   if (!res.ok) throw new ApiError(res.status);
   return res.json();
 }
@@ -41,7 +52,11 @@ export function upsertSession(list, summary) {
 function stream(path, { onEvent, onOpen, onError }) {
   const es = new EventSource(path);
   es.onopen = () => onOpen?.();
-  es.onerror = () => onError?.();
+  es.onerror = () => {
+    onError?.();
+    // An event stream does not say why it failed; ask a plain request whether the cookie is still good.
+    fetch('/api/redact', { headers: { accept: 'application/json' } }).then((r) => { if (r.status === 401) { es.close(); lost(); } }, () => {});
+  };
   es.onmessage = (e) => {
     let data;
     try { data = JSON.parse(e.data); } catch { return; }
