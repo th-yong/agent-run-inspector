@@ -68,7 +68,7 @@ test('open: CC and Codex give the same top-level shape; Codex children are linke
   const cc = idx.open(A1);
   const cx = idx.open(CX3);
   for (const r of [cc, cx]) {
-    assert.deepEqual(Object.keys(r).sort(), ['markers', 'spans', 'summary', 'turns']);
+    assert.deepEqual(Object.keys(r).sort(), ['markers', 'reportedUsd', 'spans', 'summary', 'turns']);
     assert.equal(r.spans.filter((s) => s.kind === 'session').length, 1);
     assert.equal(r.summary.id, r.spans.find((s) => s.kind === 'session').id);
   }
