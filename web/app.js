@@ -3,6 +3,7 @@ import { parseState, toSearch } from './state.js';
 import { fetchSession, fetchRoots, watchList, watchSession, mergeSpan, upsertSession, ApiError } from './api.js';
 import { mount, emptyBlock } from './session-list.js';
 import { createRunHeader } from './run-header.js';
+import { createTimeline } from './timeline.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -70,11 +71,14 @@ async function loadRoots() {
 // ---- run screen: head (title, totals strip, tabs) + the view for the chosen tab ----
 let head = null; // { id, header } - rebuilt per session so numbers do not roll in from another run
 let view = null;
+let timeline = null; // rebuilt per session, like the head
 let stopStream = null;
 
 function ensureHead() {
   if (head?.id === state.s) return head.header;
   head?.header.destroy();
+  timeline?.destroy();
+  timeline = null;
   const header = createRunHeader({
     onBack: () => select(null),
     onTab: (tab) => { state = { ...state, tab }; writeUrl(false); renderMain(); },
@@ -91,6 +95,7 @@ function renderMain() {
   document.body.dataset.view = state.s ? 'run' : listEmpty() ? 'empty' : 'list';
   if (!state.s) {
     head?.header.destroy();
+    timeline?.destroy();
     head = null;
     if (listEmpty()) {
       loadRoots();
@@ -106,7 +111,14 @@ function renderMain() {
   const scopeId = state.tab === 'timeline' ? state.sel : state.gsel;
   header.update({ summary, totals: run.id === state.s ? run.data?.totals : null, spans, scopeId, tab: state.tab, hide: state.hide });
   const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : S.views[state.tab];
-  view.replaceChildren(el('div', 'placeholder', note));
+  if (state.tab === 'timeline' && run.status === 'ready' && run.id === state.s) {
+    timeline ??= createTimeline({ onSelect: (id) => { state = { ...state, sel: id }; writeUrl(false); renderMain(); } });
+    timeline.update({ spans, totals: run.data?.totals, sel: state.sel, status: run.status });
+    if (view.firstChild !== timeline.el) view.replaceChildren(timeline.el);
+  } else {
+    timeline?.destroy();
+    view.replaceChildren(el('div', 'placeholder', note));
+  }
   if (main.firstChild !== header.el) main.replaceChildren(header.el, header.tabs, view);
 }
 
