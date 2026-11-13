@@ -92,6 +92,8 @@ export const S = {
     collapseCalls: 'Hide the calls',
     expandRun: 'Show the folded calls',
     collapseRun: 'Fold these calls again',
+    openCall: 'Show call details',
+    closeCall: 'Hide call details',
     times: (n) => `× ${n}`,
     turnTip: (dur, state) => (state ? `Turn · ${dur} · ${state}` : `Turn · ${dur}`),
     compactTip: (pre, post) => (pre && post ? `Context compacted · ${pre} → ${post} tokens` : 'Context compacted'),
