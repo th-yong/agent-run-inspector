@@ -108,5 +108,31 @@ export function createFileStore(roots) {
     }
   }
 
-  return { add, readLineAt, lineCount };
+  // Size and mtime of a registered file (never its path).
+  function stat(fileId) {
+    const e = entry(fileId);
+    const { fd } = open(e);
+    try {
+      const st = fstatSync(fd);
+      return { size: st.size, mtimeMs: st.mtimeMs };
+    } finally {
+      closeSync(fd);
+    }
+  }
+
+  // Up to `length` bytes from `offset` (may return fewer at the end of the file).
+  function readRange(fileId, offset, length) {
+    const e = entry(fileId);
+    const { fd, size } = open(e);
+    try {
+      const start = Math.max(0, Math.min(offset, size));
+      const out = Buffer.alloc(Math.max(0, Math.min(length, size - start)));
+      const n = out.length ? readSync(fd, out, 0, out.length, start) : 0;
+      return n < out.length ? out.subarray(0, n) : out;
+    } finally {
+      closeSync(fd);
+    }
+  }
+
+  return { add, readLineAt, lineCount, stat, readRange };
 }
