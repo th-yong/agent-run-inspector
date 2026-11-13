@@ -199,3 +199,19 @@ test('1,000 synthetic sessions list within 1 second', () => {
   idx.list(); // second call uses the quick-summary cache
   assert.ok(performance.now() - t1 < 1000);
 });
+
+test('quick summary takes model names from assistant lines when there is no cost-state', () => {
+  const root = tmp();
+  const asst = (model) => line({ type: 'assistant', sessionId: 'm1', timestamp: '2026-01-01T00:00:02.000Z', message: { role: 'assistant', model, content: [{ type: 'text', text: 'ok' }] } });
+  writeCc(root, 'p', 'm1', null, asst('claude-sonnet-4-5') + asst('<synthetic>') + asst('claude-opus-4-1') + asst('claude-sonnet-4-5'));
+  const s = mk([root], []).list().find((x) => x.id === 'm1');
+  assert.deepEqual(s.models, ['claude-sonnet-4-5', 'claude-opus-4-1']);
+});
+
+test('quick summary keeps cost-state models when present', () => {
+  const root = tmp();
+  const cost = line({ type: 'cost-state', sessionId: 'm2', totalCostUSD: 1, modelUsage: { 'claude-haiku-4-5': { inputTokens: 1 } } });
+  const asst = line({ type: 'assistant', sessionId: 'm2', timestamp: '2026-01-01T00:00:02.000Z', message: { role: 'assistant', model: 'claude-sonnet-4-5', content: [] } });
+  writeCc(root, 'p', 'm2', null, asst + cost);
+  assert.deepEqual(mk([root], []).list().find((x) => x.id === 'm2').models, ['claude-haiku-4-5']);
+});
