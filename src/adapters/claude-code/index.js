@@ -1,4 +1,6 @@
 import { LlmCollector } from './llm.js';
+import { ToolCollector } from './tools.js';
+import { MSG } from '../../strings.js';
 
 const DEFAULT_RUNNING_MS = 10 * 60 * 1000;
 
@@ -37,6 +39,9 @@ export class ClaudeCodeSession {
       parentId: parentId ?? this.sessionId,
       nextSeq: () => ++this.seq,
     });
+    this.tools = new ToolCollector(this.llm.ctx);
+    this.markers = [];
+    this.turns = [];
     this.parentIdOverride = parentId;
   }
 
@@ -83,6 +88,13 @@ export class ClaudeCodeSession {
         break;
       case 'assistant':
         this.llm.onAssistant(rec, ts, line, this.prevTs);
+        this.tools.onAssistant(rec, ts, line);
+        break;
+      case 'user':
+        this.tools.onUser(rec, ts);
+        break;
+      case 'system':
+        this.#system(rec, ts, line);
         break;
       default:
         break; // other kinds are handled by later tasks or skipped
@@ -91,6 +103,22 @@ export class ClaudeCodeSession {
       this.prevTs = ts;
       this.firstTs ??= ts;
       this.lastTs = this.lastTs === null ? ts : Math.max(this.lastTs, ts);
+    }
+  }
+
+  #system(rec, ts, line) {
+    if (ts === null) return;
+    if (rec.subtype === 'compact_boundary') {
+      const m = rec.compactMetadata ?? {};
+      this.markers.push({
+        kind: 'compact',
+        ts,
+        ...(Number.isFinite(m.preTokens) ? { preTokens: m.preTokens } : {}),
+        ...(Number.isFinite(m.postTokens) ? { postTokens: m.postTokens } : {}),
+        ref: { fileId: this.fileId, line },
+      });
+    } else if (rec.subtype === 'turn_duration' && Number.isFinite(rec.durationMs)) {
+      this.turns.push({ ts, durationMs: rec.durationMs }); // reference value only
     }
   }
 
@@ -108,7 +136,7 @@ export class ClaudeCodeSession {
       sessionId: this.sessionId ?? '',
       source: 'claude-code',
       kind: 'session',
-      name: this.title ?? (project || 'Untitled session'),
+      name: this.title ?? (project || MSG.untitledSession),
       status,
       start,
       end: status === 'running' ? null : end,
@@ -123,7 +151,8 @@ export class ClaudeCodeSession {
    *   spans: import('../../model/types.js').RunSpan[] }}
    */
   snapshot() {
-    const children = this.llm.spans();
+    const now = this.now ?? Date.now();
+    const children = [...this.llm.spans(), ...this.tools.spans({ lastTs: this.lastTs, now })];
     return {
       session: {
         id: this.sessionId,
@@ -132,6 +161,8 @@ export class ClaudeCodeSession {
         ...(this.cwd !== undefined ? { cwd: this.cwd } : {}),
         ...(this.branch !== undefined ? { branch: this.branch } : {}),
       },
+      markers: this.markers.slice(),
+      turns: this.turns.slice(),
       spans: [this.#sessionSpan(children), ...children],
     };
   }
