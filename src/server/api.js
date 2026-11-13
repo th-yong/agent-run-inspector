@@ -1,5 +1,7 @@
 // JSON API for the session views. Plug into startServer({ handler }).
 // Sessions and spans are addressed by opaque ids only; no response carries a record-file path.
+import { computeTotals } from '../model/totals.js';
+
 const json = (res, status, body) => {
   const data = JSON.stringify(body);
   res.statusCode = status;
@@ -49,6 +51,6 @@ export function createApiHandler({ index, roots = {} }) {
       }
     }
     const { summary, spans, markers, turns } = opened;
-    return json(res, 200, { summary, spans, markers, turns, totals: null }); // totals: T17
+    return json(res, 200, { summary, spans, markers, turns, totals: computeTotals(spans) }); // usd stays null until T18
   };
 }
