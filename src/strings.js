@@ -28,6 +28,8 @@ export const MSG = {
   conflictOpen: 'Error: --open and --no-open cannot be used together',
   untitledSession: 'Untitled session',
   toolFailed: 'Tool call failed',
+  agentFailed: 'Agent call failed',
+  mainAgent: 'Main agent',
   unknownCommand: (c) => `Error: unknown command "${c}"`,
   rootsUsage: 'Usage: ari roots <list|add|remove> [--codex] [dir]',
   rootsNeedDir: 'Error: a folder is required',
