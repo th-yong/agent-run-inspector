@@ -19,7 +19,7 @@ const spans = () => [
 test('hand-computed totals, subtree included, running llm adds no tokens', () => {
   const { total, byAgent } = computeTotals(spans());
   assert.deepEqual(total, { durationMs: 10000, input: 11, output: 7, cacheRead: 103, cacheWrite: 24,
-    modelCalls: 3, toolCalls: 2, errors: 1, agents: 2, usd: null });
+    modelCalls: 3, toolCalls: 2, errors: 1, agents: 2, usd: null, basis: 'unknown', partial: false });
   assert.equal(byAgent.A.input, 11);
   assert.equal(byAgent.A.agents, 2);
   assert.equal(byAgent.B.input, 1);

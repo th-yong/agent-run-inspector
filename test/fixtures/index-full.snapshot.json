@@ -15,7 +15,9 @@
       "output": 540,
       "cacheRead": 8000,
       "cacheWrite": 3000,
-      "usd": null
+      "usd": 1.25,
+      "basis": "reported",
+      "partial": false
     },
     "models": [
       "synthetic-model-a",
@@ -43,7 +45,9 @@
       "output": 135,
       "cacheRead": 2400,
       "cacheWrite": 900,
-      "usd": null
+      "usd": null,
+      "basis": "unknown",
+      "partial": false
     },
     "models": [
       "synthetic-model-a"
@@ -69,7 +73,9 @@
       "output": 170,
       "cacheRead": 1000,
       "cacheWrite": 0,
-      "usd": null
+      "usd": null,
+      "basis": "unknown",
+      "partial": false
     },
     "models": [
       "gpt-5-codex"
@@ -94,7 +100,9 @@
       "output": 80,
       "cacheRead": 500,
       "cacheWrite": 0,
-      "usd": null
+      "usd": null,
+      "basis": "unknown",
+      "partial": false
     },
     "models": [
       "gpt-5.1-codex"
@@ -120,7 +128,9 @@
       "output": 660,
       "cacheRead": 3900,
       "cacheWrite": 500,
-      "usd": null
+      "usd": 0.01975,
+      "basis": "priced",
+      "partial": true
     },
     "models": [
       "gpt-5.5",
@@ -147,7 +157,9 @@
       "output": 0,
       "cacheRead": 0,
       "cacheWrite": 0,
-      "usd": null
+      "usd": null,
+      "basis": "unknown",
+      "partial": false
     },
     "models": [],
     "inferredLinks": 0,

@@ -59,6 +59,6 @@ export function createApiHandler({ index, roots = {}, redactor = createRedactor(
     }
     const { summary, spans, markers, turns } = opened;
     detail.remember(summary.id, spans);
-    return send(res, 200, 'session', { summary, spans, markers, turns, totals: computeTotals(spans) }); // usd stays null until T18
+    return send(res, 200, 'session', { summary, spans, markers, turns, totals: computeTotals(spans, { reportedUsd: opened.reportedUsd }) });
   };
 }

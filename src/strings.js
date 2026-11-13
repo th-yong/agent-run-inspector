@@ -30,6 +30,7 @@ export const MSG = {
   toolFailed: 'Tool call failed',
   agentFailed: 'Agent call failed',
   mainAgent: 'Main agent',
+  badPrices: (m) => `Error: ${m}`,
   unknownCommand: (c) => `Error: unknown command "${c}"`,
   rootsUsage: 'Usage: ari roots <list|add|remove> [--codex] [dir]',
   rootsNeedDir: 'Error: a folder is required',
