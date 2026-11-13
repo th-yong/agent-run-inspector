@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { rollValue, ROLL_MS, scopeOf, runningAgents, costBasis, stripValues } from '../web/run-header.js';
+import { rollValue, ROLL_MS, scopeOf, runningAgents, costBasis, stripValues, firstStart } from '../web/run-header.js';
 
 test('rollValue runs from the old to the new number in 250ms and never overshoots', () => {
   assert.equal(ROLL_MS, 250);
@@ -60,4 +60,10 @@ test('stripValues gathers the strip numbers; unknown stays null', () => {
   const v = stripValues(totals.total);
   assert.deepEqual(v, { usd: 1.5, tokens: 150, cached: 900, modelCalls: 4, toolCalls: 6, errors: 1 });
   assert.deepEqual(stripValues(null), { usd: null, tokens: null, cached: null, modelCalls: null, toolCalls: null, errors: null });
+});
+
+test('firstStart: earliest known start, null when there is none', () => {
+  assert.equal(firstStart([{ start: 30 }, { start: 10 }, { start: null }, {}]), 10);
+  assert.equal(firstStart([]), null);
+  assert.equal(firstStart(undefined), null);
 });

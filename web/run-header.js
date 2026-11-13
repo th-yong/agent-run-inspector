@@ -21,6 +21,12 @@ export function scopeOf(totals, spans, id) {
   return { id: null, name: null, t: totals?.total ?? null };
 }
 
+/** Earliest start among the spans: the clock for a running session whose summary has no start yet. */
+export function firstStart(spans) {
+  const starts = (spans ?? []).map((x) => x.start).filter(known);
+  return starts.length ? Math.min(...starts) : null;
+}
+
 /** Agents that are working now (external session nodes are not agents of this run). */
 export const runningAgents = (spans) => (spans ?? []).filter((s) => s.kind === 'agent' && !s.external && s.status === 'running').length;
 
@@ -209,7 +215,7 @@ export function createRunHeader({ onBack, onTab, onShowAll, onHide }) {
     tok.sub.textContent = known(v.tokens) ? S.totals.cached(fmtTokens(v.cached)) : '';
     const agentSpan = sc.id ? p.spans?.find((x) => x.id === sc.id) : null;
     const scopeRunning = sc.id ? agentSpan?.status === 'running' : running;
-    last.timeInfo = { t: sc.t, running: Boolean(scopeRunning), start: sc.id ? agentSpan?.start : s?.start };
+    last.timeInfo = { t: sc.t, running: Boolean(scopeRunning), start: sc.id ? agentSpan?.start : (known(s?.start) ? s.start : firstStart(p.spans)) };
     paintTime();
     clearInterval(timer);
     if (last.timeInfo.running) timer = setInterval(paintTime, 1000);
