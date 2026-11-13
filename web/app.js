@@ -140,8 +140,11 @@ function renderMain() {
   }
   const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : S.views[state.tab];
   if (state.tab === 'timeline' && run.status === 'ready' && run.id === state.s) {
-    timeline ??= createTimeline({ onSelect: (id) => { state = { ...state, sel: id }; writeUrl(false); renderMain(); } });
-    timeline.update({ spans, totals: run.data?.totals, markers: run.data?.markers, turns: run.data?.turns, sel: state.sel, status: run.status });
+    timeline ??= createTimeline({
+      onSelect: (id) => { state = { ...state, sel: id }; writeUrl(false); renderMain(); },
+      onOpen: (id) => { state = { ...state, open: id }; writeUrl(false); renderMain(); },
+    });
+    timeline.update({ spans, totals: run.data?.totals, markers: run.data?.markers, turns: run.data?.turns, sel: state.sel, status: run.status, openId: state.open, sessionId: state.s });
     if (view.firstChild !== timeline.el) view.replaceChildren(timeline.el);
   } else {
     timeline?.destroy();
