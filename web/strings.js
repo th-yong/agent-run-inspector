@@ -2,7 +2,7 @@
 export const S = {
   appName: 'Run Inspector',
   theme: { toggle: 'Switch light / dark', toDark: 'Switch to dark theme', toLight: 'Switch to light theme' },
-  live: { connected: 'Live · 127.0.0.1', connecting: 'Connecting…', reconnecting: 'Reconnecting…', retry: 'Reconnect' },
+  live: { connected: 'Live · 127.0.0.1', connecting: 'Connecting…', reconnecting: 'Disconnected · reconnecting…', retry: 'Reconnect' },
   list: {
     heading: 'Sessions',
     loading: 'Loading sessions…',
@@ -97,6 +97,7 @@ export const S = {
     times: (n) => `× ${n}`,
     turnTip: (dur, state) => (state ? `Turn · ${dur} · ${state}` : `Turn · ${dur}`),
     compactTip: (pre, post) => (pre && post ? `Context compacted · ${pre} → ${post} tokens` : 'Context compacted'),
+    newCalls: (n) => `${n} new ${n === 1 ? 'call' : 'calls'} ↓`,
     none: 'No agents in this run yet.',
     waiting: 'Loading timeline…',
   },
