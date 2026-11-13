@@ -1,6 +1,6 @@
 # agent-run-inspector — 구현 계획서
 
-> 상태: 초안 (2026-11-13). 입력: `docs/spec.md`(요구사항), `docs/mockup.html`(화면 시안), `docs/brand-map.json`, `docs/demo.gif`.
+> 상태: 초안 (2026-11-13). 입력: `docs/spec.md`(요구사항), `docs/mockup.html`(화면 시안), `brand-map.json`(레포 루트), `docs/demo.gif`.
 > spec 과 이 계획이 다르면 **이 계획(사용자 결정 2026-11-13)** 이 우선이고, T38 에서 spec 을 맞춘다.
 
 ## 0. 확정된 결정 (2026-11-13)
