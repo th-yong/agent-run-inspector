@@ -137,5 +137,19 @@ test('unknown fileId is an error', () => {
 test('exposes no write functions and no path getter', () => {
   const { root } = setup();
   const store = createFileStore([root]);
-  assert.deepEqual(Object.keys(store).sort(), ['add', 'lineCount', 'readLineAt']);
+  assert.deepEqual(Object.keys(store).sort(), ['add', 'lineCount', 'readLineAt', 'readRange', 'stat']);
+});
+
+test('stat and readRange read byte windows of a registered file only', () => {
+  const { root } = setup();
+  const f = join(root, 'r.jsonl');
+  writeFileSync(f, '0123456789');
+  const store = createFileStore([root]);
+  const id = store.add(f);
+  assert.equal(store.stat(id).size, 10);
+  assert.equal(typeof store.stat(id).mtimeMs, 'number');
+  assert.equal(store.readRange(id, 2, 3).toString(), '234');
+  assert.equal(store.readRange(id, 8, 99).toString(), '89');
+  assert.equal(store.readRange(id, 50, 5).length, 0);
+  assert.throws(() => store.readRange(7, 0, 1), { code: 'ARI_UNKNOWN_FILE' });
 });

@@ -1,0 +1,157 @@
+[
+  {
+    "id": "00000000-0000-4000-8000-0000000000a1",
+    "source": "claude-code",
+    "project": "demo-app",
+    "start": 1767225600000,
+    "end": 1767225673000,
+    "lastWrite": 0,
+    "status": "ok",
+    "agentCount": 4,
+    "callCount": 15,
+    "errorCount": 2,
+    "totals": {
+      "input": 1700,
+      "output": 540,
+      "cacheRead": 8000,
+      "cacheWrite": 3000,
+      "usd": null
+    },
+    "models": [
+      "synthetic-model-a",
+      "synthetic-model-c"
+    ],
+    "inferredLinks": 0,
+    "detail": true,
+    "title": "Synthetic demo session",
+    "cwd": "/synthetic/demo-app",
+    "branch": "main"
+  },
+  {
+    "id": "00000000-0000-4000-8000-0000000000a2",
+    "source": "claude-code",
+    "project": "demo-app",
+    "start": 1767312000000,
+    "end": 1767312003100,
+    "lastWrite": 0,
+    "status": "ok",
+    "agentCount": 3,
+    "callCount": 3,
+    "errorCount": 0,
+    "totals": {
+      "input": 360,
+      "output": 135,
+      "cacheRead": 2400,
+      "cacheWrite": 900,
+      "usd": null
+    },
+    "models": [
+      "synthetic-model-a"
+    ],
+    "inferredLinks": 0,
+    "detail": true,
+    "cwd": "/synthetic/demo-app",
+    "branch": "main"
+  },
+  {
+    "id": "cx:00000000-0000-4000-8000-000000000001",
+    "source": "codex",
+    "project": "synthetic-project",
+    "start": 1772355600000,
+    "end": 1772355610000,
+    "lastWrite": 0,
+    "status": "unknown",
+    "agentCount": 1,
+    "callCount": 4,
+    "errorCount": 0,
+    "totals": {
+      "input": 2200,
+      "output": 170,
+      "cacheRead": 1000,
+      "cacheWrite": 0,
+      "usd": null
+    },
+    "models": [
+      "gpt-5-codex"
+    ],
+    "inferredLinks": 0,
+    "detail": true,
+    "cwd": "/work/synthetic-project"
+  },
+  {
+    "id": "cx:00000000-0000-4000-8000-000000000002",
+    "source": "codex",
+    "project": "synthetic-project",
+    "start": 1772445600000,
+    "end": 1772445625000,
+    "lastWrite": 0,
+    "status": "cancelled",
+    "agentCount": 1,
+    "callCount": 3,
+    "errorCount": 0,
+    "totals": {
+      "input": 1000,
+      "output": 80,
+      "cacheRead": 500,
+      "cacheWrite": 0,
+      "usd": null
+    },
+    "models": [
+      "gpt-5.1-codex"
+    ],
+    "inferredLinks": 0,
+    "detail": true,
+    "cwd": "/work/synthetic-project",
+    "branch": "synthetic-branch"
+  },
+  {
+    "id": "cx:00000000-0000-4000-8000-000000000003",
+    "source": "codex",
+    "project": "synthetic-project",
+    "start": 1772535600000,
+    "end": 1772535652000,
+    "lastWrite": 0,
+    "status": "ok",
+    "agentCount": 5,
+    "callCount": 16,
+    "errorCount": 1,
+    "totals": {
+      "input": 8300,
+      "output": 660,
+      "cacheRead": 3900,
+      "cacheWrite": 500,
+      "usd": null
+    },
+    "models": [
+      "gpt-5.5",
+      "gpt-5.5-mini"
+    ],
+    "inferredLinks": 3,
+    "detail": true,
+    "cwd": "/work/synthetic-project",
+    "branch": "synthetic-branch"
+  },
+  {
+    "id": "cx:unknown:N",
+    "source": "codex",
+    "project": "",
+    "start": 1772697600000,
+    "end": null,
+    "lastWrite": 0,
+    "status": "unknown",
+    "agentCount": 0,
+    "callCount": 0,
+    "errorCount": 0,
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "usd": null
+    },
+    "models": [],
+    "inferredLinks": 0,
+    "detail": true,
+    "title": "Unknown format"
+  }
+]
