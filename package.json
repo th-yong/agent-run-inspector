@@ -1,0 +1,27 @@
+{
+  "name": "agent-run-inspector",
+  "version": "0.0.0",
+  "description": "Local, read-only inspector for Claude Code and Codex CLI agent runs.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "agent-run-inspector": "bin/cli.js",
+    "ari": "bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "web",
+    "prices.json",
+    "brand-map.json",
+    "README.md",
+    "README.ko.md"
+  ],
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "lint": "node scripts/lint.js"
+  }
+}
