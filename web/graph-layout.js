@@ -10,6 +10,12 @@ export const WATCH_GAP = 56; // orchestrator -> watcher
 export const DENSE_OVER = 8; // more visible cards than this -> dense
 export const DETAIL_W = 360;
 export const NARROW_MAX = 760;
+// The detail column sits beside the cards only when the run column is at least this wide (it leaves 620px for cards);
+// below that it stacks under the graph. Keep in step with the @container query in app.css.
+export const PANEL_BESIDE_MIN = 980;
+export const SCROLL_PAD = 48; // .g-scroll side padding, both sides
+/** True when the detail column fits beside a canvas of this width. */
+export const panelBeside = (canvasWidth) => canvasWidth + SCROLL_PAD >= PANEL_BESIDE_MIN;
 export const INDENT = 18; // list mode, per depth
 export const LIST_GAP = 8;
 export const RECENT_CALLS = 5;

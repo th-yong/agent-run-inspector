@@ -3,6 +3,12 @@ export const S = {
   appName: 'Run Inspector',
   theme: { toggle: 'Switch light / dark', toDark: 'Switch to dark theme', toLight: 'Switch to light theme' },
   live: { connected: 'Live · 127.0.0.1', connecting: 'Connecting…', reconnecting: 'Disconnected · reconnecting…', retry: 'Reconnect' },
+  redact: {
+    off: 'Redact: off', on: 'Redact: on', strict: 'Redact: strict',
+    turnOn: 'Hide message text, tool inputs and errors', turnOff: 'Show message text again',
+    locked: 'The server was started with redaction on; it cannot be turned off here',
+  },
+  auth: { restarted: 'Server restarted. Open the new address printed in the terminal.', detail: 'This tab belongs to an earlier run, so the server no longer accepts it.' },
   list: {
     heading: 'Sessions',
     loading: 'Loading sessions…',

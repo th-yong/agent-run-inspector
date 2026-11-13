@@ -266,3 +266,11 @@ test('snapshots: fixed sizes for 1, 4, 12 children', () => {
     [12, 13, 800],
   ]);
 });
+
+test('panelBeside: the detail column stacks under the graph in a narrow run column', async () => {
+  const { panelBeside } = await import('../web/graph-layout.js');
+  assert.equal(panelBeside(580 - 48), false);
+  assert.equal(panelBeside(979 - 48), false);
+  assert.equal(panelBeside(980 - 48), true);
+  assert.equal(panelBeside(1072), true);
+});
