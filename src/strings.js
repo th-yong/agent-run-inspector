@@ -5,7 +5,9 @@ Local, read-only inspector for Claude Code and Codex CLI agent runs.
 
 Options:
   --port <n>            Port to listen on (default: random free port)
-  --open / --no-open    Open the browser (default) or only print the address
+  --open[=<where>]      Open the address: auto (default; Orca tab inside Orca,
+                        else default browser), orca, browser or none
+  --no-open             Only print the address (same as --open=none)
   --root <dir>          Extra Claude Code projects folder (repeatable)
   --codex-root <dir>    Extra Codex sessions folder (repeatable)
   --source <name>       claude | codex | all (default: all)

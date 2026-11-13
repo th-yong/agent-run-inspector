@@ -7,13 +7,14 @@ import { loadConfig, saveConfig } from '../src/config.js';
 import { loadPrices } from '../src/cost.js';
 import { realDir, resolveRoots } from '../src/roots.js';
 import { startApp } from '../src/app.js';
+import { OPEN_MODES, openAddress } from '../src/open.js';
 
 const pkgUrl = new URL('../package.json', import.meta.url);
 const { version } = JSON.parse(readFileSync(pkgUrl, 'utf8'));
 
 const OPTIONS = {
   port: { type: 'string' },
-  open: { type: 'boolean' },
+  open: { type: 'string' },
   'no-open': { type: 'boolean' },
   root: { type: 'string', multiple: true },
   'codex-root': { type: 'string', multiple: true },
@@ -29,9 +30,9 @@ const OPTIONS = {
 
 class UsageError extends Error {}
 
-// parseArgs has no optional values, so a bare --redact becomes --redact=basic.
+// parseArgs has no optional values, so a bare --redact becomes --redact=basic and a bare --open becomes --open=auto.
 function parseCli(argv) {
-  const fixed = argv.map((a) => (a === '--redact' ? '--redact=basic' : a));
+  const fixed = argv.map((a) => (a === '--redact' ? '--redact=basic' : a === '--open' ? '--open=auto' : a));
   let parsed;
   try {
     parsed = parseArgs({ args: fixed, options: OPTIONS, allowPositionals: true, strict: true });
@@ -51,7 +52,10 @@ function parseCli(argv) {
   if (v.redact !== undefined && !['basic', 'strict'].includes(v.redact)) {
     throw new UsageError(MSG.badValue('--redact', 'only --redact or --redact=strict'));
   }
-  if (v.open && v['no-open']) throw new UsageError(MSG.conflictOpen);
+  if (v.open !== undefined && !OPEN_MODES.includes(v.open)) {
+    throw new UsageError(MSG.badValue('--open', 'auto, orca, browser or none'));
+  }
+  if (v.open !== undefined && v['no-open']) throw new UsageError(MSG.conflictOpen);
   return parsed;
 }
 
@@ -161,6 +165,7 @@ async function main(argv, env) {
     process.once('SIGTERM', stop);
     // Print only after the handlers exist: a signal that arrives before then would kill the process with the default action.
     console.log(app.url);
+    openAddress(app.url, { mode: values['no-open'] ? 'none' : values.open ?? 'auto', env }).catch(() => {});
   });
 }
 
