@@ -1,5 +1,5 @@
 import { closeSync, constants, fstatSync, openSync, readSync, realpathSync, statSync } from 'node:fs';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { basename, isAbsolute, relative, resolve } from 'node:path';
 
 const CHUNK = 64 * 1024;
 
@@ -134,5 +134,10 @@ export function createFileStore(roots) {
     }
   }
 
-  return { add, readLineAt, lineCount, stat, readRange };
+  // File name only (never the folder), for "which file / line" in the detail view.
+  function name(fileId) {
+    return basename(entry(fileId).real);
+  }
+
+  return { add, name, readLineAt, lineCount, stat, readRange };
 }
