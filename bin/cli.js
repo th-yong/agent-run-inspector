@@ -6,6 +6,7 @@ import { HELP, MSG } from '../src/strings.js';
 import { loadConfig, saveConfig } from '../src/config.js';
 import { loadPrices } from '../src/cost.js';
 import { realDir, resolveRoots } from '../src/roots.js';
+import { startApp } from '../src/app.js';
 
 const pkgUrl = new URL('../package.json', import.meta.url);
 const { version } = JSON.parse(readFileSync(pkgUrl, 'utf8'));
@@ -103,7 +104,7 @@ function rootsCommand(positionals, values, env) {
   return 0;
 }
 
-function main(argv, env) {
+async function main(argv, env) {
   const { values, positionals } = parseCli(argv);
   if (values.help) {
     console.log(HELP);
@@ -132,17 +133,42 @@ function main(argv, env) {
     console.error(MSG.noRoots);
     return 1;
   }
-  console.log(MSG.serverNotReady);
-  return 0;
+  let app;
+  try {
+    app = await startApp({
+      config: cfg,
+      roots,
+      port: values.port === undefined ? 0 : Number(values.port),
+      source: values.source,
+      since: values.since,
+      redact: values.redact,
+      prices: values.prices,
+      session: values.session,
+    });
+  } catch (e) {
+    if (e.code === 'EADDRINUSE') throw new UsageError(MSG.portInUse(values.port));
+    if (e.code === 'EACCES') throw new UsageError(MSG.portDenied(values.port));
+    throw e;
+  }
+  return new Promise((done) => {
+    let stopping = false;
+    const stop = () => {
+      if (stopping) return;
+      stopping = true;
+      app.close().then(() => done(0), () => done(0));
+    };
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+    // Print only after the handlers exist: a signal that arrives before then would kill the process with the default action.
+    console.log(app.url);
+  });
 }
 
-{
-  try {
-    process.exitCode = main(process.argv.slice(2), process.env);
-  } catch (e) {
-    if (!(e instanceof UsageError)) throw e;
-    console.error(e.message);
-    console.error('Run "ari --help" for usage.');
-    process.exitCode = 2;
-  }
+try {
+  process.exitCode = await main(process.argv.slice(2), process.env);
+} catch (e) {
+  if (!(e instanceof UsageError)) throw e;
+  console.error(e.message);
+  console.error('Run "ari --help" for usage.');
+  process.exitCode = 2;
 }

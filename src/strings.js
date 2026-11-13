@@ -47,5 +47,7 @@ export const MSG = {
   codexSession: 'Codex session',
   hidden: '(hidden)',
   charsHidden: (n) => `(${n.toLocaleString('en-US')} chars hidden)`,
-  serverNotReady: 'Server is not available in this build yet.',
+  noWebUi: 'The web UI is not part of this build. The JSON API is available under /api/.',
+  portInUse: (p) => `Error: port ${p} is already in use. Try another with --port, or omit it to pick a free one.`,
+  portDenied: (p) => `Error: no permission to listen on port ${p}. Try another with --port.`
 };
