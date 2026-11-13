@@ -30,6 +30,7 @@
  * @property {number} start Epoch ms.
  * @property {number | null} end Null while running.
  * @property {boolean} [startApprox]
+ * @property {boolean} [linkApprox] Parent link was inferred by time (Codex sub-agents).
  * @property {string} [model]
  * @property {string} [agentType]
  * @property {Tokens} [tokens]
