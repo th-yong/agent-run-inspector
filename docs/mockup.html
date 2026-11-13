@@ -423,7 +423,7 @@ const brandIcon = (model, size = 14) => {
   if (!slug || !BRAND.icons[slug]) return `<svg class="brand other" viewBox="0 0 16 16" width="${size}" height="${size}" role="img" aria-label="알 수 없는 제공사"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`;
   return siSvg(slug, size);
 };
-// 도구 → 브랜드 (spec §4 toolBrand 규칙, 표는 docs/brand-map.json)
+// 도구 → 브랜드 (spec §4 toolBrand 규칙, 표는 brand-map.json)
 //  1) MCP 도구 mcp__<server>__<tool> → <server>   2) 이름 앞부분(github.pr → github)
 //  3) Bash 류는 명령 첫 단어(앞의 VAR=값 · sudo · env · time 은 건너뜀)
 const toolBrand = (name, cmd) => {
