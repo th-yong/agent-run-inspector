@@ -1,11 +1,11 @@
 # agent-run-inspector — 요구사항
 
-> 상태: 초안 (2026-11-13). 화면 시안은 `docs/mockup.html`.
+> 상태: v0.2.0 구현에 맞춰 정리 (2026-11-13). 화면 글과 CLI 도움말은 영어, 사용 설명은 `README.md`(영어)·`README.ko.md`(한국어). 화면 시안은 `docs/mockup.html`.
 > 이 문서의 형식 조사는 이 기계의 실제 기록 파일을 **구조(키·타입·개수)만** 집계해서 얻었다. 메시지 본문은 옮기지 않았다.
 
 ## 0. 한 줄 요약
 
-Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록(JSONL)을 읽어, 오케스트레이터 → 하위 에이전트 → 호출(LLM·도구) 관계를 **로컬 브라우저에서 실시간 트리 + 막대 타임라인**으로 보여 주는 읽기 전용 도구. `npx agent-run-inspector` 한 줄로 뜬다.
+Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록(JSONL)을 읽어, 오케스트레이터 → 하위 에이전트 → 호출(LLM·도구) 관계를 **로컬 브라우저에서 실시간 트리 + 막대 타임라인**으로 보여 주는 읽기 전용 도구. `npx github:th-yong/agent-run-inspector` 한 줄로 뜬다(공개 뒤 `npx agent-run-inspector`).
 
 ## 1. 목표 / 비목표
 
@@ -18,8 +18,8 @@ Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록(JSONL)
 
 ## 2. 사용자 흐름
 
-1. **실행**: 터미널에서 `npx agent-run-inspector` (또는 Claude Code 안에서 `/inspect`).
-   - 기록 폴더를 찾고(§5.1) 색인을 만든 뒤 `http://127.0.0.1:<port>/?t=<token>` 을 출력하고 기본 브라우저로 연다(`--no-open` 으로 끔).
+1. **실행**: 터미널에서 `npx github:th-yong/agent-run-inspector` (`/inspect` 슬래시 명령은 v0.3.0 뒤로 미룸).
+   - 기록 폴더를 찾고(§5.1) 색인을 만든 뒤 `http://127.0.0.1:<port>/?t=<token>` 을 출력하고 연다: Orca 안이면 Orca 새 탭, 아니면 기본 브라우저(`--open=auto|orca|browser|none`, `--no-open` 으로 끔).
 2. **세션 목록**(왼쪽 칸, 좁은 폭에서는 첫 화면)
    - 최근 수정순. 각 줄: 출처 배지(Claude Code / Codex), 제목(있으면), 프로젝트 이름(cwd 의 마지막 폴더), 시작 시각, 길이, 에이전트 수, 토큰 합계, 상태(진행 중 / 끝남 / 오류 있음).
    - 위쪽에 출처 필터(전체 · Claude Code · Codex), 기간(오늘 · 7일 · 30일), 검색(제목·프로젝트 이름만, 본문 검색 없음).
@@ -153,7 +153,7 @@ interface SessionSummary {
 | Claude Code | `$CLAUDE_CONFIG_DIR/projects` 가 있으면 그것, 없으면 `~/.claude/projects` | `--root <dir>` 반복 가능, 설정 파일 `~/.config/agent-run-inspector/config.json` 의 `claudeRoots[]` |
 | Codex | `$CODEX_HOME/sessions` 또는 `~/.codex/sessions` | `--codex-root <dir>`, `codexRoots[]` |
 
-- 한 기계에 설정 폴더가 여러 개일 수 있다(이 기계: `~/.claude` + 프로필 폴더 2개). 특정 도구(예: Orca) 경로를 코드에 박지 않는다. 대신 `npx agent-run-inspector roots add <dir>` 로 설정 파일에 더한다.
+- 한 기계에 설정 폴더가 여러 개일 수 있다(이 기계: `~/.claude` + 프로필 폴더 2개). 특정 도구(예: Orca) 경로를 코드에 박지 않는다. 대신 `ari roots add <dir>` 로 설정 파일에 더한다.
 - 세션 목록에는 어느 폴더에서 왔는지 작은 표시(폴더가 2개 이상일 때만).
 
 ### 5.2 Claude Code (조사 결과)
@@ -217,7 +217,7 @@ interface SessionSummary {
 ## 6. 실시간 갱신
 
 - 서버가 색인할 때 파일마다 (크기, mtime, 읽은 바이트 위치, 마지막 줄 조각) 를 기억한다.
-- 감시: `fs.watch(root, { recursive: true })` (macOS·Windows, Linux Node 20+). 이벤트는 200ms 모아서 처리. `fs.watch` 가 실패하거나 Linux 구버전이면 2초 간격 `stat` 폴링으로 자동 전환.
+- 감시: `fs.watch(root, { recursive: true })` (macOS·Windows, Linux Node 22). 이벤트는 200ms 모아서 처리. `fs.watch` 가 실패하거나 Linux 구버전이면 2초 간격 `stat` 폴링으로 자동 전환.
 - 바뀐 파일은 기억한 위치부터 끝까지만 읽는다(tail). 줄이 끝나지 않은 마지막 조각은 다음 번에 이어 붙임. 파일 크기가 줄었으면(교체·압축) 처음부터 다시.
 - 새 줄 → 어댑터가 RunSpan **변경분**(추가·갱신) 을 낸다 → 열린 화면에 SSE 로 보낸다.
   - `GET /api/sessions/stream` : 세션 목록 변경 `{type:'session', summary}`
@@ -253,13 +253,13 @@ interface SessionSummary {
 
 ## 9. 패키징 · 설치
 
-- npm 패키지 `agent-run-inspector`, 실행 파일 `agent-run-inspector`(별칭 `ari`). Node ≥ 20, **런타임 의존성 0**(Node 내장 `http`·`fs`·`readline` 만), 빌드 단계 없음 → GitHub 에서 바로 설치해도 그대로 동작.
-- 구성: `bin/cli.js`, `src/server.js`, `src/index/*.js`(색인·tail), `src/adapters/claude-code.js`, `src/adapters/codex.js`, `src/cost.js`, `prices.json`, `web/`(HTML·CSS·JS 그대로).
+- npm 패키지 `agent-run-inspector`, 실행 파일 `agent-run-inspector`(별칭 `ari`). Node ≥ 22(Node 20 은 2026-04 지원 종료), **런타임 의존성 0**(Node 내장 `http`·`fs`·`readline` 만), 빌드 단계 없음 → GitHub 에서 바로 설치해도 그대로 동작.
+- 구성: `bin/cli.js`, `src/server/`(HTTP·보안·API), `src/index/`(색인), `src/live/`(감시·tail·SSE), `src/adapters/claude-code/`, `src/adapters/codex/`, `src/model/`(합계·가리기·상세), `src/cost.js`, `src/open.js`, `prices.json`, `brand-map.json`, `web/`(HTML·CSS·JS 그대로), `README.md`·`README.ko.md`. `package.json` 의 `files` 가 이것만 담는다(테스트·docs·scripts 제외).
 - 실행 방법
   - 지금(비공개 레포): `npx github:th-yong/agent-run-inspector` — 레포 접근 권한이 있는 사람만(GitHub 로그인된 git 필요).
   - 나중(공개 결정 후): `npx agent-run-inspector`.
-- 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `roots add|list|remove`.
-- Claude Code 플러그인(덧붙임): 같은 레포에 `.claude-plugin/plugin.json` + `commands/inspect.md`(슬래시 명령 `/inspect` → `npx -y github:th-yong/agent-run-inspector --session $CLAUDE_SESSION_ID` 로 지금 세션을 바로 엶). 설치: `/plugin marketplace add th-yong/agent-run-inspector` → `/plugin install agent-run-inspector`. 핵심 기능은 CLI 쪽에만 있다.
+- 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `--open[=auto|orca|browser|none]`, `--session <id>`, `roots add|list|remove`.
+- Claude Code 플러그인(덧붙임, **v0.3.0 뒤**로 미룸 — 아직 없음): 같은 레포에 `.claude-plugin/plugin.json` + `commands/inspect.md`(슬래시 명령 `/inspect` → `npx -y github:th-yong/agent-run-inspector --session $CLAUDE_SESSION_ID` 로 지금 세션을 바로 엶). 설치: `/plugin marketplace add th-yong/agent-run-inspector` → `/plugin install agent-run-inspector`. 핵심 기능은 CLI 쪽에만 있다.
 - Codex: 플러그인 체계에 기대지 않는다. 터미널에서 같은 `npx` 명령.
 
 ## 10. 넣지 않는 것
