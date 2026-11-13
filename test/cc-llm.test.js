@@ -43,7 +43,7 @@ test('repeated message.id lines make one llm span with usage counted once', () =
   });
   assert.equal(llms[0].model, 'synthetic-model-a');
   assert.equal(llms[0].status, 'ok');
-  assert.equal(llms[0].parentId, S1);
+  assert.equal(llms[0].parentId, `${S1}:main`);
 });
 
 test('start from api-request via requestRef, end = last line of the id', () => {

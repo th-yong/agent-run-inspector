@@ -44,6 +44,7 @@
  * @property {string} [toolBrand] simple-icons slug from brand-map.json.
  * @property {string} [command]
  * @property {string} [spawnsAgentId]
+ * @property {boolean} [external] agent: another session (teammate), shown as a bare node.
  * @property {number} lastActivity
  * @property {number} seq
  */

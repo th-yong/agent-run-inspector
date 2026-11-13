@@ -1,8 +1,13 @@
 import { LlmCollector } from './llm.js';
 import { ToolCollector } from './tools.js';
+import { AgentCollector } from './agents.js';
+import { providerOf } from '../../model/provider.js';
 import { MSG } from '../../strings.js';
 
 const DEFAULT_RUNNING_MS = 10 * 60 * 1000;
+
+/** Id of the root agent span under the session span (Codex: `cx:<sid>:main`). */
+export const rootAgentId = (sessionId) => `${sessionId}:main`;
 
 function lastSegment(path) {
   const parts = String(path).split(/[\\/]+/).filter(Boolean);
@@ -17,9 +22,9 @@ function lastSegment(path) {
  */
 export class ClaudeCodeSession {
   /**
-   * @param {{ fileId: string, sessionId?: string, parentId?: string, now?: number }} opts
+   * @param {{ fileId: string, sessionId?: string, parentId?: string, depth?: number, now?: number }} opts
    */
-  constructor({ fileId, sessionId, parentId, now } = {}) {
+  constructor({ fileId, sessionId, parentId, depth, now } = {}) {
     this.fileId = fileId ?? '0';
     this.sessionId = sessionId ?? null;
     this.now = now;
@@ -36,10 +41,12 @@ export class ClaudeCodeSession {
     this.llm = new LlmCollector({
       sessionId: this.sessionId,
       fileId: this.fileId,
-      parentId: parentId ?? this.sessionId,
+      parentId: parentId ?? (this.sessionId ? rootAgentId(this.sessionId) : undefined),
+      depth: depth ?? 0,
       nextSeq: () => ++this.seq,
     });
     this.tools = new ToolCollector(this.llm.ctx);
+    this.agents = new AgentCollector(this.llm.ctx);
     this.markers = [];
     this.turns = [];
     this.parentIdOverride = parentId;
@@ -71,7 +78,7 @@ export class ClaudeCodeSession {
     if (this.sessionId === null && typeof rec.sessionId === 'string') {
       this.sessionId = rec.sessionId;
       this.llm.ctx.sessionId = rec.sessionId;
-      if (this.parentIdOverride === undefined) this.llm.ctx.parentId = rec.sessionId;
+      if (this.parentIdOverride === undefined) this.llm.ctx.parentId = rootAgentId(rec.sessionId);
     }
     if (typeof rec.cwd === 'string' && rec.cwd) this.cwd = rec.cwd;
     if (typeof rec.gitBranch === 'string' && rec.gitBranch) this.branch = rec.gitBranch;
@@ -89,9 +96,11 @@ export class ClaudeCodeSession {
       case 'assistant':
         this.llm.onAssistant(rec, ts, line, this.prevTs);
         this.tools.onAssistant(rec, ts, line);
+        this.agents.onAssistant(rec, ts, line);
         break;
       case 'user':
         this.tools.onUser(rec, ts);
+        this.agents.onUser(rec, ts);
         break;
       case 'system':
         this.#system(rec, ts, line);
@@ -122,7 +131,7 @@ export class ClaudeCodeSession {
     }
   }
 
-  /** @returns {import('../../model/types.js').RunSpan} */
+  /** @returns {import('../../model/types.js').RunSpan[]} */
   #sessionSpan(children) {
     const project = this.cwd ? lastSegment(this.cwd) : '';
     const start = this.firstTs ?? 0;
@@ -146,13 +155,47 @@ export class ClaudeCodeSession {
     };
   }
 
+  /** The main thread's own agent span: depth 0, parent of everything the main file does. */
+  #rootAgent(session) {
+    const model = this.llm.lastModel();
+    return {
+      id: rootAgentId(this.sessionId ?? ''),
+      parentId: session.id,
+      sessionId: session.sessionId,
+      source: 'claude-code',
+      kind: 'agent',
+      name: model ?? MSG.mainAgent,
+      status: session.status,
+      start: session.start,
+      end: session.end,
+      ref: session.ref,
+      depth: 0,
+      role: 'orchestrator',
+      ...(model ? { model, provider: providerOf(model) } : {}),
+      lastActivity: session.lastActivity,
+      seq: session.seq,
+    };
+  }
+
   /**
+   * llm, tool and agent spans of this file (no session / root agent).
+   * @param {import('./agents.js').AgentLookup} [lookup] sub-agent files, to link and to time agent spans
+   */
+  childSpans(lookup) {
+    const now = this.now ?? Date.now();
+    const clock = { lastTs: this.lastTs, now };
+    return [...this.llm.spans(), ...this.tools.spans(clock), ...this.agents.spans({ ...clock, lookup })];
+  }
+
+  /**
+   * @param {{ children?: import('../../model/types.js').RunSpan[] }} [opts]
+   *   children: precomputed spans for the whole tree (see buildSessionTree); default = this file only
    * @returns {{ session: { id: string|null, title?: string, project: string, cwd?: string, branch?: string },
    *   spans: import('../../model/types.js').RunSpan[] }}
    */
-  snapshot() {
-    const now = this.now ?? Date.now();
-    const children = [...this.llm.spans(), ...this.tools.spans({ lastTs: this.lastTs, now })];
+  snapshot({ children } = {}) {
+    const kids = children ?? this.childSpans();
+    const session = this.#sessionSpan(kids);
     return {
       session: {
         id: this.sessionId,
@@ -163,7 +206,7 @@ export class ClaudeCodeSession {
       },
       markers: this.markers.slice(),
       turns: this.turns.slice(),
-      spans: [this.#sessionSpan(children), ...children],
+      spans: [session, this.#rootAgent(session), ...kids],
     };
   }
 }
