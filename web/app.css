@@ -351,6 +351,7 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 @media (max-width: 760px) {
   .view.with-panel { display: block; }
   .g-panel { width: auto; position: static; max-height: none; border-left: 0; border-top: 1px solid var(--line); }
+}
 /* Graph motion (150-300ms). Cards, rows and edges are keyed, so each animation plays once per change. */
 .g-card { transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease, border-color .15s, box-shadow .15s; }
 .g-card.in { animation: g-card-in .25s ease-out backwards; }
