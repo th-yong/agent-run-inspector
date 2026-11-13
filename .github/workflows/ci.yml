@@ -1,19 +1,27 @@
 name: CI
 
+# Private repo: Actions minutes are billed, and macOS runners count 10x.
+# Run once per PR update (not again for the branch push), plus main, on Linux only.
+# macOS is covered by local runs (development happens on macOS).
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    name: node ${{ matrix.node }} / ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
         # 22 = oldest supported LTS (engines.node), 26 = Active LTS since 2026-10
         node: [22, 26]
-        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
