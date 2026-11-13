@@ -89,7 +89,9 @@ test('no response contains a record-file path', async () => {
 
 test('session detail carries totals that match the summary', async () => {
   const body = JSON.parse((await get(`/api/sessions/${A1}`)).body);
-  assert.equal(body.totals.total.usd, null);
+  assert.equal(body.totals.total.usd, 1.25); // cost-state in the fixture
+  assert.equal(body.totals.total.basis, 'reported');
+  assert.equal(body.summary.totals.usd, 1.25);
   for (const k of ['input', 'output', 'cacheRead', 'cacheWrite']) assert.equal(body.totals.total[k], body.summary.totals[k]);
   assert.equal(body.totals.total.errors, body.summary.errorCount);
   assert.equal(body.totals.total.modelCalls + body.totals.total.toolCalls, body.summary.callCount);
