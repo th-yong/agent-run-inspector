@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Run Inspector 시안</title>
 <!-- 정적 시안. 가짜 데이터. 외부 요청 없음.
-     주소 상태: ?theme=dark|light  ?state=empty  ?s=<세션번호>  ?sel=<agent id>  ?open=<span id>  ?view=list|run(좁은 폭)  ?exp=a,b -->
+     주소 상태: ?theme=dark|light  ?state=empty  ?s=<세션번호>  ?view=list|run(좁은 폭)  ?tab=graph|timeline
+     타임라인: ?sel=<agent id>  ?open=<span id>|err|run|llm  ?exp=a,b,c:a
+     그래프:   ?gsel=<agent id>  ?gopen=<span id>|err  ?hide=1  ?scenario=big(카드 많음)
+     재생기:   ?t=<초>&paused=1 (그 시각 프레임 고정)  ?speed=0.5|1|2|4  — 모든 움직임이 재생 시각의 함수라 같은 t 면 같은 화면 -->
 <style>
 :root {
   --bg: #f7f7f5; --panel: #ffffff; --panel-2: #f1f1ee; --line: #e3e3de; --line-2: #ececE8;
@@ -155,6 +158,100 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .empty li:last-child { border-bottom: 0; }
 .empty code { font-family: var(--mono); background: var(--panel-2); border: 1px solid var(--line); padding: 8px 10px; border-radius: 7px; display: block; font-size: 12px; }
 
+/* 보기 탭 */
+.tabs { display: flex; align-items: center; gap: 12px; padding: 8px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.g-toggle { font-size: 12px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
+
+/* 그래프 뷰 */
+:root { --flow: #8b5cf6; --edge: #4c6ef5; }
+:root[data-theme="dark"], :root.auto-dark { --flow: #b197fc; --edge: #7c93ff; }
+.g-title { flex-wrap: wrap; }
+.g-hdr { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--muted); }
+.g-hdr b { color: var(--text); font-weight: 600; }
+.rolling { color: var(--accent); }
+.g-wrap { display: grid; grid-template-columns: 1fr; min-height: 520px; }
+.g-wrap.with-panel { grid-template-columns: 1fr 360px; }
+.g-scroll { overflow: auto; padding: 20px 24px 80px; }
+.g-canvas { position: relative; display: flex; flex-direction: column; gap: 40px; min-width: 0; }
+.g-edges { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.g-edges .e { fill: none; stroke-width: 1.6; stroke-linecap: round; }
+.g-edges .e.run { stroke: var(--edge); } .g-edges .e.done { stroke: var(--line); stroke: color-mix(in srgb, var(--faint) 55%, transparent); } .g-edges .e.fail { stroke: var(--err); }
+.g-edges .e.watch { stroke: var(--faint); }
+.g-edges .dotc { stroke-width: 1.6; fill: var(--panel); }
+.g-edges .dotc.run { stroke: var(--edge); } .g-edges .dotc.done { stroke: var(--faint); } .g-edges .dotc.fail { stroke: var(--err); }
+.g-level { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 40px 18px; position: relative; z-index: 1; }
+.g-level.l0 { display: grid; grid-template-columns: 1fr auto 1fr; gap: 56px; align-items: start; }
+.g-slot.watch { justify-self: start; }
+.g-level.lg { gap: 40px 22px; align-items: flex-start; }
+.g-group { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 40px 14px; padding: 22px 12px 12px; border: 1px dashed var(--line); border-radius: 14px; position: relative; }
+.g-group-l { position: absolute; top: 4px; left: 12px; font-size: 11px; color: var(--faint); }
+.g-card { width: 272px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 16px -10px rgba(0,0,0,.18); cursor: pointer; text-align: left; transform-origin: 50% 0; }
+.g-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.g-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.g-card[data-status="failed"] { border-color: color-mix(in srgb, var(--err) 55%, var(--line)); }
+.g-card.watch { border-style: dashed; width: 232px; }
+.g-h { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.g-name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-model { font: 11px var(--mono); color: var(--faint); white-space: nowrap; }
+.prov { width: 20px; height: 20px; border-radius: 6px; display: inline-grid; place-items: center; flex: none; }
+.prov svg { width: 12px; height: 12px; }
+.prov.cc { background: #f6e7da; } .prov.cc svg { fill: #c4622d; }
+.prov.cx { background: #e3eaf3; } .prov.cx svg { stroke: #3d5a80; }
+:root[data-theme="dark"] .prov.cc, :root.auto-dark .prov.cc { background: #3a281c; } :root[data-theme="dark"] .prov.cc svg, :root.auto-dark .prov.cc svg { fill: #f0a46e; }
+:root[data-theme="dark"] .prov.cx, :root.auto-dark .prov.cx { background: #1d2a3a; } :root[data-theme="dark"] .prov.cx svg, :root.auto-dark .prov.cx svg { stroke: #9cc0ea; }
+.g-badge { margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; flex: none; }
+.g-badge.running { color: var(--accent); background: var(--accent-soft); }
+.g-badge.done { color: var(--muted); background: var(--panel-2); }
+.g-badge.failed { color: var(--err); background: var(--err-soft); }
+.spin { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid currentColor; border-right-color: transparent; display: inline-block; animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.g-body { overflow: hidden; }
+.g-task { color: var(--muted); font-size: 12px; margin: 6px 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-calls { border-top: 1px solid var(--line-2); padding-top: 6px; display: flex; flex-direction: column; }
+.g-more { font-size: 11px; color: var(--faint); padding: 0 0 4px 22px; }
+.g-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) 54px 46px; align-items: center; gap: 6px; height: 24px; overflow: hidden; font-size: 12px; border-radius: 5px; }
+.g-row:hover, .g-row.open { background: var(--panel-2); }
+.g-rn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11.5px; }
+.g-rt { text-align: right; color: var(--muted); font-size: 11px; }
+.g-bar { height: 4px; border-radius: 2px; background: var(--panel-2); overflow: hidden; }
+.g-bar i { display: block; height: 100%; border-radius: 2px; background: var(--tool); }
+.g-row .k-llm ~ .g-bar i { background: var(--llm); }
+.g-row.err .g-bar i { background: var(--err); }
+.g-row.running .g-bar i { background: linear-gradient(90deg, transparent 0%, var(--flow) 35%, var(--llm) 55%, transparent 90%); background-size: 200% 100%; animation: flow 1.1s linear infinite; }
+@keyframes flow { from { background-position: 100% 0 } to { background-position: -100% 0 } }
+.ico { width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.ico.k-llm { stroke: none; fill: var(--llm); } .ico.k-err { stroke: var(--err); }
+.g-f { display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line-2); font-size: 11px; color: var(--muted); }
+.g-mini { font-size: 11px; color: var(--muted); }
+.g-mini:empty { display: none; }
+.g-card.folded .g-mini { margin-top: 4px; }
+.g-card.folded .g-model { display: none; }
+.g-canvas.dense .g-card { width: 216px; }
+.g-canvas.dense .g-task { display: none; }
+/* 오른쪽 상세 */
+.g-panel { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; max-height: calc(100vh - 48px); position: sticky; top: 0; }
+.g-panel:empty { display: none; }
+.gp-h { display: flex; gap: 10px; align-items: center; padding: 14px 16px 6px; }
+.gp-h .icon-btn { margin-left: auto; }
+.gp-name { font-weight: 650; font-size: 15px; }
+.gp-task { padding: 0 16px 10px; color: var(--muted); font-size: 12px; }
+.gp-stats { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 16px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.gp-stats div { padding: 6px 8px; border-right: 1px solid var(--line-2); display: flex; flex-direction: column; }
+.gp-stats div:last-child { border-right: 0; }
+.gp-stats span { font-size: 10px; color: var(--faint); }
+.gp-sub { padding: 6px 16px 8px; font-size: 11px; color: var(--faint); }
+.gp-row { display: grid; grid-template-columns: 16px 1fr auto; gap: 8px; align-items: center; padding: 6px 16px; border-top: 1px solid var(--line-2); font-size: 12px; cursor: pointer; }
+.gp-row:hover { background: var(--panel-2); } .gp-row.sel { background: var(--sel); } .gp-row.err .g-rn { color: var(--err); }
+.gp-row .num { color: var(--muted); }
+.gp-detail { grid-template-columns: 1fr; padding: 12px 16px; gap: 10px; }
+/* 데모 재생 조절 — 실제 제품에는 없음 */
+.demo { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; align-items: center; gap: 4px; background: var(--text); color: var(--bg); padding: 5px 8px; border-radius: 10px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.demo button { padding: 3px 7px; border-radius: 6px; color: inherit; opacity: .75; }
+.demo button[aria-pressed="true"], .demo button:hover { opacity: 1; background: color-mix(in srgb, var(--bg) 18%, transparent); }
+.demo-l { opacity: .6; margin-right: 4px; font-size: 11px; }
+.demo .num { opacity: .8; margin-left: 4px; min-width: 76px; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) { .spin, .g-row.running .g-bar i { animation: none; } }
+
 /* 좁은 폭 */
 .back { display: none; }
 @media (max-width: 760px) {
@@ -180,6 +277,23 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .span-bg { top: 3px; } .b, .r.call .b { top: 2px; height: 8px; }
   .detail { grid-template-columns: 1fr; padding: 12px 16px; }
   .legend { padding: 8px 16px; }
+}
+@media (max-width: 760px) {
+  .tabs { padding: 8px 16px; flex-wrap: wrap; }
+  .g-toggle { margin-left: 0; }
+  .g-hdr { margin-left: 0; width: 100%; }
+  .g-wrap, .g-wrap.with-panel { grid-template-columns: 1fr; min-height: 0; }
+  .g-scroll { padding: 12px 16px 76px; overflow: visible; }
+  .g-edges { display: none; }
+  .g-canvas { gap: 8px; }
+  .g-level, .g-level.l0, .g-level.lg, .g-group, .g-slot { display: contents; }
+  .g-group-l { display: none; }
+  .g-card, .g-card.watch, .g-canvas.dense .g-card { width: auto; margin-left: calc(var(--depth) * 18px); position: relative; }
+  .g-card.watch { margin-left: 18px; }
+  .g-card:not([data-depth="0"])::before, .g-card.watch::before { content: ""; position: absolute; left: -12px; top: -9px; height: 30px; width: 9px; border-left: 1.5px solid var(--line); border-bottom: 1.5px solid var(--line); border-bottom-left-radius: 6px; }
+  .g-canvas.dense .g-task { display: block; }
+  .g-panel { border-left: 0; border-top: 1px solid var(--line); max-height: none; position: static; }
+  .demo { left: 16px; right: 16px; bottom: 10px; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { .dot.pulse, .span-bg.running::after { animation: none; } .tw svg { transition: none; } }
 </style>
@@ -278,6 +392,10 @@ let state = {
   redact: Q.get('redact') === '1',
   empty: Q.get('state') === 'empty',
   withSub: true,
+  tab: Q.get('tab') === 'timeline' ? 'timeline' : 'graph',
+  gsel: Q.get('gsel') || null,
+  gopen: Q.get('gopen') || null,
+  hide: Q.get('hide') === '1',
 };
 // 시안 바로가기: ?open=err | run | llm
 if (state.open === 'err') state.open = errCall.id;
@@ -291,6 +409,10 @@ const syncUrl = () => {
   p.set('s', state.s); if (state.sel) p.set('sel', state.sel); if (state.open) p.set('open', state.open);
   p.set('exp', [...state.exp].join(',')); if (state.redact) p.set('redact', '1');
   p.set('view', document.body.dataset.view);
+  p.set('tab', state.tab);
+  if (Q.get('scenario')) p.set('scenario', Q.get('scenario'));
+  if (state.gsel) p.set('gsel', state.gsel); if (state.gopen) p.set('gopen', state.gopen);
+  if (state.hide) p.set('hide', '1');
   history.replaceState(null, '', '?' + p);
 };
 
@@ -415,6 +537,8 @@ function renderMain() {
       <code>npx agent-run-inspector --root ~/my-claude-profile/projects</code></div>`;
     return;
   }
+  if (state.tab === 'graph') { renderGraph(el); return; }
+  GE.unmount();
   const s = sessions.find(x => x.id === state.s) || sessions[0];
   const scopeIds = state.sel ? (state.withSub ? desc(state.sel) : [state.sel]) : agents.map(a => a.id);
   const t = totals(scopeIds);
@@ -434,6 +558,7 @@ function renderMain() {
         <div class="stat ${t.err ? 'err' : ''}"><div class="lbl">오류</div><div class="v">${t.err}</div><div class="sub">${t.err ? '도구 1' : '없음'}</div></div>
       </div>
     </div>
+    ${tabsHtml('')}
     <div class="legend"><span><i style="background:var(--llm)"></i>LLM</span><span><i style="background:var(--tool-soft);box-shadow:inset 0 0 0 1px var(--tool)"></i>도구</span><span><i style="background:var(--err)"></i>오류</span><span><i style="background:var(--line)"></i>에이전트 수명</span><span style="margin-left:auto">이름을 누르면 합계 범위 · 호출을 누르면 상세</span></div>
     <div class="grid">
       <div class="ghead"><div>에이전트 · 호출</div><div class="ruler">${rulerHtml()}</div><div style="text-align:right">토큰</div><div style="text-align:right">비용</div><div style="text-align:right">시간</div></div>
@@ -443,8 +568,370 @@ function renderMain() {
 }
 function render() { renderList(); renderMain(); syncUrl(); }
 
+// =====================================================================
+// 그래프 뷰 — 에이전트 카드 + 연결선, 가짜 이벤트 재생기
+// 모든 움직임은 재생 시각 T 의 함수다(같은 T 면 같은 화면) → ?t=12&paused=1 로 프레임 고정 캡처 가능.
+// =====================================================================
+function tabsHtml(extra) {
+  return `<div class="tabs"><div class="seg" role="tablist" aria-label="보기">
+      <button role="tab" data-tab="graph" aria-pressed="${state.tab === 'graph'}">그래프</button>
+      <button role="tab" data-tab="timeline" aria-pressed="${state.tab === 'timeline'}">타임라인</button></div>${extra}</div>`;
+}
+const ICON = {
+  llm: '<path d="M8 1.5l1.6 4.9 4.9 1.6-4.9 1.6L8 14.5 6.4 9.6 1.5 8l4.9-1.6z"/>',
+  search: '<circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2L14 14"/>',
+  globe: '<circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/>',
+  db: '<ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>',
+  git: '<circle cx="4.5" cy="3.5" r="1.6"/><circle cx="4.5" cy="12.5" r="1.6"/><circle cx="11.5" cy="6" r="1.6"/><path d="M4.5 5.1v5.8M11.5 7.6c0 2.4-3 2.2-6.2 3.6"/>',
+  term: '<rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6.5l2 1.5-2 1.5M8.5 10h3"/>',
+  file: '<path d="M4 1.8h5l3 3v9.4H4z"/><path d="M9 1.8v3h3"/>',
+  edit: '<path d="M10.8 2.2l3 3-8 8H2.8v-3z"/>',
+  agent: '<circle cx="8" cy="5" r="2.6"/><path d="M3 14c.6-2.8 2.6-4.2 5-4.2s4.4 1.4 5 4.2"/>',
+};
+const ico = (k, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 16 16" aria-hidden="true">${ICON[k] || ICON.file}</svg>`;
+// 출처 표식: 상표 그림이 아닌 중립 기호 (CC=별, CX=육각)
+const provMark = p => p === 'cc'
+  ? '<span class="prov cc" title="Claude Code"><svg viewBox="0 0 16 16"><path d="M8 1l1.4 4.6L14 7l-4.6 1.4L8 13 6.6 8.4 2 7l4.6-1.4z"/></svg></span>'
+  : '<span class="prov cx" title="Codex"><svg viewBox="0 0 16 16"><path d="M8 1.5l5.6 3.2v6.6L8 14.5l-5.6-3.2V4.7z" fill="none" stroke-width="1.6"/></svg></span>';
+
+const GD = (() => {
+  const scen = Q.get('scenario') === 'big' ? 'big' : 'demo';
+  let gs = 11; const r = () => (gs = (gs * 16807) % 2147483647) / 2147483647;
+  const A = [];
+  const add = o => A.push({ calls: [], fail: false, ...o });
+  if (scen === 'demo') {
+    add({ id: 'o', parent: null, name: '오케스트레이터', prov: 'cc', model: 'opus', task: '환불 흐름 정리 작업을 나눠 맡기고 결과를 합친다', start: 0, end: 41 });
+    add({ id: 'w', parent: 'o', watch: true, name: '감시자', prov: 'cx', model: 'gpt-5', task: '하위 결과에서 비밀·고객 정보 노출 점검', start: 0.6, end: 40 });
+    add({ id: 'r', parent: 'o', name: '자료 조사', prov: 'cc', model: 'sonnet', task: '기존 환불 규정과 관련 이슈 3건 요약', start: 2, end: 15 });
+    add({ id: 'd', parent: 'o', name: '문서 초안', prov: 'cx', model: 'gpt-5', task: '환불 정책 변경안 초안 작성', start: 3.5, end: 26 });
+    add({ id: 'c', parent: 'o', name: '환불 API 구현', prov: 'cc', model: 'sonnet', task: '부분 환불 엔드포인트와 테스트', start: 5, end: 37 });
+    add({ id: 't', parent: 'c', name: '테스트 실행', prov: 'cc', model: 'haiku', task: '환불 테스트 묶음 실행 · 실패 분석', start: 13, end: 24, fail: true });
+    add({ id: 'l', parent: 'c', name: '린트', prov: 'cc', model: 'haiku', task: '변경 파일 린트 · 형식 검사', start: 14.5, end: 20 });
+  } else {
+    add({ id: 'o', parent: null, name: '오케스트레이터', prov: 'cc', model: 'opus', task: '결제 개편 작업 분배', start: 0, end: 70 });
+    add({ id: 'w', parent: 'o', watch: true, name: '감시자', prov: 'cx', model: 'gpt-5', task: '비밀·고객 정보 노출 점검', start: 0.5, end: 69 });
+    const kids = [['API 설계', 'opus'], ['DB 마이그레이션', 'sonnet'], ['결제 연동', 'sonnet'], ['환불 API', 'sonnet'], ['알림 메일', 'haiku'], ['관리 화면', 'sonnet'], ['문서', 'gpt-5'], ['보안 점검', 'opus']];
+    kids.forEach(([n, m], i) => add({ id: 'k' + i, parent: 'o', name: n, prov: m === 'gpt-5' ? 'cx' : 'cc', model: m, task: n + ' 담당', start: 1.5 + i * 1.1, end: 22 + i * 4 + (i % 3) * 5, fail: i === 4 }));
+    [['테스트', 'haiku'], ['린트', 'haiku'], ['타입 검사', 'haiku']].forEach(([n, m], i) => add({ id: 'g3' + i, parent: 'k3', name: n, prov: 'cc', model: m, task: n, start: 10 + i * 1.2, end: 26 + i * 3 }));
+    [['화면 캡처', 'sonnet'], ['접근성 점검', 'haiku']].forEach(([n, m], i) => add({ id: 'g5' + i, parent: 'k5', name: n, prov: 'cc', model: m, task: n, start: 12 + i * 1.5, end: 30 + i * 4 }));
+  }
+  const TOOLS = [['search', 'web.search'], ['globe', 'web.fetch'], ['db', 'db.query'], ['git', 'github.pr'], ['term', 'bash'], ['file', 'fs.read'], ['edit', 'fs.edit']];
+  for (const a of A) {
+    let t = a.start + 0.3, i = 0;
+    while (t < a.end - 0.6) {
+      const ld = 0.8 + r() * 1.6;
+      a.calls.push({ id: `${a.id}.${i++}`, agent: a.id, kind: 'llm', icon: 'llm', name: a.model, start: t, end: Math.min(t + ld, a.end - 0.1), tin: Math.round(1500 + r() * 9000), tout: Math.round(150 + r() * 1200) });
+      t += ld + 0.15;
+      if (t >= a.end - 0.6) break;
+      const [icon, name] = TOOLS[Math.floor(r() * TOOLS.length)];
+      const td = 0.5 + r() * 3;
+      a.calls.push({ id: `${a.id}.${i++}`, agent: a.id, kind: 'tool', icon, name, start: t, end: Math.min(t + td, a.end - 0.1) });
+      t += td + 0.2 + r() * 1.4;
+    }
+    if (a.fail) {
+      const k = a.calls.map(c => c.kind).lastIndexOf('tool');
+      const e = a.calls[k]; Object.assign(e, { err: true, icon: 'term', name: 'bash', errMsg: 'Exit code 1 · 3 failed, 41 passed' });
+      a.calls.length = k + 1; a.end = e.end + 0.4;
+    }
+  }
+  for (const a of A) if (a.parent && !a.watch) {
+    const p = A.find(x => x.id === a.parent);
+    p.calls.push({ id: `${p.id}.sp.${a.id}`, agent: p.id, kind: 'tool', icon: 'agent', name: '→ ' + a.name, start: a.start - 0.35, end: a.start, spawn: a.id });
+  }
+  const depthOf = a => a.parent ? (a.watch ? 0 : depthOf(A.find(x => x.id === a.parent)) + 1) : 0;
+  let dfs = 0; const order = id => { const a = A.find(x => x.id === id); a.order = dfs++; A.filter(x => x.parent === id && x.watch).forEach(x => order(x.id)); A.filter(x => x.parent === id && !x.watch).forEach(x => order(x.id)); };
+  A.forEach(a => { a.calls.sort((x, y) => x.start - y.start); a.depth = depthOf(a); });
+  order('o');
+  const P = { opus: [15, 75], sonnet: [3, 15], haiku: [1, 5], 'gpt-5': [1.25, 10] }; // 시안용 가짜 단가
+  A.forEach(a => a.calls.forEach(c => { if (c.kind === 'llm') c.usd = (c.tin * P[a.model][0] + c.tout * P[a.model][1]) / 1e6; }));
+  const maxEnd = Math.max(...A.map(a => a.end));
+  return { A, scen, maxEnd, byId: id => A.find(a => a.id === id), kids: id => A.filter(a => a.parent === id && !a.watch) };
+})();
+
+// ---------- 재생 엔진 ----------
+const GE = (() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const E = { T: Q.get('t') != null ? +Q.get('t') : 0, speed: +(Q.get('speed') || 1), playing: Q.get('paused') !== '1' && Q.get('t') == null, el: null, cards: new Map(), raf: 0, last: 0, shown: {}, panelSig: '' };
+  const N_VISIBLE = () => (E.el && E.el.querySelector('.g-canvas').classList.contains('dense') ? 3 : 5);
+  const ANIM = 0.25;
+  const prog = start => reduce ? 1 : Math.max(0, Math.min(1, (E.T - start) / (ANIM * E.speed)));
+  const ease = p => 1 - Math.pow(1 - p, 3);
+  const stat = a => E.T < a.start ? 'hidden' : E.T < a.end ? 'running' : a.fail ? 'failed' : 'done';
+  const descIds = id => [id, ...GD.A.filter(x => x.parent === id).flatMap(x => descIds(x.id))];
+  const runningDesc = a => GD.A.some(x => x.parent === a.id && (stat(x) === 'running' || runningDesc(x)));
+  const collapseP = a => (a.id === state.gsel || stat(a) === 'running' || stat(a) === 'hidden' || a.id === 'o') ? 0 : prog(a.end + 1.6);
+  const hiddenByToggle = a => state.hide && a.id !== 'o' && collapseP(a) >= 1 && !runningDesc(a);
+
+  function totalsFor(ids) {
+    let usd = 0, tok = 0, nl = 0, nt = 0, err = 0, start = Infinity, end = 0, running = 0, nAg = 0;
+    for (const a of GD.A) if (ids.includes(a.id) && stat(a) !== 'hidden') {
+      nAg++; if (stat(a) === 'running') running++;
+      start = Math.min(start, a.start); end = Math.max(end, Math.min(E.T, a.end));
+      for (const c of a.calls) if (c.start <= E.T) {
+        if (c.kind === 'llm') nl++; else nt++;
+        if (c.end <= E.T) { if (c.usd) usd += c.usd; if (c.tin) tok += c.tin + c.tout; if (c.err) err++; }
+      }
+    }
+    return { usd, tok, nl, nt, err, dur: nAg ? end - start : 0, running, nAg };
+  }
+  // 숫자 굴러 올라가기: 표시값이 목표값으로 250ms 동안 따라감
+  const tween = {};
+  function roll(key, target, fmt, now) {
+    const t = tween[key] || (tween[key] = { v: target, from: target, to: target, at: now });
+    if (t.to !== target) { t.from = t.v; t.to = target; t.at = now; }
+    const p = reduce || (!E.playing && !E.forceRoll) ? 1 : Math.min(1, (now - t.at) / 250);
+    t.v = t.from + (t.to - t.from) * ease(p);
+    const el = E.el.querySelector(`[data-roll="${key}"]`);
+    if (el) { const s = fmt(t.v); if (el.textContent !== s) { el.textContent = s; if (p < 1) el.classList.add('rolling'); else el.classList.remove('rolling'); } }
+  }
+
+  function cardHtml(a) {
+    return `<div class="g-card${a.watch ? ' watch' : ''}" data-gagent="${a.id}" tabindex="0" role="button">
+      <div class="g-h">${provMark(a.prov)}<span class="g-name">${esc(a.name)}</span><span class="g-model">${esc(a.model)}</span><span class="g-badge"></span></div>
+      <div class="g-body"><div class="g-task">${state.redact ? '(과제 설명 숨김)' : esc(a.task)}</div>
+        <div class="g-calls"><div class="g-more" hidden></div></div>
+        <div class="g-f"><span class="g-cost num"></span><span class="g-count"></span></div></div>
+      <div class="g-mini num"></div>
+    </div>`;
+  }
+  function ensureCard(a) {
+    let c = E.cards.get(a.id);
+    if (c) return c;
+    const host = a.depth === 0 ? E.el.querySelector(a.watch ? '.g-slot.watch' : '.g-slot.root') : (() => {
+      if (a.depth === 1) return E.el.querySelector('.g-level.l1');
+      let g = E.el.querySelector(`.g-group[data-parent="${a.parent}"]`);
+      if (!g) {
+        let lv = E.el.querySelector(`.g-level[data-depth="${a.depth}"]`);
+        if (!lv) { lv = document.createElement('div'); lv.className = 'g-level lg'; lv.dataset.depth = a.depth; E.el.querySelector('.g-canvas').appendChild(lv); }
+        g = document.createElement('div'); g.className = 'g-group'; g.dataset.parent = a.parent;
+        g.innerHTML = `<div class="g-group-l">${esc(GD.byId(a.parent).name)} 아래</div>`;
+        lv.appendChild(g);
+      }
+      return g;
+    })();
+    host.insertAdjacentHTML('beforeend', cardHtml(a));
+    const el = host.lastElementChild;
+    c = { el, rows: new Map(), badge: el.querySelector('.g-badge'), body: el.querySelector('.g-body'), calls: el.querySelector('.g-calls'), more: el.querySelector('.g-more'), cost: el.querySelector('.g-cost'), count: el.querySelector('.g-count'), mini: el.querySelector('.g-mini'), st: '' };
+    el.style.order = a.order; el.style.setProperty('--depth', a.depth); el.dataset.depth = a.depth;
+    E.cards.set(a.id, c);
+    return c;
+  }
+  function rowHtml(cl) {
+    return `<div class="g-row${cl.err ? ' err' : ''}" data-gcall="${cl.id}">${ico(cl.icon, cl.kind === 'llm' ? 'k-llm' : cl.err ? 'k-err' : '')}
+      <span class="g-rn">${esc(cl.kind === 'llm' ? '모델 응답' : cl.name)}</span><span class="g-bar"><i></i></span><span class="g-rt num"></span></div>`;
+  }
+  function updateCard(a, now) {
+    const s = stat(a);
+    let c = E.cards.get(a.id);
+    if (s === 'hidden') { if (c) { c.el.remove(); E.cards.delete(a.id); } return; }
+    c = ensureCard(a);
+    const hid = hiddenByToggle(a);
+    c.el.hidden = hid;
+    if (hid) return;
+    const pe = ease(prog(a.start + 0.08));
+    c.el.style.opacity = pe; c.el.style.transform = pe < 1 ? `translateY(${(1 - pe) * 10}px) scale(${0.96 + 0.04 * pe})` : '';
+    if (c.st !== s) {
+      c.st = s; c.el.dataset.status = s;
+      c.badge.className = 'g-badge ' + s;
+      c.badge.innerHTML = s === 'running' ? '<i class="spin"></i>진행 중' : s === 'failed' ? '▲ 실패' : '✓ 끝남';
+    }
+    c.el.classList.toggle('sel', state.gsel === a.id);
+    // 호출 줄: 최근 N개만, 오래된 줄은 위로 접혀 사라짐
+    const started = a.calls.filter(x => x.start <= E.T);
+    const n = N_VISIBLE();
+    const keep = new Set();
+    let gone = 0;
+    started.forEach((cl, i) => {
+      const pushedAt = i < started.length - n ? started[i + n].start : null;
+      const lp = pushedAt == null ? 0 : prog(pushedAt);
+      if (lp >= 1) { gone++; return; }
+      keep.add(cl.id);
+      let row = c.rows.get(cl.id);
+      if (!row) { c.calls.insertAdjacentHTML('beforeend', rowHtml(cl)); row = { el: c.calls.lastElementChild }; row.bar = row.el.querySelector('.g-bar i'); row.t = row.el.querySelector('.g-rt'); c.rows.set(cl.id, row); }
+      const pin = ease(prog(cl.start));
+      row.el.style.opacity = Math.min(pin, 1 - lp);
+      row.el.style.transform = pin < 1 ? `translateY(${(1 - pin) * -6}px)` : '';
+      row.el.style.height = lp > 0 ? (1 - ease(lp)) * 24 + 'px' : '';
+      row.el.classList.toggle('open', state.gopen === cl.id);
+      const running = E.T < cl.end;
+      row.el.classList.toggle('running', running);
+      const maxD = Math.max(...a.calls.map(x => x.end - x.start));
+      row.bar.style.width = running ? '100%' : Math.max(8, (cl.end - cl.start) / maxD * 100) + '%';
+      row.t.textContent = running ? '…' : fmtDur(cl.end - cl.start);
+    });
+    for (const [id, row] of c.rows) if (!keep.has(id)) { row.el.remove(); c.rows.delete(id); }
+    c.more.hidden = gone === 0;
+    if (gone) c.more.textContent = `+${gone} 이전 호출`;
+    const t = totalsFor([a.id]);
+    c.cost.textContent = `${fmtUsd(t.usd)} · ${fmtDur(Math.max(0, Math.min(E.T, a.end) - a.start))}`;
+    c.count.textContent = `호출 ${started.length}`;
+    // 끝난 카드는 잠시 뒤 한 줄로 접힘
+    const cp = ease(collapseP(a));
+    c.el.classList.toggle('folded', cp >= 1);
+    if (cp > 0 && cp < 1) { c.body.style.maxHeight = (1 - cp) * c.body.scrollHeight + 'px'; c.body.style.opacity = 1 - cp; }
+    else { c.body.style.maxHeight = cp >= 1 ? '0px' : ''; c.body.style.opacity = cp >= 1 ? 0 : ''; }
+    c.mini.textContent = cp > 0 ? `${fmtUsd(t.usd)} · ${fmtDur(a.end - a.start)} · 호출 ${started.length}` : '';
+  }
+  function edgePath(x1, y1, x2, y2) {
+    // 꺾는 높이는 '자식 줄 바로 위 틈' — 한 단계가 여러 줄로 넘쳐도 가로선이 카드 위를 지나지 않는다
+    const my = y2 - 19, rr = Math.min(9, Math.abs(x2 - x1) / 2, (y2 - y1) / 4);
+    if (Math.abs(x2 - x1) < 1) return `M${x1},${y1} V${y2}`;
+    const sx = x2 > x1 ? 1 : -1;
+    return `M${x1},${y1} V${my - rr} Q${x1},${my} ${x1 + sx * rr},${my} H${x2 - sx * rr} Q${x2},${my} ${x2},${my + rr} V${y2}`;
+  }
+  function drawEdges() {
+    const svg = E.el.querySelector('svg.g-edges'), cv = E.el.querySelector('.g-canvas');
+    if (getComputedStyle(svg).display === 'none') return;
+    const cr = cv.getBoundingClientRect();
+    // 화면이 확대·축소(transform)돼 있어도 선이 카드에 맞도록 화면 좌표 → 캔버스 좌표로 환산
+    const k = cv.offsetWidth ? cr.width / cv.offsetWidth : 1;
+    const R = el => { const r = el.getBoundingClientRect(); return { left: (r.left - cr.left) / k, right: (r.right - cr.left) / k, top: (r.top - cr.top) / k, bottom: (r.bottom - cr.top) / k, width: r.width / k }; };
+    svg.setAttribute('width', cv.clientWidth); svg.setAttribute('height', cv.clientHeight);
+    let h = '';
+    for (const a of GD.A) {
+      if (!a.parent) continue;
+      const pc = E.cards.get(a.parent), cc = E.cards.get(a.id);
+      if (!pc || !cc || pc.el.hidden || cc.el.hidden) continue;
+      const pr = R(pc.el), rr = R(cc.el);
+      const s = stat(a), cls = s === 'running' ? 'run' : s === 'failed' ? 'fail' : 'done';
+      const p = ease(prog(a.start));
+      let d;
+      if (a.watch) { const y = pr.top + 22; d = `M${pr.right},${y} H${rr.left}`; }
+      else d = edgePath(pr.left + pr.width / 2, pr.bottom, rr.left + rr.width / 2, rr.top);
+      h += a.watch
+        ? `<path class="e watch" d="${d}" style="stroke-dasharray:4 4;opacity:${p}"/>`
+        : `<path class="e ${cls}" d="${d}" pathLength="1" style="stroke-dasharray:1 1;stroke-dashoffset:${1 - p}"/>`;
+      if (!a.watch) {
+        h += `<circle class="dotc ${cls}" cx="${pr.left + pr.width / 2}" cy="${pr.bottom}" r="3"/>`;
+        if (p >= 1) h += `<circle class="dotc ${cls}" cx="${rr.left + rr.width / 2}" cy="${rr.top}" r="3"/>`;
+      }
+    }
+    svg.innerHTML = h;
+  }
+  function updatePanel() {
+    const pn = E.el.querySelector('.g-panel');
+    const a = state.gsel && GD.byId(state.gsel);
+    E.el.querySelector('.g-wrap').classList.toggle('with-panel', !!a && stat(a) !== 'hidden');
+    if (!a || stat(a) === 'hidden') { if (E.panelSig) { pn.innerHTML = ''; E.panelSig = ''; } return; }
+    const started = a.calls.filter(x => x.start <= E.T);
+    const sig = [a.id, state.gopen, state.redact, stat(a), started.length, started.filter(x => x.end <= E.T).length].join('|');
+    if (sig === E.panelSig) return;
+    E.panelSig = sig;
+    const t = totalsFor(descIds(a.id));
+    const st = pn.scrollTop;
+    pn.innerHTML = `<div class="gp-h">${provMark(a.prov)}<div><div class="gp-name">${esc(a.name)}</div><div class="atype">${esc(a.model)} · ${{ running: '진행 중', done: '끝남', failed: '실패' }[stat(a)]}</div></div><button class="icon-btn" data-gclose>닫기</button></div>
+      <div class="gp-task">${state.redact ? '(과제 설명 숨김)' : esc(a.task)}</div>
+      <div class="gp-stats"><div><span>비용</span><b class="num">${fmtUsd(t.usd)}</b></div><div><span>토큰</span><b class="num">${fmtTok(t.tok)}</b></div><div><span>시간</span><b class="num">${fmtDur(t.dur)}</b></div><div><span>호출</span><b class="num">${t.nl + t.nt}</b></div></div>
+      <div class="gp-sub">하위 포함 합계 · 호출 ${started.length}개 (전부)</div>
+      <div class="gp-list">${started.slice().reverse().map(cl => {
+        const run = E.T < cl.end;
+        return `<div class="gp-row${state.gopen === cl.id ? ' sel' : ''}${cl.err ? ' err' : ''}" data-gcall="${cl.id}" role="button" tabindex="0">${ico(cl.icon, cl.kind === 'llm' ? 'k-llm' : cl.err ? 'k-err' : '')}<span class="g-rn">${esc(cl.kind === 'llm' ? '모델 응답 · ' + cl.name : cl.name)}</span><span class="num">${run ? '…' : fmtDur(cl.end - cl.start)}</span></div>
+        ${state.gopen === cl.id ? gDetail(cl, a, run) : ''}`;
+      }).join('')}</div>`;
+    pn.scrollTop = st;
+  }
+  function gDetail(cl, a, run) {
+    const clock = s => { const d = new Date(2026, 10, 13, 14, 2, 0); d.setMilliseconds(s * 1000); return d.toTimeString().slice(0, 8); };
+    const red = n => `<pre class="redacted">(${n.toLocaleString()}자 숨김)</pre>`;
+    return `<div class="detail gp-detail"><dl>
+      <dt>종류</dt><dd>${cl.kind === 'llm' ? 'LLM 호출' : '도구 호출'}</dd><dt>이름</dt><dd class="num">${esc(cl.name)}</dd>
+      <dt>상태</dt><dd>${cl.err ? '<span class="status-err">오류</span>' : run ? '<span class="st-run">진행 중</span>' : '정상'}</dd>
+      <dt>시작</dt><dd class="num">${clock(cl.start)}</dd><dt>걸린 시간</dt><dd class="num">${run ? fmtDur(E.T - cl.start) + ' 지남' : fmtDur(cl.end - cl.start)}</dd>
+      ${cl.kind === 'llm' ? `<dt>입력/출력</dt><dd class="num">${cl.tin.toLocaleString()} / ${run ? '—' : cl.tout.toLocaleString()}</dd><dt>비용</dt><dd class="num">${run ? '—' : fmtUsd(cl.usd)}<span class="basis">단가표</span></dd>` : ''}
+    </dl><div class="pv">${cl.err ? `<div class="errbox"><b>오류</b> · ${esc(cl.errMsg)}</div>` : ''}
+      <h4><span>입력 미리보기</span></h4>${state.redact ? red(1840) : `<pre>${cl.kind === 'llm' ? 'system + 12개 메시지 · 도구 정의 9개' : cl.name === 'bash' ? '{ "command": "npm test -- refund" }' : '{ "query": "refund policy partial" }'}</pre>`}
+      <h4><span>출력 미리보기</span></h4>${run ? '<pre class="redacted">아직 끝나지 않음</pre>' : state.redact ? red(620) : `<pre>${cl.kind === 'llm' ? 'text 1블록 · tool_use 1블록' : cl.err ? 'FAIL  src/refund/refund.test.ts\nTests: 3 failed, 41 passed' : '3 results'}</pre>`}</div></div>`;
+  }
+  function frame(now) {
+    if (!E.el || !E.el.isConnected) { E.raf = 0; return; }
+    const dt = Math.min(0.1, (now - (E.last || now)) / 1000); E.last = now;
+    if (E.playing) { E.T += dt * E.speed; if (E.T > GD.maxEnd + 4) E.T = 0; }
+    const cv = E.el.querySelector('.g-canvas');
+    cv.classList.toggle('dense', GD.A.filter(a => stat(a) !== 'hidden' && !hiddenByToggle(a)).length > 8);
+    for (const a of GD.A) updateCard(a, now);
+    drawEdges();
+    const all = GD.A.map(a => a.id);
+    const scope = state.gsel ? descIds(state.gsel) : all;
+    const tt = totalsFor(scope), ta = totalsFor(all);
+    roll('dur', tt.dur, v => fmtDur(v), now);
+    roll('usd', tt.usd, v => fmtUsd(v), now);
+    roll('tok', tt.tok, v => fmtTok(Math.round(v)), now);
+    roll('nl', tt.nl, v => String(Math.round(v)), now);
+    roll('nt', tt.nt, v => String(Math.round(v)), now);
+    roll('err', tt.err, v => String(Math.round(v)), now);
+    roll('hdrUsd', ta.usd, v => fmtUsd(v), now);
+    const hdr = E.el.querySelector('.g-count-h');
+    const hs = `에이전트 ${ta.nAg} · 진행 중 ${ta.running}`;
+    if (hdr.textContent !== hs) hdr.textContent = hs;
+    E.el.querySelector('[data-errstat]').classList.toggle('err', tt.err > 0);
+    const sc = E.el.querySelector('.scope .v'); const sn = state.gsel ? GD.byId(state.gsel).name : '실행 전체';
+    if (sc.textContent !== sn) sc.textContent = sn;
+    E.el.querySelector('[data-clock]').textContent = `${E.T.toFixed(1)}s / ${GD.maxEnd.toFixed(0)}s`;
+    E.el.querySelector('[data-play]').textContent = E.playing ? '❚❚' : '▶';
+    updatePanel();
+    E.raf = requestAnimationFrame(frame);
+  }
+  return {
+    E,
+    mount(el) { E.el = el; E.cards.clear(); E.panelSig = ''; for (const k in tween) delete tween[k]; E.last = 0; if (!E.raf) E.raf = requestAnimationFrame(frame); },
+    unmount() { if (E.raf) cancelAnimationFrame(E.raf); E.raf = 0; E.el = null; },
+    stat,
+  };
+})();
+
+// 시안 바로가기: ?gsel=<id>&gopen=err → 그 에이전트의 오류 호출 / 캡처용 손잡이
+if (state.gopen === 'err') { const a = GD.byId(state.gsel); state.gopen = (a && (a.calls.find(c => c.err) || {}).id) || null; }
+window.__demo = GE.E;
+function renderGraph(el) {
+  const s = sessions.find(x => x.id === state.s) || sessions[0];
+  el.innerHTML = `<div class="run-head">
+      <button class="back" id="backBtn">← 세션 목록</button>
+      <div class="run-title g-title"><span class="badge cc">CC</span>${state.redact ? '(숨김)' : esc(s.title)}<span class="dot pulse" title="진행 중"></span>
+        <span class="g-hdr"><span class="g-count-h"></span> · <b class="num" data-roll="hdrUsd"></b></span></div>
+      <div class="run-meta"><span>${state.redact ? '••••' : esc(s.project)}</span><span>${s.start} 시작</span><span>모델 opus · sonnet · haiku · gpt-5</span></div>
+      <div class="totals">
+        <div class="scope"><div><div class="lbl">합계 범위</div><div class="v">실행 전체</div></div>${state.gsel ? '<button class="clear" id="gClear">전체로</button>' : ''}</div>
+        <div class="stat"><div class="lbl">시간</div><div class="v" data-roll="dur"></div></div>
+        <div class="stat"><div class="lbl">비용</div><div class="v" data-roll="usd"></div></div>
+        <div class="stat"><div class="lbl">토큰</div><div class="v" data-roll="tok"></div></div>
+        <div class="stat"><div class="lbl">모델 호출</div><div class="v" data-roll="nl"></div></div>
+        <div class="stat"><div class="lbl">도구 호출</div><div class="v" data-roll="nt"></div></div>
+        <div class="stat" data-errstat><div class="lbl">오류</div><div class="v" data-roll="err"></div></div>
+      </div>
+    </div>
+    ${tabsHtml(`<label class="g-toggle"><input type="checkbox" id="gHide" ${state.hide ? 'checked' : ''}> 끝난 에이전트 숨기기</label>`)}
+    <div class="g-wrap">
+      <div class="g-scroll"><div class="g-canvas${GD.scen === 'big' ? ' big' : ''}">
+        <svg class="g-edges" aria-hidden="true"></svg>
+        <div class="g-level l0"><div></div><div class="g-slot root"></div><div class="g-slot watch"></div></div>
+        <div class="g-level l1"></div>
+      </div></div>
+      <aside class="g-panel" aria-label="에이전트 상세"></aside>
+    </div>
+    <div class="demo" aria-label="시안 재생 조절 (데모 전용)">
+      <span class="demo-l">데모 재생</span>
+      <button data-play>❚❚</button><button data-restart title="처음부터">↺</button>
+      ${[0.5, 1, 2, 4].map(v => `<button data-speed="${v}" aria-pressed="${GE.E.speed === v}">${v}×</button>`).join('')}
+      <span class="num" data-clock></span>
+    </div>`;
+  GE.mount(el);
+}
+
 // ---------- 이벤트 ----------
 document.addEventListener('click', e => {
+  // 그래프 뷰
+  const tab = e.target.closest('[data-tab]');
+  if (tab) { state.tab = tab.dataset.tab; render(); return; }
+  if (e.target.closest('[data-gclose]') || e.target.id === 'gClear') { state.gsel = null; state.gopen = null; render(); return; }
+  const gc = e.target.closest('[data-gcall]');
+  if (gc) { const id = gc.dataset.gcall; state.gopen = state.gopen === id ? null : id; const ag = id.split('.')[0]; if (state.gsel !== ag) { state.gsel = ag; render(); } else syncUrl(); return; }
+  const ga = e.target.closest('[data-gagent]');
+  if (ga) { state.gsel = state.gsel === ga.dataset.gagent ? null : ga.dataset.gagent; state.gopen = null; render(); return; }
+  if (e.target.closest('[data-play]')) { GE.E.playing = !GE.E.playing; return; }
+  if (e.target.closest('[data-restart]')) { GE.E.T = 0; GE.E.playing = true; return; }
+  const sp = e.target.closest('[data-speed]');
+  if (sp) { GE.E.speed = +sp.dataset.speed; document.querySelectorAll('[data-speed]').forEach(b => b.setAttribute('aria-pressed', b === sp)); return; }
+  if (e.target.id === 'gHide') { state.hide = e.target.checked; syncUrl(); return; }
   const tw = e.target.closest('[data-tw]');
   if (tw) { const id = tw.dataset.tw; state.exp.has(id) ? state.exp.delete(id) : state.exp.add(id); render(); return; }
   const call = e.target.closest('[data-call]');
@@ -459,7 +946,7 @@ document.addEventListener('click', e => {
   if (e.target.id === 'redactBtn') { state.redact = !state.redact; e.target.setAttribute('aria-pressed', state.redact); render(); return; }
   if (e.target.id === 'themeBtn') { const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && root.classList.contains('auto-dark')); root.classList.remove('auto-dark'); root.dataset.theme = dark ? 'light' : 'dark'; return; }
 });
-document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-call]')) { e.preventDefault(); e.target.click(); } });
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-call], [data-gcall], [data-gagent]')) { e.preventDefault(); e.target.click(); } });
 document.getElementById('redactBtn').setAttribute('aria-pressed', state.redact);
 render();
 })();
