@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
 import { HELP, MSG } from '../src/strings.js';
 import { loadConfig, saveConfig } from '../src/config.js';
+import { loadPrices } from '../src/cost.js';
 import { realDir, resolveRoots } from '../src/roots.js';
 
 const pkgUrl = new URL('../package.json', import.meta.url);
@@ -115,6 +116,12 @@ function main(argv, env) {
   if (positionals[0] === 'roots') return rootsCommand(positionals, values, env);
   if (positionals.length) throw new UsageError(MSG.unknownCommand(positionals[0]));
   const cfg = loadConfigOrFail(env);
+  try {
+    loadPrices({ file: values.prices, config: cfg.prices }); // fail early on a bad price file
+  } catch (e) {
+    if (e.code !== 'EPRICES') throw e;
+    throw new UsageError(MSG.badPrices(e.message));
+  }
   const roots = resolveRoots({
     env,
     config: cfg,

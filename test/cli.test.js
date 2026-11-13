@@ -46,7 +46,8 @@ test('bad option values -> exit 2', () => {
 test('valid option set parses (reaches root discovery)', () => {
   const h = tmp();
   mkdirSync(join(h, 'r'));
-  const r = run(['--port', '0', '--no-open', '--root', join(h, 'r'), '--source', 'claude', '--since', '7d', '--redact', '--prices', 'p.json', '--session', 's1'], h);
+  writeFileSync(join(h, 'p.json'), '{}');
+  const r = run(['--port', '0', '--no-open', '--root', join(h, 'r'), '--source', 'claude', '--since', '7d', '--redact', '--prices', join(h, 'p.json'), '--session', 's1'], h);
   assert.equal(r.status, 0, r.stderr);
   const r2 = run(['--redact=strict', '--root', join(h, 'r')], h);
   assert.equal(r2.status, 0, r2.stderr);
@@ -131,4 +132,15 @@ test('default folders from CLAUDE_CONFIG_DIR / CODEX_HOME are listed', () => {
   const r = run(['roots', 'list'], h, { CLAUDE_CONFIG_DIR: join(h, 'cc'), CODEX_HOME: join(h, 'cx') });
   assert.match(r.stdout, /claude .*cc\/projects +\(default\)/);
   assert.match(r.stdout, /codex .*cx\/sessions +\(default\)/);
+});
+
+test('--prices with an unreadable or invalid file -> error, exit 2', () => {
+  const home = tmp();
+  const bad = join(home, 'bad.json');
+  writeFileSync(bad, '{nope');
+  for (const f of [bad, join(home, 'missing.json')]) {
+    const r = run(['--prices', f, '--no-open'], home);
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /price file/i);
+  }
 });
