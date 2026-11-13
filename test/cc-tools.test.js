@@ -21,7 +21,7 @@ const run = (lines, opts = {}) => parseSessionText(lines.join('\n') + '\n', { fi
 test('fixture: tool span ids, parent, name, command, ref', () => {
   const t = byId(fixture, 'tool:toolu_synth_bash1');
   assert.equal(t.kind, 'tool');
-  assert.equal(t.parentId, S1);
+  assert.equal(t.parentId, `${S1}:main`);
   assert.equal(t.name, 'Bash');
   assert.equal(t.command, 'echo SECRET-MARKER-CMD');
   assert.equal(t.ref.line, 13);

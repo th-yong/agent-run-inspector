@@ -3,7 +3,7 @@ import { toolCategoryOf } from '../../model/tool-category.js';
 import { MSG } from '../../strings.js';
 
 // Sub-agent launches become agent spans (T11), not tool spans.
-const AGENT_TOOLS = new Set(['agent', 'task']);
+export const AGENT_TOOLS = new Set(['agent', 'task']);
 
 /**
  * Pairs tool_use / server_tool_use blocks with their results (tool_use_id) into tool spans.
