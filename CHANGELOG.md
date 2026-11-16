@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Claude Code agent-team teammates (logged as their own session files) are now joined to the run that started them, also from a worktree folder below the lead's: their calls, cost and live status show in the lead's graph instead of an "Another session" node, and they are no longer listed as separate untitled sessions. A run with teammates totals cost from its calls, since Claude Code's own session total leaves teammates out.
+- The same teammate spawned twice no longer produces two nodes with the same id.
+
+### Changed
+- Brand logos keep their owners' colors (no shifting for contrast; black logos use the theme text color). Logos whose owners' guidelines do not allow this use (OpenAI, Google, Figma, Slack, Python, Docker, PostgreSQL, Linear, Vercel, Atlassian) are replaced by the neutral category symbol.
+- The code is now under the MIT License. Brand names and logos are not covered; see `THIRD_PARTY_NOTICES.md` for credits, trademark notices and the guideline review.
+- README: a "What you see" section, a correct description of how cost is chosen, current limits, and a new demo GIF recorded from the app with synthetic data.
+
 ## [0.3.0] - 2026-11-13
 
 Open in Orca, packaging and an end-to-end check against real run records.
