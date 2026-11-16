@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Opening an agent's details no longer rewraps the graph: the panel floats over its right side, and if it would cover the chosen card the whole graph slides left as one piece (and back on close), instead of the graph laying itself out 360 px narrower.
+- README demo: an animated WebP (30 fps, recorded from the app with `screencapture`) of a made-up but realistic run, "Add rate limiting to the login API": planner, then backend-dev and test-writer, then reviewer; a failed test run is opened to show its details. `scripts/demo-dev-project.js` writes that run.
+
 ## [0.5.0] - 2026-11-16
 
 A Mac app with a menu bar item, and the inspector running in the background so it opens without a terminal. Not on npm yet; install from GitHub.

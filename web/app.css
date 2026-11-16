@@ -254,7 +254,7 @@ body.lost .app, body.lost .live, body.lost .redact-btn { display: none; }
 /* Graph tab: cards are placed by layoutGraph() (web/graph-layout.js); their heights below match its constants. */
 .g-view { position: relative; min-height: 360px; }
 .g-scroll { padding: 20px 24px 64px; }
-.g-canvas { position: relative; min-width: 0; }
+.g-canvas { position: relative; min-width: 0; transition: transform .25s ease; }
 .g-edges { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
 .g-edges .e { fill: none; stroke-width: 1.6; stroke-linecap: round; }
 .g-edges .e.run { stroke: var(--edge); }
@@ -324,7 +324,7 @@ body.lost .app, body.lost .live, body.lost .redact-btn { display: none; }
 /* Graph detail column (web/agent-panel.js) and the call detail block (web/call-detail.js). */
 .view.with-panel { display: grid; }
 .view.with-panel > * { grid-area: 1 / 1; min-width: 0; }
-.g-panel { justify-self: end; align-self: start; z-index: 3; width: 360px; max-height: calc(100vh - 48px); overflow: auto; position: sticky; top: 0; border-left: 1px solid var(--line); background: var(--panel); }
+.g-panel { justify-self: end; align-self: start; z-index: 3; width: 360px; box-shadow: -8px 0 24px rgba(0,0,0,.18); max-height: calc(100vh - 48px); overflow: auto; position: sticky; top: 0; border-left: 1px solid var(--line); background: var(--panel); }
 .g-panel[hidden] { display: none; }
 .gp-h { display: flex; gap: 10px; align-items: center; padding: 14px 16px 6px; }
 .gp-who { min-width: 0; flex: 1; }

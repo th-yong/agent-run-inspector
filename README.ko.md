@@ -8,7 +8,7 @@
 
 Claude Code 와 Codex CLI 의 에이전트 실행을 로컬 브라우저에서 실시간으로 보는 읽기 전용 도구입니다. 누가 누구를 불렀는지, 호출마다 비용이 얼마인지, 어디서 실패했는지 한눈에 봅니다.
 
-![데모: 새 실행이 나타나고, orchestrator 가 에이전트를 띄우고, 각 에이전트의 호출이 끝날 때까지 실시간으로 쌓이는 모습](docs/demo.gif)
+![데모: "Add rate limiting to the login API" 실행이 나타나고, orchestrator 가 planner, 이어서 backend-dev 와 test-writer, 마지막으로 reviewer 를 띄우며 호출이 실시간으로 쌓이고, 실패한 테스트 호출의 상세를 열어 본 뒤 PR 로 끝나는 모습](docs/demo.webp)
 
 ## Get started
 

@@ -3,7 +3,7 @@
 // so motion (new card + edge growth, rows sliding in and folding away, finished cards folding) plays once per change.
 // Pure helpers (prepareGraph, hiddenAgents, foldedAgents) are exported for tests; the DOM part runs only in createGraph().
 import { S } from './strings.js';
-import { layoutGraph, panelBeside } from './graph-layout.js';
+import { DETAIL_W, layoutGraph, panelBeside } from './graph-layout.js';
 import { cardInfo, callRows, createCard, updateCard } from './card.js';
 
 export const FOLD_DELAY_MS = 1600; // a finished agent shows its Done / Failed badge this long before it folds
@@ -210,7 +210,12 @@ export function createGraph({ onSelect }) {
     if (wake > 0) foldTimer = setTimeout(render, wake + 20);
     const hidden = hiddenAgents(agents, props.hide, selected, held);
     const folded = foldedAgents(agents, hidden, selected, held);
-    layout = layoutGraph(agents, { width: lastWidth, detailOpen: props.detailOpen && panelBeside(lastWidth), hidden, folded });
+    layout = layoutGraph(agents, { width: lastWidth, hidden, folded });
+    // The detail panel floats over the right of the graph. If it would cover the selected card, the whole
+    // graph slides left as one piece (no card changes place relative to the others) and back on close.
+    const sel = props.detailOpen && panelBeside(lastWidth) && layout.mode === 'graph' ? layout.cards.find((b) => b.id === selected) : null;
+    const over = sel ? sel.x + sel.w - (lastWidth - DETAIL_W - 16) : 0;
+    canvas.style.transform = over > 0 ? `translateX(${-Math.min(over, sel.x)}px)` : '';
     root.dataset.mode = layout.mode;
     canvas.classList.toggle('dense', layout.dense);
     canvas.style.height = `${layout.height}px`;

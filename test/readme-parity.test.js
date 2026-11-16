@@ -39,7 +39,7 @@ test('code blocks, tables, images and npx lines match', () => {
   assert.equal(fences(ko), fences(en));
   assert.equal(tables(ko), tables(en));
   assert.deepEqual(images(ko), images(en));
-  assert.ok(images(en).includes('docs/demo.gif'));
+  assert.ok(images(en).includes('docs/demo.webp'));
   assert.deepEqual(npxLines(ko), npxLines(en));
   assert.ok(npxLines(en).some((l) => l.includes('npx github:th-yong/agent-run-inspector')));
 });
