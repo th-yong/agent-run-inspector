@@ -100,8 +100,72 @@ function statOf(path, fileId) {
   return { fileId, size, mtimeMs };
 }
 
-function scanClaude(roots, store, accept) {
-  const out = [];
+// Agent-team teammates are logged as their own top-level session file; their head lines carry
+// `teamName` + `agentName`. Returns `name@team` (the lead's teammate_id) or null.
+function mateKey(store, file, cache) {
+  const k = `cc:${file.fileId}`;
+  if (cache.has(k)) return cache.get(k);
+  const head = readHead(store, file.fileId, file.size);
+  const r = head.find((x) => typeof x.teamName === 'string' && typeof x.agentName === 'string');
+  const key = r ? `${r.agentName}@${r.teamName}` : null;
+  if (key || file.size > HEAD_BYTES) cache.set(k, key); // a young file may not have the line yet
+  return key;
+}
+
+// teammate_ids a lead file has spawned; reads only bytes appended since the last call.
+function spawnedIds(store, file, cache) {
+  const k = `ids:${file.fileId}`;
+  let c = cache.get(k);
+  if (!c || file.size < c.offset) c = { offset: 0, ids: new Set() };
+  if (file.size > c.offset) {
+    const text = store.readRange(file.fileId, c.offset, file.size - c.offset).toString('utf8');
+    const nl = text.lastIndexOf('\n');
+    if (nl !== -1) {
+      for (const m of text.slice(0, nl).matchAll(/"teammate_id":"([^"]+)"/g)) c.ids.add(m[1]);
+      c.offset += Buffer.byteLength(text.slice(0, nl + 1));
+    }
+  }
+  cache.set(k, c);
+  return c.ids;
+}
+
+// Moves teammate entries under the lead that spawned them (as subs). A teammate run in a worktree
+// logs under that worktree's folder (`<lead folder>--claude-worktrees-...`), so a lead is looked for
+// in the teammate's folder and in folders whose name prefixes it; only those leads are read.
+// ponytail: prefix match only; a teammate whose cwd is not under the lead's cwd stays unlinked.
+function linkTeammates(list, store, cache) {
+  const mates = [];
+  const leads = [];
+  for (const e of list) {
+    const key = mateKey(store, e.main, cache);
+    if (key) mates.push({ e, key });
+    else leads.push(e);
+  }
+  if (!mates.length) return list;
+  const mateDirs = new Set(mates.map((m) => m.e.dir));
+  const owner = new Map(); // key -> newest lead that spawned it, per lead folder
+  for (const l of leads) {
+    if (![...mateDirs].some((d) => d.startsWith(l.dir))) continue;
+    for (const id of spawnedIds(store, l.main, cache)) {
+      if (!owner.has(id)) owner.set(id, []);
+      owner.get(id).push(l);
+    }
+  }
+  const out = [...leads];
+  mates.sort((a, b) => a.e.main.mtimeMs - b.e.main.mtimeMs); // newest last: it wins the lookup
+  for (const { e, key } of mates) {
+    const lead = (owner.get(key) ?? [])
+      .filter((l) => e.dir.startsWith(l.dir))
+      .reduce((a, b) => (!a || b.main.mtimeMs > a.main.mtimeMs ? b : a), null);
+    if (!lead) { out.push(e); continue; }
+    lead.subs.push({ ...e.main, agentId: key, metaFileId: null, mate: true });
+    lead.lastWrite = Math.max(lead.lastWrite, e.lastWrite);
+  }
+  return out;
+}
+
+function scanClaude(roots, store, accept, cache = new Map()) {
+  const found = [];
   const labels = roots.length > 1 ? rootLabels(roots.map((r) => r.path)) : [];
   roots.forEach((root, ri) => {
     let projects = [];
@@ -147,15 +211,14 @@ function scanClaude(roots, store, accept) {
         });
         subs.sort((a, b) => (a.agentId < b.agentId ? -1 : 1));
         const lastWrite = Math.max(main.mtimeMs, ...subs.map((s) => s.mtimeMs));
-        if (!accept(lastWrite)) continue;
-        out.push({
-          id: sid, source: 'claude-code', main, subs, lastWrite, project: proj.name,
+        found.push({
+          id: sid, source: 'claude-code', main, subs, lastWrite, project: proj.name, dir: `${ri}/${proj.name}`,
           ...(labels.length ? { origin: labels[ri] } : {}),
         });
       }
     }
   });
-  return out;
+  return linkTeammates(found, store, cache).filter((e) => accept(e.lastWrite));
 }
 
 function codexHead(store, file, cache) {
@@ -229,7 +292,7 @@ export function scanRoots({ roots, source = 'all', since, now = Date.now(), stor
   const accept = (t) => sinceMs === null || t >= now - sinceMs;
   const want = (s) => source === 'all' || source === s;
   const out = [];
-  if (want('claude')) out.push(...scanClaude(roots.claude ?? [], store, accept));
+  if (want('claude')) out.push(...scanClaude(roots.claude ?? [], store, accept, headCache));
   if (want('codex')) out.push(...scanCodex(roots.codex ?? [], store, accept, headCache));
   // the same session id found under two roots: keep the newer one
   const best = new Map();

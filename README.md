@@ -4,7 +4,15 @@ English | [한국어](README.ko.md)
 
 A local, read-only inspector for Claude Code and Codex CLI agent runs: see who called whom, what each call cost and where it failed, live, in your browser.
 
-![Demo: the agent graph and timeline of a run](docs/demo.gif)
+![Demo: a new run appears, the orchestrator starts agents, and their calls stream in until each one is done](docs/demo.gif)
+
+## What you see
+
+- **Session list**: running sessions on top, then recent ones. Filter by tool (Claude Code, Codex CLI) and period, or search by title or project. Agent-team teammates are folded into the run that started them instead of being listed on their own.
+- **Graph**: one card per agent, from the orchestrator down. Each card shows its latest calls, status, cost, time and call count. Click a card to total that agent; "Hide finished agents" keeps only the ones still working.
+- **Timeline**: every agent and call on one time axis, with turns and context compactions. Open a call to see its details.
+- **Totals**: time, cost, tokens, model calls, tool calls and errors for the whole run or the selected agent.
+- **Live**: new lines in the logs show up within about a second, with no reload.
 
 ## Install and run
 
@@ -73,7 +81,7 @@ Run logs can hold customer data and secrets, so nothing leaves your machine exce
 
 - The server listens on `127.0.0.1` only.
 - Each run makes a random token. The first address carries it once, then it becomes an HttpOnly, SameSite=Strict cookie and disappears from the address bar. Requests without the cookie get 401. Host and Origin headers are checked.
-- Zero outside requests: fonts, scripts and icons ship in the package. No CDN, telemetry or update check.
+- Zero outside requests: scripts and icons ship in the package and text uses the system's own fonts. No CDN, web fonts, telemetry or update check.
 - Read-only: log files are never written or deleted. The screen never sends a file path; files are found by opaque ids and must stay inside the known log folders.
 
 ### Redaction
@@ -82,23 +90,24 @@ Run logs can hold customer data and secrets, so nothing leaves your machine exce
 
 ## Cost
 
-Costs are estimates, not bills. Per call, the value the tool itself reported (Claude Code) is used first, then the built-in `prices.json` (USD per 1M tokens, with an `asOf` date of 2026-11-13 and a source URL per model: the Anthropic and OpenAI public pricing pages), otherwise the call shows tokens only and totals are marked partial. Sub-agent calls always use the price table. Override or add models with `--prices <file>`, which is merged field by field over the built-in table.
+Costs are estimates, not bills. Each model call is priced from the built-in `prices.json` (USD per 1M tokens, with an `asOf` date of 2026-11-13 and a source URL per model: the Anthropic and OpenAI public pricing pages); a call on an unknown model shows tokens only and the total is marked partial. For a Claude Code run, the session total that Claude Code itself recorded ("Reported") replaces the sum when it is there, except when teammate sessions are part of the run, since that total leaves them out. Override or add models with `--prices <file>`, which is merged field by field over the built-in table.
 
 ## Supported scope
 
-Claude Code (main sessions, sub-agents, teammate sessions) and Codex CLI (rollout files from 0.40 to 0.166). Not included: controlling agents, hooks or proxies, remote access or accounts, other tools such as Cursor or Gemini CLI, full-text search, exporting, and alerts.
+Claude Code (main sessions, sub-agents, agent-team teammates) and Codex CLI (rollout files from 0.40 to 0.166). Not included: controlling agents, hooks or proxies, remote access or accounts, other tools such as Cursor or Gemini CLI, full-text search, exporting, and alerts.
 
 ### Known limits
 
 - Codex sub-agents are linked to their parent by timing, so the link is an estimate when several start at once.
 - Sub-agents of sub-agents are rare in the logs we have seen and are drawn as plain cards on the next row.
-- Teammate sessions of Claude Code are shown as external nodes and are not joined to their own session.
+- A Claude Code teammate is joined to its lead only when its log folder is the lead's own or one below it (for example a `.claude/worktrees/...` worktree of the lead's project). Otherwise it is listed as a session of its own. Sub-agents started by a teammate are not drawn yet.
+- Every run in its own working folder (for example one Orca worktree each) is listed as its own session.
 - Cost needs a known model; unknown models show tokens only.
 
 ## Third-party assets
 
-Brand icons come from simple-icons 15.22.0 (CC0-1.0), inlined without a dependency. Brand names and logos are trademarks of their owners. The OpenAI icon is no longer in newer simple-icons releases, so check each company's brand guidelines before any public distribution.
+Brand icons come from simple-icons 15.22.0 (CC0-1.0), inlined without a dependency, and only mark which provider or service a call belongs to. Brand names and logos are trademarks of their owners; this project is not affiliated with or endorsed by them. Logos keep their owners' colors. Logos whose owners' guidelines do not allow this use (OpenAI, Google, Figma, Slack, Python, Docker, PostgreSQL, Linear, Vercel, Atlassian) are not drawn; a neutral symbol stands in. Credits (Git logo by Jason Long, CC BY 3.0; Yarn logo, CC BY 4.0), trademark notices and the per-brand guideline review are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-No license has been chosen (`UNLICENSED`): private use only, not for redistribution.
+The code is under the [MIT License](LICENSE). The license does not cover the third-party brand names and logos.

@@ -6,8 +6,12 @@
     "openai": "openai",
     "google": "googlegemini"
   },
-  "colorOverrides": {
-    "openai": "text"
+  "noIcon": {
+    "$comment": "simple-icons 에 있어도 그리지 않는 slug(범주 기호로 대체). 각 사 브랜드 가이드라인과 맞지 않음: THIRD_PARTY_NOTICES.md 참고 (2026-11-16 확인).",
+    "slugs": [
+      "openai", "googlegemini", "gmail", "googledrive", "googledocs", "googlecalendar", "googlecloud", "googlechrome",
+      "figma", "slack", "python", "docker", "postgresql", "linear", "vercel", "atlassian", "jira", "confluence"
+    ]
   },
   "tools": [
     { "slug": "github", "names": ["github"], "cmds": ["gh"] },
