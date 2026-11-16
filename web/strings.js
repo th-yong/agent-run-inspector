@@ -8,6 +8,7 @@ export const S = {
     turnOn: 'Hide message text, tool inputs and errors', turnOff: 'Show message text again',
     locked: 'The server was started with redaction on; it cannot be turned off here',
   },
+  meta: { update: (v) => `Update ${v}`, how: (v) => `Version ${v} is out. Run "npm i -g agent-run-inspector", then "ari service install" if you use the app or the service.` },
   auth: { restarted: 'Signed out. Open the new address printed in the terminal, or run "ari open" if the inspector runs as a service.', detail: 'The server was restarted or this tab lost its sign-in, so the server no longer accepts it.' },
   list: {
     heading: 'Sessions',

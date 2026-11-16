@@ -21,7 +21,7 @@ const fail = (res, status, error) => json(res, status, { error });
  *   roots: { claude?: {path:string, origin?:string}[], codex?: {path:string, origin?:string}[] } }} opts
  * @returns {(req, res) => Promise<boolean>}
  */
-export function createApiHandler({ index, roots = {}, redactor = createRedactor(), pingMs, live = createLiveHub({ index, redactor, pingMs }) }) {
+export function createApiHandler({ index, roots = {}, meta = { version: null, latest: null }, redactor = createRedactor(), pingMs, live = createLiveHub({ index, redactor, pingMs }) }) {
   // Every response is serialized here, so redaction cannot be skipped by a route.
   const send = (res, status, kind, body) => json(res, status, redactor.apply(kind, body));
   const detail = createDetailRoutes({ index, redactor, send });
@@ -47,6 +47,7 @@ export function createApiHandler({ index, roots = {}, redactor = createRedactor(
     const url = new URL(req.url, 'http://127.0.0.1');
     const { pathname } = url;
     if (detail.matches(pathname)) return detail.handle(req, res, url);
+    if (pathname === '/api/meta' && req.method === 'GET') return send(res, 200, 'meta', { version: meta.version, latest: meta.latest });
     if (pathname !== '/api/roots' && pathname !== '/api/sessions' && !pathname.startsWith('/api/sessions/')) return false;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD');

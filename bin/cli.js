@@ -12,8 +12,9 @@ import { startApp } from '../src/app.js';
 import { OPEN_MODES, openAddress } from '../src/open.js';
 import { checkForUpdate } from '../src/update-check.js';
 import {
-  COOKIE_MAX_AGE, DEFAULT_PORT, ServiceError, buildApp, installService, loadService, logFile, serviceUrl, stableNode, uninstallService,
+  COOKIE_MAX_AGE, DEFAULT_PORT, ServiceError, appDir, buildApp, installService, loadService, logFile, serviceUrl, stableNode, uninstallService,
 } from '../src/service.js';
+import { pinToDock, unpinFromDock } from '../src/dock.js';
 import { fetchSessions, installPlugin, renderMenu, renderProblem, uninstallPlugin } from '../src/menubar.js';
 
 const pkgUrl = new URL('../package.json', import.meta.url);
@@ -24,6 +25,7 @@ const OPTIONS = {
   open: { type: 'string' },
   'no-open': { type: 'boolean' },
   'no-update-check': { type: 'boolean' },
+  'no-dock': { type: 'boolean' },
   service: { type: 'boolean' }, // set by the LaunchAgent (ari service install), not meant to be typed
   root: { type: 'string', multiple: true },
   'codex-root': { type: 'string', multiple: true },
@@ -123,6 +125,7 @@ async function serviceCommand(positionals, values, env) {
   const run = promisify(execFile);
   try {
     if (action === 'uninstall') {
+      if (process.platform === 'darwin' && (await unpinFromDock(appDir(env), run).catch(() => false))) console.log(MSG.dockRemoved);
       console.log((await uninstallService({ env, run })) ? MSG.serviceRemoved : MSG.serviceNone);
       return 0;
     }
@@ -130,8 +133,9 @@ async function serviceCommand(positionals, values, env) {
     if (port === 0) throw new UsageError(MSG.badValue('--port', '1-65535 for a service'));
     const s = await installService({ env, port, node: stableNode(env), cli: fileURLToPath(import.meta.url), run });
     console.log(MSG.serviceInstalled(`http://127.0.0.1:${s.port}/`, logFile(env)));
-    const app = await buildApp({ env, run }).catch(() => null); // the service is fine without the app
+    const app = await buildApp({ env, run, version }).catch(() => null); // the service is fine without the app
     console.log(app ? MSG.appBuilt(app) : MSG.appFailed);
+    if (app && !values['no-dock'] && (await pinToDock(app, run).catch(() => false))) console.log(MSG.dockAdded);
     if (!values['no-open']) {
       if (app) await run('open', [app]).catch(() => {});
       else await openAddress(serviceUrl(s), { mode: values.open ?? 'browser', env }).catch(() => {});
@@ -221,9 +225,11 @@ async function main(argv, env) {
     console.error(MSG.noRoots);
     return 1;
   }
+  const meta = { version, latest: null }; // /api/meta: the web header shows the version and a newer one
   let app;
   try {
     app = await startApp({
+      meta,
       config: cfg,
       roots,
       port: svc ? svc.port : values.port === undefined ? 0 : Number(values.port),
@@ -255,7 +261,12 @@ async function main(argv, env) {
       openAddress(app.url, { mode: values['no-open'] ? 'none' : values.open ?? 'auto', env }).catch(() => {});
     }
     if (!values['no-update-check']) {
-      checkForUpdate({ version, env }).then((v) => { if (v && !stopping) console.error(MSG.updateAvailable(version, v)); }, () => {});
+      const check = () => checkForUpdate({ version, env }).then((v) => {
+        meta.latest = v;
+        if (v && !stopping) console.error(MSG.updateAvailable(version, v));
+      }, () => {});
+      check();
+      if (svc) setInterval(check, 6 * 60 * 60 * 1000).unref(); // a service runs for days; the check itself is cached a day
     }
   });
 }

@@ -59,6 +59,7 @@ node bin/cli.js
 | `ari roots remove <dir>` | Forget a remembered folder |
 | `ari service install` | macOS: keep it running from login (see below) |
 | `ari service uninstall` | Stop and remove the service |
+| `--no-dock` | With `service install`: do not add the app to the Dock |
 | `ari open` | Open the running service in the browser |
 | `ari menubar install [dir]` | Add a SwiftBar menu bar item (see below) |
 | `ari menubar uninstall [dir]` | Remove it |
@@ -90,7 +91,7 @@ npm i -g agent-run-inspector   # the service needs a lasting install, not the np
 ari service install            # starts the service and opens the app
 ```
 
-It also builds **Agent Run Inspector.app** in `~/Applications`: its own window, Dock icon and Launchpad entry, signed in at every launch. It is compiled on your Mac with the built-in `osacompile`, so it needs no download or developer signing. If that fails, open the address in Chrome or Edge and choose Install instead. A bookmark of the address works too: the sign-in lasts a year. If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it and the app. The log is `~/Library/Logs/agent-run-inspector.log`.
+It also builds **Agent Run Inspector.app** in `~/Applications` and adds it to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. It is compiled on your Mac with the built-in `osacompile`, so it needs no download or developer signing. If that fails, open the address in Chrome or Edge and choose Install instead. A bookmark of the address works too: the sign-in lasts a year. If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it, the app and its Dock icon. The page header shows the version, and a badge when a newer one is on npm. The log is `~/Library/Logs/agent-run-inspector.log`.
 
 For a menu bar item, install [SwiftBar](https://swiftbar.app/) (`brew install --cask swiftbar`), open it once to choose its plugin folder, then run `ari menubar install`. The item shows how many runs are going; its menu lists them and the five most recent, and a click opens that run. It refreshes every 30 seconds from the service.
 

@@ -15,10 +15,11 @@ const roots = {
 const A1 = '00000000-0000-4000-8000-0000000000a1';
 const CX3 = 'cx:00000000-0000-4000-8000-000000000003';
 let srv;
+const meta = { version: '9.8.7', latest: null }; // the CLI fills latest after its npm check
 
 before(async () => {
   const index = createIndex({ roots, now: () => Date.parse('2026-12-01T00:00:00Z') });
-  srv = await startServer({ webDir: FIX, handler: createApiHandler({ index, roots }) });
+  srv = await startServer({ webDir: FIX, handler: createApiHandler({ index, roots, meta }) });
 });
 after(() => srv.close());
 
@@ -37,7 +38,7 @@ function get(path, { cookie = true, method = 'GET' } = {}) {
 }
 
 test('every API route needs the cookie', async () => {
-  for (const p of ['/api/sessions', `/api/sessions/${A1}`, '/api/roots']) assert.equal((await get(p, { cookie: false })).status, 401);
+  for (const p of ['/api/sessions', `/api/sessions/${A1}`, '/api/roots', '/api/meta']) assert.equal((await get(p, { cookie: false })).status, 401);
 });
 
 test('GET /api/sessions lists both tools', async () => {
@@ -96,4 +97,10 @@ test('session detail carries totals that match the summary', async () => {
   assert.equal(body.totals.total.errors, body.summary.errorCount);
   assert.equal(body.totals.total.modelCalls + body.totals.total.toolCalls, body.summary.callCount);
   assert.equal(body.totals.total.agents, body.summary.agentCount);
+});
+
+test('/api/meta: version, and the newer version once the update check found one', async () => {
+  assert.deepEqual(JSON.parse((await get('/api/meta')).body), { version: '9.8.7', latest: null });
+  meta.latest = '9.9.0';
+  assert.deepEqual(JSON.parse((await get('/api/meta')).body), { version: '9.8.7', latest: '9.9.0' });
 });

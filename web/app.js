@@ -1,7 +1,7 @@
 import { S } from './strings.js';
 import { parseState, toSearch } from './state.js';
 import { mountRedactToggle } from './redact-toggle.js';
-import { onAuthLost, fetchSession, fetchRoots, watchList, watchSession, mergeSpan, trimSpans, upsertSession, ApiError } from './api.js';
+import { onAuthLost, fetchSession, fetchRoots, watchList, watchSession, mergeSpan, trimSpans, upsertSession, ApiError, fetchMeta } from './api.js';
 import { liveState, createFlushGate } from './live-follow.js';
 import { mount, emptyBlock } from './session-list.js';
 import { createRunHeader } from './run-header.js';
@@ -246,6 +246,15 @@ onAuthLost(() => {
 });
 mountRedactToggle($('redactBtn'));
 $('appName').textContent = S.appName;
+// Version, and a newer one when the server's daily npm check found it (app users never see the terminal).
+const showMeta = () => fetchMeta().then((m) => {
+  $('ver').textContent = m.version ? `v${m.version}` : '';
+  const upd = $('upd');
+  upd.hidden = !m.latest;
+  if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = S.meta.how(m.latest); }
+}, () => {});
+showMeta();
+setInterval(showMeta, 60 * 60 * 1000);
 setLive('connecting');
 
 $('list').addEventListener('click', (e) => {

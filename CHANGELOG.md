@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web app manifest and icons: with the service running, Chrome or Edge can install the inspector as an app with its own Dock and Launchpad icon and window. The manifest and icons are the only files served without the sign-in cookie, since browsers fetch them without credentials. `scripts/build-app-icons.js` draws the icons, and the browser tab uses the same mark (it was a plain black square).
 
 - `ari service install` also builds `~/Applications/Agent Run Inspector.app`: its own window, Dock icon and Launchpad entry, signed in at every launch. It is compiled locally from `src/macos/app.js` with the built-in `osacompile`, so no download, compiler or developer signing is needed. The app reads the token from the service file at launch and never stores it.
+- `ari service install` adds the app to the Dock once (`--no-dock` to skip); `ari service uninstall` takes it out again. Only the app's own Dock entry is touched.
+- Version info: the page header shows the version, and an "Update" badge (with how to update) when the daily npm check found a newer one, so app users see it without a terminal. The app's Info.plist carries the version too (Finder's Get Info, About). `GET /api/meta` returns `{ version, latest }`.
 - `ari menubar install`: a SwiftBar menu bar item that shows how many runs are going, lists them and the five most recent, and opens a run on click. It reads the service every 30 seconds; its links never carry the token.
 
 ### Changed
