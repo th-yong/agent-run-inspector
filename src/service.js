@@ -84,7 +84,7 @@ export class ServiceError extends Error {}
  * @param {{ env: object, port: number, node: string, cli: string, platform?: string, uid?: number,
  *   run: (file: string, args: string[]) => Promise<unknown> }} o
  */
-export async function installService({ env, port, node, cli, platform = process.platform, uid = process.getuid?.(), run }) {
+export async function installService({ env, port, node, cli, platform = process.platform, uid = process.getuid?.(), run, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   if (platform !== 'darwin') throw new ServiceError('service: only macOS is supported for now');
   if (/[\\/]_npx[\\/]/.test(cli)) throw new ServiceError('service: install the package first (npm i -g agent-run-inspector); the npx cache is pruned');
   const s = saveService(env, port);
@@ -92,8 +92,16 @@ export async function installService({ env, port, node, cli, platform = process.
   mkdirSync(dirname(logFile(env)), { recursive: true });
   writeFileSync(plistFile(env), buildPlist({ node, cli, env }));
   await run('launchctl', ['bootout', `gui/${uid}/${LABEL}`]).catch(() => {}); // not loaded yet is fine
-  await run('launchctl', ['bootstrap', `gui/${uid}`, plistFile(env)]);
-  return s;
+  // bootout returns before the old instance is gone; bootstrap then fails with "5: Input/output error"
+  for (let i = 0; ; i++) {
+    try {
+      await run('launchctl', ['bootstrap', `gui/${uid}`, plistFile(env)]);
+      return s;
+    } catch (e) {
+      if (i >= 9) throw e;
+      await wait(500);
+    }
+  }
 }
 
 /** Stops the LaunchAgent and removes it and the token file. Returns false if nothing was installed. */
