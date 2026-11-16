@@ -94,9 +94,9 @@ The page header shows the version, and a badge when a newer one is out. To updat
 
 ### The menu bar
 
-<img src="docs/menubar.png" width="400" alt="Menu bar panel: one running session in the Shop API group, with backend-dev running Bash for 2.4 s and its four agents">
+<img src="docs/menubar.png" width="400" alt="Menu bar panel with three running sessions by group: Shop API, where test-writer is in a Bash call; Docs site, waiting for you; and an ungrouped one thinking">
 
-The app's mark sits in the menu bar with the number of sessions running now, so you can follow long runs while you work in other apps.
+The app's mark sits in the menu bar with the number of sessions running now, so you can follow long runs while you work in other apps. The picture shows the three states a session can be in: in a tool call, waiting for you, and thinking.
 
 - **Click** for a panel of the running sessions, grouped by your [groups](#what-you-see). The top line shows how many are running and what they have cost so far.
 - Each session shows its title, project, time, cost, tokens and failed calls. A highlighted line says what it is doing now: the tool and how long it has been in it, "Thinking…" between calls, or **Waiting for you** when it asks you something. When a run has sub-agents, they are listed with a dot each (orange: working, grey: done) and how many are done.
