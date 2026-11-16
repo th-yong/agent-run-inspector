@@ -12,7 +12,7 @@ A local, read-only inspector for Claude Code and Codex CLI agent runs: see who c
 
 ## Get started
 
-It reads the run logs Claude Code and Codex CLI already write to disk. Nothing is installed into the agents (no hooks, no proxy). You need Node 22 or newer.
+It reads the run logs Claude Code and Codex CLI already write to disk. Nothing is installed into the agents (no hooks, no proxy). You need Node 22 or newer (check with `node -v`). On a Mac without it, install it with `brew install node` ([Homebrew](https://brew.sh)) or the installer from [nodejs.org](https://nodejs.org). If `npm i -g` fails with `EACCES`, your Node came from the nodejs.org installer: use Homebrew's Node or [nvm](https://github.com/nvm-sh/nvm) rather than `sudo`.
 
 ### On a Mac: use it as an app
 
