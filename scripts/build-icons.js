@@ -13,7 +13,6 @@ export const DARK_BG = '#17181b';
 export const TEXT = 'currentColor'; // theme text color (black on light, white on dark)
 export const MIN_CONTRAST = 3;
 export const MIN_SATURATION = 0.25;
-export const MAX_SHIFT = 0.25;
 
 const toRgb = (hex) => [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16) / 255);
 
@@ -42,36 +41,23 @@ function rgbToHsl(hex) {
   return [(h * 60 + 360) % 360, s, l];
 }
 
-function hslToHex(h, s, l) {
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-  const [r, g, b] = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][Math.floor(h / 60) % 6];
-  return '#' + [r, g, b].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('');
-}
-
-// Brand color for one theme: keep it if it has 3:1 on the card background; else shift lightness
-// (<= 0.25, same hue) for saturated colors; else fall back to the theme text color.
-export function themeColor(hex, bg, direction) {
+// Brand color for one theme, never shifted (owners' guidelines forbid changed colors). A gray / black /
+// white logo that lacks 3:1 on the background is drawn in the theme text color: the owner's own
+// black or white variant. A saturated brand color is kept even when its contrast is low.
+export function themeColor(hex, bg) {
   if (contrast(hex, bg) >= MIN_CONTRAST) return hex;
-  const [h, s, l] = rgbToHsl(hex);
-  if (s < MIN_SATURATION) return TEXT;
-  for (let step = 1; step <= 25; step++) {
-    const next = hslToHex(h, s, Math.min(1, Math.max(0, l + direction * step * 0.01)));
-    if (contrast(next, bg) >= MIN_CONTRAST) return next;
-  }
-  return TEXT;
+  return rgbToHsl(hex)[1] < MIN_SATURATION ? TEXT : hex;
 }
 
-export function colorsFor(slug, hex, overrides = {}) {
-  if (overrides[slug] === 'text') return { light: TEXT, dark: TEXT };
+export function colorsFor(slug, hex) {
   const brand = '#' + hex.toLowerCase();
-  return { light: themeColor(brand, LIGHT_BG, -1), dark: themeColor(brand, DARK_BG, +1) };
+  return { light: themeColor(brand, LIGHT_BG), dark: themeColor(brand, DARK_BG) };
 }
 
 export function wantedSlugs(map) {
+  const skip = new Set(map.noIcon?.slugs ?? []);
   const slugs = new Set([...Object.values(map.providers), ...map.tools.map((t) => t.slug)]);
-  return [...slugs].sort();
+  return [...slugs].filter((s) => !skip.has(s)).sort();
 }
 
 // icons: { slug: { path, hex } } available in simple-icons. Slugs missing there are skipped (category symbol).
@@ -80,12 +66,12 @@ export function buildSource(map, icons) {
   for (const slug of wantedSlugs(map)) {
     const icon = icons[slug];
     if (!icon) continue;
-    const { light, dark } = colorsFor(slug, icon.hex, map.colorOverrides);
+    const { light, dark } = colorsFor(slug, icon.hex);
     entries.push(`  ${JSON.stringify(slug)}: { path: ${JSON.stringify(icon.path)}, light: '${light}', dark: '${dark}' },`);
   }
   return `// generated, do not edit: run \`node scripts/build-icons.js\`.
 // Brand icons from simple-icons ${map.simpleIconsVersion} (CC0-1.0), only the slugs in brand-map.json.
-// Trademarks belong to their owners; see spec section 12. light/dark: hex, or 'currentColor' = theme text color.
+// Trademarks belong to their owners; see THIRD_PARTY_NOTICES.md. Colors are the brand's own; 'currentColor' = the\n// theme text color, used only for black / gray logos (the owner's black or white variant).
 export const SIMPLE_ICONS_VERSION = '${map.simpleIconsVersion}';
 
 export const ICONS = {

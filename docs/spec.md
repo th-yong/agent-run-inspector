@@ -298,10 +298,8 @@ interface SessionSummary {
 | **simple-icons 에 없음 → 범주 기호** | Microsoft Azure(`az`), AWS(`aws`), Playwright |
 
 - 매핑 표: 레포 루트 `brand-map.json`(패키지에 포함, 원본 하나). 아이콘 path 와 테마별 색은 이 표와 simple-icons 에서 스크립트로 만들어 넣는다(손으로 고치지 않음).
-- **색 규칙**: 기본은 브랜드 고유색(simple-icons `hex`). 그 색과 카드 배경(라이트 `#ffffff`, 다크 `#17181b`)의 **명암비가 3:1 미만**이면
-  - 채도 있는 색(HSL 채도 ≥ 0.25)은 같은 색상에서 밝기를 최대 0.25 까지 옮겨 3:1 을 맞춘다(예: 다크에서 Slack 보라를 밝게, 라이트에서 pnpm·Supabase 를 조금 어둡게).
-  - 그래도 안 되거나 무채색(검정·회색)이면 **글자색 단색**(라이트 검정 / 다크 흰색). 예: GitHub · Notion · Vercel 은 다크에서 흰색, Confluence · Sentry(진남색)도 다크에서 흰색.
-  - 예외: OpenAI 는 요청에 따라 두 테마 모두 글자색 단색. Claude 주황(`#D97757`)은 두 테마 모두 3:1 이상이라 그대로.
+- **그리지 않는 로고 (2026-11-16)**: 각 사 공개 브랜드 가이드라인을 확인한 결과, 로고 변형(여러 색 로고의 단색화·색 변경)·사용 허가·다른 로고와의 병렬 표시를 막는 곳은 `brand-map.json` 의 `noIcon.slugs` 에 넣고 범주 기호로 대신한다: OpenAI, Google 계열(Gemini·Gmail·Drive·Docs·Calendar·Cloud·Chrome), Figma, Slack, Python, Docker, PostgreSQL, Linear, Vercel, Atlassian·Jira·Confluence. 도구 판별(`names`·`cmds`)은 그대로 남는다. 근거는 `THIRD_PARTY_NOTICES.md`.
+- **색 규칙**: 브랜드 고유색(simple-icons `hex`)을 **바꾸지 않는다**. 무채색(검정·회색, HSL 채도 < 0.25) 로고가 배경과 3:1 이 안 되면 글자색 단색(라이트 검정 / 다크 흰색 = 그 회사의 흑/백 버전)으로 그린다. 예: GitHub · Notion 은 다크에서 흰색. 채도 있는 색은 대비가 낮아도 그대로 둔다(예: 다크의 Sentry 진보라).
 - **상표는 각 회사 소유.** 아이콘은 "어느 제공사 모델 / 어느 서비스 도구인가" 를 알아보게 하는 식별 용도로만 쓰고, 우리 도구의 로고·이름·홍보물에는 쓰지 않는다.
-- **공개 배포 전 확인 필요**: 각 사 브랜드 가이드(Anthropic, OpenAI `https://openai.com/brand`, GitHub `https://github.com/logos`, Google 등)를 확인할 것.
-- **주의**: `openai` 아이콘은 simple-icons **16.0.0 에서 빠졌다**(최신 16.37.0 에는 없음, 15.22.0 까지 있음). 그래서 모든 아이콘을 15.22.0 에서 가져왔다. 빠진 이유(상표권자 요청 여부)를 공개 배포 전에 확인하고, 문제가 되면 OpenAI 는 중립 기호 + "OpenAI" 글자로 바꾼다. 같은 이유로 Azure·AWS 처럼 이미 빠진 브랜드는 다른 출처에서 가져오지 않는다.
+- **공개 배포 전 확인 필요**: 남은 아이콘 중 공개 가이드라인을 확인하지 못한 곳(Anthropic, Notion, pnpm, uv, Supabase, Sentry, Stripe, Node.js)은 `THIRD_PARTY_NOTICES.md` 에 표시해 두었다.
+- **주의**: `openai` 아이콘은 simple-icons **16.0.0 에서 빠졌다**(최신 16.37.0 에는 없음, 15.22.0 까지 있음). 그래서 모든 아이콘을 15.22.0 에서 가져왔다. 빠진 이유(상표권자 요청 여부)를 공개 배포 전에 확인하고, (2026-11-16: OpenAI 는 중립 기호로 바꿨다.) 같은 이유로 Azure·AWS 처럼 이미 빠진 브랜드는 다른 출처에서 가져오지 않는다.
