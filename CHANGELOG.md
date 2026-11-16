@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-16
+
+Agent-team teammates inside their run, brand logos that follow their owners' guidelines, and a public repository under the MIT License.
+
 ### Fixed
 - Claude Code agent-team teammates (logged as their own session files) are now joined to the run that started them, also from a worktree folder below the lead's: their calls, cost and live status show in the lead's graph instead of an "Another session" node, and they are no longer listed as separate untitled sessions. A run with teammates totals cost from its calls, since Claude Code's own session total leaves teammates out.
 - The same teammate spawned twice no longer produces two nodes with the same id.
@@ -14,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Brand logos keep their owners' colors (no shifting for contrast; black logos use the theme text color). Logos whose owners' guidelines do not allow this use (OpenAI, Google, Figma, Slack, Python, Docker, PostgreSQL, Linear, Vercel, Atlassian) are replaced by the neutral category symbol.
 - The code is now under the MIT License. Brand names and logos are not covered; see `THIRD_PARTY_NOTICES.md` for credits, trademark notices and the guideline review.
 - README: a "What you see" section, a correct description of how cost is chosen, current limits, and a new demo GIF recorded from the app with synthetic data.
+- The repository is public: `npx github:th-yong/agent-run-inspector` works without a GitHub login, and the clone address in the README is HTTPS.
+- CI can also be started by hand (`workflow_dispatch`).
+
+### Verified
+End-to-end check on one machine (688 sessions: 143 Claude Code, 545 Codex; 101,531 spans), with the teammate files (265 at the time) folded into their 7 lead runs:
+- First session list 2.6 s through a freshly started server (cached list 57 ms). In one process with a warm disk cache the first list takes 0.5 s, the same range as v0.3.0's code on the same logs (0.3 to 0.6 s). Finding teammates reads 13 lead files (357 MB) once, in about 0.26 s.
+- Opening every session: 0 failures; median 1 ms, 95th percentile 171 ms, slowest 3.8 s.
+- Per-session totals equal the sum of their spans in all 688 sessions.
+- Claude Code sub-agents: 518 of 518 files with metadata attached to their parent call (100%).
+- Codex sub-agents: 9 of 553 links inferred by time (1.6%).
+- Live updates: 52 session-list events in 60 s, first after 0.9 s.
+- Peak server memory (RSS) 3.7 GB while opening all 688 sessions in a row (v0.3.0: 2.2 GB), since runs with teammates now load the teammates' files too.
 
 ## [0.3.0] - 2026-11-13
 
@@ -75,6 +91,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/th-yong/agent-run-inspector/releases/tag/v0.1.0
