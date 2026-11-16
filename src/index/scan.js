@@ -65,6 +65,29 @@ export function readTail(store, fileId, size, bytes = TAIL_BYTES) {
   return nl === -1 ? [] : parseLines(text.slice(nl + 1));
 }
 
+export const TITLE_SCAN_BYTES = 256 * 1024;
+const TITLE_MARK = Buffer.from('"type":"ai-title"');
+
+/**
+ * The newest Claude Code title (ai-title) within the last `bytes` of a file, or undefined.
+ * Long tool output can push the title out of the head and tail windows; it is rewritten often,
+ * so the last one is near the end. A raw byte search: only the matching line is parsed.
+ */
+export function findLastTitle(store, fileId, size, bytes = TITLE_SCAN_BYTES) {
+  const start = Math.max(0, size - bytes);
+  const buf = store.readRange(fileId, start, size - start);
+  for (let at = buf.lastIndexOf(TITLE_MARK); at !== -1; at = at > 0 ? buf.lastIndexOf(TITLE_MARK, at - 1) : -1) {
+    const from = buf.lastIndexOf(10, at) + 1; // 10 = "\n"
+    if (from === 0 && start > 0) return undefined; // the line starts before the window
+    const nl = buf.indexOf(10, at);
+    try {
+      const r = JSON.parse(buf.subarray(from, nl === -1 ? buf.length : nl).toString('utf8'));
+      if (r?.type === 'ai-title' && typeof r.aiTitle === 'string' && r.aiTitle) return r.aiTitle;
+    } catch { /* cut line, or the text appears inside another record */ }
+  }
+  return undefined;
+}
+
 function walk(dir, visit) {
   let list;
   try {

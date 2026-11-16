@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Claude Code sessions listed as "Untitled session" although they have a title (shown once opened). Long tool output pushed the title record out of the first and last 16 KB the list reads; the list now also searches the last 256 KB for it. On one machine: 61 of 143 untitled before, 19 after, and those 19 have no title at all.
+
 ### Added
 - `ari service install` (macOS): a LaunchAgent keeps the inspector running from login on a fixed port (7317 by default) with a sign-in that lasts a year, so a bookmark or a Dock app opens it without a terminal. `ari open` signs a browser in again, and `ari service uninstall` removes it. The token stays in a file only you can read and never appears in the LaunchAgent, the process arguments or the log.
 
