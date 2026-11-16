@@ -25,6 +25,7 @@ async function getJson(path) {
 
 export const fetchSessions = async () => (await getJson('/api/sessions')).sessions;
 export const fetchRoots = async () => (await getJson('/api/roots')).roots;
+export const fetchMeta = () => getJson('/api/meta');
 export const fetchSession = (id) => getJson(`/api/sessions/${encodeURIComponent(id)}`);
 export const fetchSpanDetail = (spanId, sessionId) =>
   getJson(`/api/spans/${encodeURIComponent(spanId)}/detail${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ''}`);

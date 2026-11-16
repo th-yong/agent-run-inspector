@@ -59,6 +59,7 @@ node bin/cli.js
 | `ari roots remove <dir>` | 기억한 폴더 잊기 |
 | `ari service install` | macOS: 로그인할 때부터 계속 실행 (아래 참고) |
 | `ari service uninstall` | 서비스 멈추고 지우기 |
+| `--no-dock` | `service install` 때 앱을 Dock 에 넣지 않음 |
 | `ari open` | 실행 중인 서비스를 브라우저로 열기 |
 | `ari menubar install [dir]` | SwiftBar 메뉴 막대 항목 추가 (아래 참고) |
 | `ari menubar uninstall [dir]` | 그 항목 지우기 |
@@ -90,7 +91,7 @@ npm i -g agent-run-inspector   # 서비스는 npx 캐시가 아닌 설치본이 
 ari service install            # 서비스를 띄우고 앱을 엽니다
 ```
 
-`~/Applications` 에 **Agent Run Inspector.app** 도 만듭니다. 자체 창·Dock 아이콘·Launchpad 항목이 있고, 실행할 때마다 자동으로 로그인합니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받기나 개발자 서명이 필요 없습니다. 만들기에 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요. 주소를 북마크해도 됩니다(로그인 1년 유지). 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요. 패키지나 Node 를 업그레이드한 뒤에는 `ari service install` 을 다시 실행해 새 코드로 재시작하세요. `ari service uninstall` 이 서비스와 앱을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+`~/Applications` 에 **Agent Run Inspector.app** 도 만들어 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고, 실행할 때마다 자동으로 로그인합니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받기나 개발자 서명이 필요 없습니다. 만들기에 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요. 주소를 북마크해도 됩니다(로그인 1년 유지). 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요. 패키지나 Node 를 업그레이드한 뒤에는 `ari service install` 을 다시 실행해 새 코드로 재시작하세요. `ari service uninstall` 이 서비스·앱·Dock 아이콘을 지웁니다. 화면 머리에 버전이 보이고, npm 에 새 버전이 있으면 배지가 뜹니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
 
 메뉴 막대 항목을 원하면 [SwiftBar](https://swiftbar.app/) 를 설치하고(`brew install --cask swiftbar`) 한 번 열어 플러그인 폴더를 고른 뒤 `ari menubar install` 을 실행하세요. 진행 중인 run 수가 보이고, 메뉴에는 그 run 들과 최근 5개가 나오며, 누르면 그 run 이 열립니다. 서비스에서 30초마다 새로 읽습니다.
 

@@ -27,9 +27,11 @@ Commands:
   roots add <dir>       Remember a Claude Code folder (--codex for Codex)
   roots remove <dir>    Forget a remembered folder
   service install       macOS: keep the inspector running from login on a fixed
-                        port (default 7317) with a lasting sign-in; run again
+                        port (default 7317) with a lasting sign-in, and build
+                        Agent Run Inspector.app (added to the Dock); run again
                         after an upgrade to restart it
-  service uninstall     Stop it and remove it
+  service uninstall     Stop it and remove it (and the app and its Dock icon)
+  --no-dock             With service install: do not add the app to the Dock
   open                  Open the running service in the browser (signs in again)
   menubar install       Add a SwiftBar menu bar item: running runs at a glance
                         (needs the service and SwiftBar; folder from SwiftBar)
@@ -54,6 +56,8 @@ export const MSG = {
   menubarRemoved: (d) => `Menu bar plugin removed from ${d}`,
   appBuilt: (p) => `App: ${p} (open it from Launchpad, Spotlight or the Dock)`,
   appFailed: 'Could not build the app; open the address in Chrome or Edge and choose Install instead.',
+  dockAdded: 'Added to the Dock (skip with --no-dock).',
+  dockRemoved: 'Removed from the Dock.',
   serviceUsage: 'Usage: ari service <install|uninstall> [--port <n>]',
   serviceNone: 'No service is installed. Run "ari service install" first.',
   serviceRemoved: 'Service stopped and removed.',

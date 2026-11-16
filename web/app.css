@@ -49,6 +49,8 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .top { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
 .brand { font-weight: 650; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
 .brand-mark { width: 20px; height: 20px; flex: none; }
+.ver { color: var(--muted); font-size: 11px; font-weight: 400; }
+.upd { font-size: 11px; font-weight: 500; color: var(--llm); background: var(--llm-soft); border-radius: 999px; padding: 1px 8px; cursor: help; }
 .spacer { flex: 1; }
 .live { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; flex: none; }

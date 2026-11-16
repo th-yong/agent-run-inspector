@@ -114,7 +114,7 @@ export async function installService({ env, port, node, cli, platform = process.
  * signing account): a window that signs in from service.json at each launch, with the app icon.
  * Returns the app path, or throws; the service works without it.
  */
-export async function buildApp({ env, run }) {
+export async function buildApp({ env, run, version }) {
   const app = appDir(env);
   const plist = join(app, 'Contents', 'Info.plist');
   rmSync(app, { recursive: true, force: true });
@@ -122,6 +122,10 @@ export async function buildApp({ env, run }) {
   await run('osacompile', ['-l', 'JavaScript', '-s', '-x', '-o', app, APP_SRC]); // -s stay open, -x run-only
   await run('plutil', ['-replace', 'ARIServiceFile', '-string', serviceFile(env), plist]);
   await run('plutil', ['-replace', 'CFBundleIdentifier', '-string', APP_ID, plist]);
+  if (version) { // shown in Finder's Get Info and the app's About box
+    await run('plutil', ['-replace', 'CFBundleShortVersionString', '-string', version, plist]);
+    await run('plutil', ['-replace', 'CFBundleVersion', '-string', version, plist]);
+  }
   copyFileSync(APP_ICON, join(app, 'Contents', 'Resources', 'applet.icns'));
   await run('codesign', ['--force', '--sign', '-', app]); // ad-hoc: the edits above broke osacompile's signature
   return app;
