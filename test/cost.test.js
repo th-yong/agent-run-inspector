@@ -166,3 +166,12 @@ test('Claude models seen in real logs are priced: Opus 5, Sonnet 5, Fable 5 / 5.
   }
   assert.ok(Math.abs(p.cost('claude-opus-5', { input: 1e6, output: 1e6, cacheRead: 1e6, cacheWrite: 1e6 }).usd - (5 + 25 + 0.5 + 6.25)) < 1e-9);
 });
+
+test('Codex models with user-supplied rates are priced; a sibling (…-max) does not borrow them', () => {
+  const p = loadPrices();
+  const t = { input: 1e6, output: 1e6, cacheRead: 1e6 };
+  assert.ok(Math.abs(p.cost('gpt-5-codex', t).usd - (1.25 + 10 + 0.125)) < 1e-9);
+  assert.ok(Math.abs(p.cost('gpt-5.1-codex', t).usd - (1.25 + 10 + 0.125)) < 1e-9);
+  assert.ok(Math.abs(p.cost('gpt-5.2-codex', t).usd - (1.75 + 14 + 0.175)) < 1e-9);
+  assert.equal(p.cost('gpt-5.1-codex-max', t).basis, 'unknown');
+});
