@@ -10,3 +10,16 @@ test('each web/*.js file is served', () => {
     assert.ok(src.includes(`'${f}'`), `${f} is not in the static allowlist`);
   }
 });
+
+test('the web app manifest and its icons are public files that exist', async () => {
+  const { PUBLIC_FILES } = await import('../src/server/static.js');
+  const web = (f) => fileURLToPath(new URL(`../web/${f}`, import.meta.url));
+  for (const f of PUBLIC_FILES) assert.ok(readFileSync(web(f)).length > 0, f);
+  const m = JSON.parse(readFileSync(web('manifest.webmanifest'), 'utf8'));
+  for (const i of m.icons) {
+    assert.ok(PUBLIC_FILES.includes(i.src.slice(1)), `${i.src} must be public`);
+    const png = readFileSync(web(i.src.slice(1)));
+    assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, i.sizes); // PNG IHDR width x height
+  }
+  assert.ok(readFileSync(web('index.html'), 'utf8').includes('rel="manifest" href="/manifest.webmanifest"'));
+});

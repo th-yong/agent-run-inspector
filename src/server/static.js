@@ -5,7 +5,13 @@ const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
+  '.png': 'image/png',
 };
+
+// Served without the cookie: browsers fetch the web app manifest and its icons without credentials.
+// They hold nothing about the logs.
+export const PUBLIC_FILES = ['manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 // The only files the server will ever hand out, keyed by request path.
 // No path is ever built from the request: unknown paths are simply 404.

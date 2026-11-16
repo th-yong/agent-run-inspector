@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import {
   newToken, hasValidCookie, setCookieHeader, hostAllowed, originAllowed, tokenMatches,
 } from './auth.js';
-import { serveStatic } from './static.js';
+import { PUBLIC_FILES, serveStatic } from './static.js';
 
 const HOST = '127.0.0.1'; // fixed on purpose: not configurable
 const DEFAULT_WEB_DIR = fileURLToPath(new URL('../../web', import.meta.url));
@@ -38,6 +38,8 @@ export async function startServer({ port = 0, webDir = DEFAULT_WEB_DIR, handler,
         res.statusCode = 204;
         return res.end();
       }
+
+      if ((req.method === 'GET' || req.method === 'HEAD') && !url.search && (await serveStatic(req, res, webDir, PUBLIC_FILES))) return;
 
       if (url.searchParams.has('t')) {
         if (!tokenMatches(url.searchParams.get('t'), token)) return plain(res, 401, 'Unauthorized');

@@ -208,3 +208,23 @@ test('an explicit --port is honoured and the host cannot be changed', async () =
 test('url helper contains the token and 127.0.0.1', () => {
   assert.equal(s1.url, `http://127.0.0.1:${s1.port}/?t=${s1.token}`);
 });
+
+test('web app manifest and icons are served without the cookie; nothing else is', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ari-web-'));
+  writeFileSync(join(dir, 'index.html'), '<!doctype html><title>t</title>');
+  writeFileSync(join(dir, 'manifest.webmanifest'), '{"name":"x"}');
+  writeFileSync(join(dir, 'icon-192.png'), 'png');
+  const srv = await startServer({ webDir: dir });
+  try {
+    const m = await req(srv, '/manifest.webmanifest');
+    assert.equal(m.status, 200);
+    assert.equal(m.headers['content-type'], 'application/manifest+json');
+    assert.equal((await req(srv, '/icon-192.png')).headers['content-type'], 'image/png');
+    assert.equal((await req(srv, '/')).status, 401);
+    assert.equal((await req(srv, '/index.html')).status, 401);
+    assert.equal((await req(srv, '/api/sessions')).status, 401);
+    assert.equal((await req(srv, '/manifest.webmanifest', { host: 'evil.test' })).status, 403); // Host check still first
+  } finally {
+    await srv.close();
+  }
+});

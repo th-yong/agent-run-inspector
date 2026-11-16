@@ -84,14 +84,14 @@ npm i -g agent-run-inspector   # the service needs a lasting install, not the np
 ari service install            # opens the browser signed in
 ```
 
-The sign-in lasts a year, so a bookmark opens it directly. If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it. The log is `~/Library/Logs/agent-run-inspector.log`.
+The sign-in lasts a year, so a bookmark opens it directly. To get a Dock and Launchpad icon with its own window, open it in Chrome or Edge and choose Install (the icon at the right of the address bar, or the menu's "Install page as app"). If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it. The log is `~/Library/Logs/agent-run-inspector.log`.
 
 ## Security
 
 Run logs can hold customer data and secrets, so nothing leaves your machine except what you see on screen.
 
 - The server listens on `127.0.0.1` only.
-- Each run makes a random token. The first address carries it once, then it becomes an HttpOnly, SameSite=Strict cookie and disappears from the address bar. Requests without the cookie get 401. Host and Origin headers are checked.
+- Each run makes a random token. The first address carries it once, then it becomes an HttpOnly, SameSite=Strict cookie and disappears from the address bar. Requests without the cookie get 401, except the web app manifest and its two icons (browsers fetch them without cookies; they hold nothing about your logs). Host and Origin headers are checked.
 - The service (`ari service install`) instead keeps one token in `~/.config/agent-run-inspector/service.json` (readable by you only), and its cookie lasts a year. The token is never in the LaunchAgent file, the process arguments or the log. `ari service uninstall` deletes it; installing again keeps it.
 - One outside request at most: once a day the CLI asks the npm registry for the latest version number of this package and prints a line in the terminal if there is a newer one. It sends nothing about you or your logs. Turn it off with `--no-update-check` or `ARI_NO_UPDATE_CHECK=1` (also off when `CI` or `NO_UPDATE_NOTIFIER` is set). Scripts and icons ship in the package and text uses the system's own fonts: no CDN, web fonts or telemetry.
 - Read-only: log files are never written or deleted. The screen never sends a file path; files are found by opaque ids and must stay inside the known log folders.
