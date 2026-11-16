@@ -10,6 +10,7 @@ import { readEnds, readHead } from './scan.js';
 import { createCodexParser } from '../adapters/codex/index.js';
 import { linkCodexAgents } from '../adapters/codex/agents.js';
 import { buildSessionTree } from '../adapters/claude-code/agents.js';
+import { ENDS_TURN } from '../adapters/claude-code/index.js';
 import { mapUsage } from '../adapters/codex/llm.js';
 import { MSG } from '../strings.js';
 
@@ -34,6 +35,12 @@ function base(entry, extra) {
     ...(entry.origin ? { origin: entry.origin } : {}),
     ...extra,
   };
+}
+
+// A sub-agent's meta file says when it is done (`finished` / `stoppedByUser`); a small JSON read.
+function subFinished(store, sub) {
+  const m = readMeta(store, sub);
+  return m.finished === true || m.stoppedByUser === true;
 }
 
 function quickClaude(entry, store, now) {
@@ -66,7 +73,13 @@ function quickClaude(entry, store, now) {
       if (typeof m === 'string' && m && !m.startsWith('<') && !models.includes(m)) models.push(m);
     }
   }
-  const running = now - last < RUNNING_MS && now >= last;
+  const recent = (t) => now - t < RUNNING_MS && now >= t;
+  // The main thread's last turn ended (a final answer or system/turn_duration last): it waits for the user.
+  const lastTurnRec = lastOf(tail, (r) => r.type === 'user' || r.type === 'assistant' || (r.type === 'system' && r.subtype === 'turn_duration'));
+  const turnEnded = lastTurnRec?.type === 'system' || (lastTurnRec?.type === 'assistant' && ENDS_TURN.has(lastTurnRec.message?.stop_reason));
+  // ...but a sub-agent or teammate still writing keeps the run going (same rule as the full parse).
+  const childRunning = entry.subs.some((s) => recent(s.mtimeMs) && (s.mate || !subFinished(store, s)));
+  const running = (!turnEnded && recent(last)) || childRunning;
   return base(entry, {
     ...(title ? { title } : {}),
     project: lastSeg(cwd) || entry.project || '',

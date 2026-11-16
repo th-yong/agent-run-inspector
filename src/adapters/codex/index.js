@@ -35,6 +35,8 @@ export function createCodexParser({ fileId, now = Date.now }) {
   const sessionSpanId = () => `cx:${sessionId}`;
   const agentSpanId = () => `cx:${sessionId}:main`;
   const live = () => now() - lastTs <= RECENT_MS;
+  // The last turn closed (task_complete / turn_aborted): waiting for the user, not running.
+  const turnEnded = () => [...turns.values()].at(-1)?.status != null;
 
   function turnList() {
     const isLive = live();
@@ -58,7 +60,7 @@ export function createCodexParser({ fileId, now = Date.now }) {
     const list = turnList();
     const lastTurn = list.at(-1);
     let status;
-    if (live()) status = 'running';
+    if (live() && !turnEnded()) status = 'running';
     else if (lastTurn?.status === 'cancelled') status = 'cancelled';
     else if (lastTurn?.status === 'ok') status = 'ok';
     else status = 'unknown';
@@ -75,7 +77,8 @@ export function createCodexParser({ fileId, now = Date.now }) {
   function agentSpan() {
     return {
       id: agentSpanId(), parentId: sessionSpanId(), sessionId, source: 'codex', kind: 'agent',
-      name: currentModel ?? MSG.codexSession, status: live() ? 'running' : 'unknown',
+      name: currentModel ?? MSG.codexSession,
+      status: live() && !turnEnded() ? 'running' : ([...turns.values()].at(-1)?.status ?? 'unknown'),
       start: startTs, end: null, ref: { fileId, line: 1 }, depth: 0, lastActivity: lastTs,
       ...(currentModel ? { model: currentModel } : {}),
     };
