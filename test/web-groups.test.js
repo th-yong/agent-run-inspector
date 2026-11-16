@@ -29,3 +29,8 @@ test('filterSessions: `only` keeps the sessions of a group, running ones include
   const list = [{ id: 's1', status: 'running' }, { id: 's2', status: 'ok' }];
   assert.deepEqual(filterSessions(list, { only: new Set(['s2']) }).map((x) => x.id), ['s2']);
 });
+
+test('clampWidth keeps the session list between 220 and 640 px', async () => {
+  const { clampWidth } = await import('../web/list-resize.js');
+  assert.deepEqual([100, 333.4, 900].map(clampWidth), [220, 333, 640]);
+});

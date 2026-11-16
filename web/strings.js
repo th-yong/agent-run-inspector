@@ -47,6 +47,7 @@ export const S = {
     clear: 'Clear filters',
     agents: (n) => `${n} ${n === 1 ? 'agent' : 'agents'}`,
     tokens: (t) => `${t} tokens`,
+    resize: 'Resize the session list (drag; double-click to reset)',
   },
   empty: {
     title: 'No run logs found',
