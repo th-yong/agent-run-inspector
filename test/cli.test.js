@@ -155,3 +155,17 @@ test('service commands: usage errors and "no service" without an install', () =>
   assert.match(run(['open'], h).stderr, /No service is installed/);
   assert.match(run(['service', 'bogus'], h).stderr, /Usage: ari service/);
 });
+
+test('menubar: without a service it prints a SwiftBar notice; install writes into the given folder', () => {
+  const h = tmp();
+  const r = run(['menubar'], h);
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /^⚠︎ \| sfimage=/);
+  assert.match(r.stdout, /No service is installed/);
+  const dir = tmp();
+  assert.equal(run(['menubar', 'install', dir], h).status, 0);
+  assert.ok(existsSync(join(dir, 'agent-run-inspector.30s.sh')));
+  assert.equal(run(['menubar', 'uninstall', dir], h).status, 0);
+  assert.ok(!existsSync(join(dir, 'agent-run-inspector.30s.sh')));
+  assert.equal(run(['menubar', 'bogus'], h).status, 2);
+});

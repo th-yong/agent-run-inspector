@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Web app manifest and icons: with the service running, Chrome or Edge can install the inspector as an app with its own Dock and Launchpad icon and window. The manifest and icons are the only files served without the sign-in cookie, since browsers fetch them without credentials. `scripts/build-app-icons.js` draws the icons, and the browser tab uses the same mark (it was a plain black square).
 
+- `ari menubar install`: a SwiftBar menu bar item that shows how many runs are going, lists them and the five most recent, and opens a run on click. It reads the service every 30 seconds; its links never carry the token.
+
 ### Changed
 - The "signed out" notice in the web UI also points to `ari open`.
 

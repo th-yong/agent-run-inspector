@@ -2,6 +2,7 @@ export const HELP = `Usage: ari [options]
        ari roots <list|add|remove> [--codex] [dir]
        ari service <install|uninstall> [--port <n>]
        ari open
+       ari menubar [install|uninstall [dir]]
 
 Local, read-only inspector for Claude Code and Codex CLI agent runs.
 
@@ -30,6 +31,9 @@ Commands:
                         after an upgrade to restart it
   service uninstall     Stop it and remove it
   open                  Open the running service in the browser (signs in again)
+  menubar install       Add a SwiftBar menu bar item: running runs at a glance
+                        (needs the service and SwiftBar; folder from SwiftBar)
+  menubar uninstall     Remove the menu bar item
 `;
 
 export const MSG = {
@@ -43,6 +47,11 @@ export const MSG = {
   mainAgent: 'Main agent',
   badPrices: (m) => `Error: ${m}`,
   unknownCommand: (c) => `Error: unknown command "${c}"`,
+  menubarUsage: 'Usage: ari menubar [install|uninstall [dir]]',
+  menubarNoSwiftBar: 'SwiftBar has no plugin folder yet. Install SwiftBar (brew install --cask swiftbar), open it once and choose a folder, or pass one: ari menubar install <dir>',
+  menubarDown: 'The inspector service is not answering. Run "ari service install".',
+  menubarInstalled: (f) => `Menu bar plugin written: ${f}\nSwiftBar picks it up within a few seconds (refreshes every 30 s).`,
+  menubarRemoved: (d) => `Menu bar plugin removed from ${d}`,
   serviceUsage: 'Usage: ari service <install|uninstall> [--port <n>]',
   serviceNone: 'No service is installed. Run "ari service install" first.',
   serviceRemoved: 'Service stopped and removed.',
