@@ -5,7 +5,7 @@
     "Anthropic cacheWrite is the 5-minute rate (1-hour writes cost more).",
     "OpenAI rates are the standard tier for input up to 272K tokens; longer prompts cost more. null = no published price.",
     "longContext: a second rate card used when a call's prompt (input + cache read + cache write) is above `above` tokens (Claude Haiku 5.5: 100K).",
-    "Left out on purpose (not priced here): OpenAI *-pro and gpt-5.6-*, gpt-5-codex, gpt-5.1-codex, gpt-5.5-mini (not on the price page)."
+    "Left out on purpose (not priced here): OpenAI *-pro and gpt-5.6-*, gpt-5.1-codex-max, gpt-5.5-mini, gpt-6-astra (no price found). Web search calls ($0.01 each on OpenAI) are not counted."
   ],
   "models": {
     "claude-fable-5-2": {
@@ -157,6 +157,30 @@
         "cacheWrite": 0.625
       },
       "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "asOf": "2026-11-16"
+    },
+    "gpt-5-codex": {
+      "input": 1.25,
+      "output": 10,
+      "cacheRead": 0.125,
+      "cacheWrite": null,
+      "source": "Supplied by the user from OpenAI / OpenRouter API rates (2026-11-16); cache read $0.13 shown rounded, $0.125 used as for gpt-5 / gpt-5.1",
+      "asOf": "2026-11-16"
+    },
+    "gpt-5.1-codex": {
+      "input": 1.25,
+      "output": 10,
+      "cacheRead": 0.125,
+      "cacheWrite": null,
+      "source": "Supplied by the user from OpenAI / OpenRouter API rates (2026-11-16); cache read $0.13 shown rounded, $0.125 used as for gpt-5 / gpt-5.1",
+      "asOf": "2026-11-16"
+    },
+    "gpt-5.2-codex": {
+      "input": 1.75,
+      "output": 14,
+      "cacheRead": 0.175,
+      "cacheWrite": null,
+      "source": "Supplied by the user from OpenAI API rates (2026-11-16)",
       "asOf": "2026-11-16"
     }
   }
