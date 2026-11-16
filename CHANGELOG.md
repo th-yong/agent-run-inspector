@@ -6,20 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-16
+
+Session groups, a menu bar panel of running sessions, and a fix for the app window jumping in front. Not on npm yet; install from GitHub.
+
 ### Added
 - Session groups: make a group with "+ New group" above the list, then drag sessions onto it, right-click a session, or pick the group in the run header. A group chip filters the list to its sessions; right-click a chip to delete it. The menu bar panel shows running sessions by group. Groups are saved in `groups.json` next to `config.json` (`GET`/`PUT /api/groups`).
+- Session list: drag the line between the list and the run to resize the list (220-640 px, remembered; double-click resets; arrow keys when focused).
 
 ### Changed
-- Menu bar panel: instead of one run's graph, it lists every running session with its agents, what each is doing now (the tool it is in, or thinking), its call count, and the session's time, cost and tokens. The panel fits its height to the list. A click on a session opens it in the window. The right-click menu no longer lists recent runs. `GET /api/live` serves this view (agent names, states and tool names only).
-- Session list: drag the line between the list and the run to resize the list (220-640 px, remembered; double-click resets; arrow keys when focused).
-- Session list: Running and Recent have clear section bars (Running tinted, with counts) and a gap between them.
-- Session list: Today is the default period, and the Recent section folds with a click (remembered in the browser).
+- Menu bar panel: instead of one run's graph, it lists every running session with what it is doing now (the tool and the time in it, thinking, or waiting for you), its agents, and the session's time, cost, tokens and failed calls. The panel fits its height to the list. A click on a session opens it in the window. The right-click menu no longer lists recent runs. `GET /api/live` serves this view (agent names, states and tool names only).
+- Session list: Today is the default period; Running and Recent have clear section bars with counts and a gap between them; Recent folds with a click (remembered in the browser).
 - Session list: the token count is left out when it is not known yet (it showed "0 tok" for runs that were never opened and had no cost record), and reads "tokens".
+- Opening an agent's details no longer rewraps the graph: the panel floats over its right side, and if it would cover the chosen card the whole graph slides left as one piece (and back on close).
+- README demo: an animated WebP of a made-up but realistic run, "Add rate limiting to the login API". `scripts/demo-dev-project.js` writes that run.
 
 ### Fixed
-- Opening and closing the menu bar panel no longer brings the app's window in front of other apps. The panel no longer activates the app.
-- Opening an agent's details no longer rewraps the graph: the panel floats over its right side, and if it would cover the chosen card the whole graph slides left as one piece (and back on close), instead of the graph laying itself out 360 px narrower.
-- README demo: an animated WebP (30 fps, recorded from the app with `screencapture`) of a made-up but realistic run, "Add rate limiting to the login API": planner, then backend-dev and test-writer, then reviewer; a failed test run is opened to show its details. `scripts/demo-dev-project.js` writes that run.
+- Opening and closing the menu bar panel no longer brings the app's window in front of other apps: the panel no longer activates the app.
 
 ## [0.5.0] - 2026-11-16
 
@@ -153,7 +156,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.0...v0.4.1
