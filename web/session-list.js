@@ -135,8 +135,10 @@ export function sessionRow(s, { selected = false, now = Date.now() } = {}) {
   m.append(el('span', 'num', fmtStart(s.start, now)));
   if (s.start && s.end) m.append(el('span', 'num', fmtDuration(s.end - s.start)));
   m.append(el('span', '', S.list.agents(s.agentCount ?? 0)));
+  // The list's quick summary only knows tokens when Claude Code wrote a cost record (on exit) or the run
+  // was opened; 0 there means "not counted yet", so nothing is shown.
   const tokens = (s.totals?.input ?? 0) + (s.totals?.output ?? 0) + (s.totals?.cacheRead ?? 0);
-  m.append(el('span', 'num', `${fmtTokens(tokens)} tok`));
+  if (tokens) m.append(el('span', 'num', S.list.tokens(fmtTokens(tokens))));
   if (s.status === 'running' || s.status === 'error') {
     m.append(el('span', s.status === 'error' ? 'st-err' : 'st-run', s.status === 'error' ? `▲ ${S.status.error}` : S.status.running));
   }

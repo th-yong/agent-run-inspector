@@ -3,21 +3,25 @@
 // macOS) into a stay-open applet, so no compiler or signing account is needed. Port and token are read
 // from the file named by Info.plist key ARIServiceFile at launch, never stored in the app.
 // Launched with --background (at login), it starts with only the menu bar item. A click on the item
-// opens a popover with the mini view (?view=mini: running run and its graph); a right click shows a
-// text menu (recent runs, Open, Quit). The window opens from either, or from the Dock. Runs in the JXA engine, not Node (ObjC bridge: $.NSWindow, ...).
+// opens a panel with the mini view (?view=mini: running sessions and their agents); a right click shows
+// a text menu (running runs, Open, Quit). The window opens from either, or from the Dock.
+// The panel is non-activating: showing it must not activate the app, because activation brings the
+// app's window in front of the user's other apps. It closes when it loses key (a click elsewhere).
+// Runs in the JXA engine, not Node (ObjC bridge: $.NSWindow, ...).
 /* global ObjC, $, Ref */
 ObjC.import('Cocoa');
 ObjC.import('WebKit');
 
 const REFRESH_S = 10;
-const RECENT = 5;
 let win = null;
 let web = null;
 let item = null;
 let handler = null;
 let svc = null;
-let pop = null;
+let panel = null;
 let popWeb = null;
+let panelClosedAt = 0;
+let panelDelegate = null; // window delegates are weak: keep a reference
 let rightMenu = null;
 
 function readService() {
@@ -47,15 +51,41 @@ function signIn() {
 // A page that never loaded (the service was not up yet, e.g. right after login) has no title: sign in again.
 const notLoaded = (view) => !view.loading && !ObjC.unwrap(view.title);
 
-function togglePopover() {
-  if (pop.shown) return pop.performClose(null);
+const PANEL_W = 400;
+const PANEL_H = 560;
+
+function hidePanel() {
+  if (!panel.isVisible) return;
+  panel.orderOut(null);
+  panelClosedAt = Date.now();
+}
+
+// The page reports its content height; the panel keeps its top edge under the item.
+function fitPanel(h) {
+  const height = Math.max(80, Math.min(PANEL_H, Math.round(h)));
+  const f = panel.frame;
+  if (Math.abs(f.size.height - height) < 1) return;
+  panel.setFrameDisplay($.NSMakeRect(f.origin.x, f.origin.y + f.size.height - height, PANEL_W, height), true);
+}
+
+function togglePanel() {
+  if (panel.isVisible) return hidePanel();
+  // A click on the item while the panel is open first takes key from it (closing it): not a reopen.
+  if (Date.now() - panelClosedAt < 300) return;
   if (notLoaded(popWeb)) signIn();
-  pop.showRelativeToRectOfViewPreferredEdge(item.button.bounds, item.button, 1); // below the item
-  $.NSApplication.sharedApplication.activateIgnoringOtherApps(true);
+  const f = item.button.window.frame; // the item, in screen coordinates
+  const screen = item.button.window.screen.visibleFrame;
+  const left = Math.min(Math.max(f.origin.x + f.size.width / 2 - PANEL_W / 2, screen.origin.x + 8), screen.origin.x + screen.size.width - PANEL_W - 8);
+  const height = panel.frame.size.height; // as fitted to the content last time
+  panel.setFrameDisplay($.NSMakeRect(left, f.origin.y - height - 6, PANEL_W, height), true);
+  const app = $.NSApplication.sharedApplication;
+  if (app.isHidden) app.unhideWithoutActivation; // launched at login with "open -j" (hidden): windows stay off screen
+  panel.orderFrontRegardless;
+  panel.makeKeyWindow; // key without activating the app (non-activating panel)
 }
 
 function showWindow(sessionId) {
-  if (pop && pop.shown) pop.performClose(null);
+  if (panel) hidePanel();
   if (!sessionId && notLoaded(web)) signIn();
   if (sessionId && svc) go(`${base()}?s=${encodeURIComponent(sessionId)}`);
   win.makeKeyAndOrderFront(null);
@@ -93,8 +123,6 @@ const label = (s) => {
 function refresh() {
   const list = fetchSessions();
   const running = (list || []).filter((s) => s.status === 'running');
-  const last = (s) => s.end || s.lastWrite || 0;
-  const recent = (list || []).filter((s) => s.status !== 'running').sort((a, b) => last(b) - last(a)).slice(0, RECENT);
   item.button.title = running.length ? ` ${running.length}` : '';
   const menu = $.NSMenu.alloc.init;
   const head = (t) => menuItem(t, null, (mi) => { mi.enabled = false; });
@@ -102,11 +130,6 @@ function refresh() {
   else {
     menu.addItem(head(running.length ? `Running (${running.length})` : 'Nothing running'));
     for (const s of running) menu.addItem(menuItem(`● ${label(s)}`, 'openRun:', (mi) => { mi.representedObject = $(s.id); }));
-    if (recent.length) {
-      menu.addItem($.NSMenuItem.separatorItem);
-      menu.addItem(head('Recent'));
-      for (const s of recent) menu.addItem(menuItem(label(s), 'openRun:', (mi) => { mi.representedObject = $(s.id); }));
-    }
   }
   menu.addItem($.NSMenuItem.separatorItem);
   menu.addItem(menuItem('Open Agent Run Inspector', 'openApp:'));
@@ -127,13 +150,21 @@ ObjC.registerSubclass({
         const ev = $.NSApplication.sharedApplication.currentEvent;
         const right = ev && !ev.isNil() && (ev.type === 4 || (ev.modifierFlags & (1 << 18))); // right mouse up, or control-click
         if (right && rightMenu) item.popUpStatusItemMenu(rightMenu);
-        else togglePopover();
+        else togglePanel();
       },
     },
   },
 });
 
-// The popover page asks for the window: window.webkit.messageHandlers.ari.postMessage({ open: sessionId }).
+ObjC.registerSubclass({
+  name: 'ARIPanelDelegate',
+  protocols: ['NSWindowDelegate'],
+  methods: {
+    'windowDidResignKey:': { types: ['void', ['id']], implementation: () => hidePanel() },
+  },
+});
+
+// The panel page asks for the window (postMessage({ open: sessionId })) or reports its height ({ height }).
 ObjC.registerSubclass({
   name: 'ARIBridge',
   protocols: ['WKScriptMessageHandler'],
@@ -143,6 +174,7 @@ ObjC.registerSubclass({
       implementation: (controller, message) => {
         const body = ObjC.deepUnwrap(message.body) || {};
         if (typeof body.open === 'string') showWindow(body.open || null);
+        if (typeof body.height === 'number' && body.height > 0) fitPanel(body.height);
       },
     },
   },
@@ -159,16 +191,26 @@ function run() {
   item.button.action = 'itemClicked:';
   item.button.sendActionOn((1 << 2) | (1 << 4)); // left and right mouse up
 
-  const popSize = $.NSMakeRect(0, 0, 400, 560);
+  const popSize = $.NSMakeRect(0, 0, PANEL_W, PANEL_H);
   const popConfig = $.WKWebViewConfiguration.alloc.init;
   popConfig.userContentController.addScriptMessageHandlerName($.ARIBridge.alloc.init, 'ari');
   popWeb = $.WKWebView.alloc.initWithFrameConfiguration(popSize, popConfig);
-  const popView = $.NSViewController.alloc.init;
-  popView.view = popWeb;
-  pop = $.NSPopover.alloc.init;
-  pop.contentSize = $.NSMakeSize(400, 560);
-  pop.behavior = 1; // transient: closes on a click outside
-  pop.contentViewController = popView;
+  // titled (so it can take key) | non-activating | full-size content; the title bar is hidden
+  panel = $.NSPanel.alloc.initWithContentRectStyleMaskBackingDefer(popSize, 1 | (1 << 7) | (1 << 15), $.NSBackingStoreBuffered, false);
+  panel.titleVisibility = 1; // hidden
+  panel.titlebarAppearsTransparent = true;
+  for (const b of [0, 1, 2]) panel.standardWindowButton(b).hidden = true; // close, minimize, zoom
+  panel.movable = false;
+  panel.level = 25; // status bar level: above other apps' windows
+  panel.hidesOnDeactivate = false;
+  panel.releasedWhenClosed = false;
+  panel.collectionBehavior = 1 << 0 | 1 << 8; // all spaces, full-screen auxiliary
+  panel.contentView = popWeb;
+  panelDelegate = $.ARIPanelDelegate.alloc.init;
+  panel.delegate = panelDelegate;
+  // The app is not active while the panel is up, so a click in another app does not take key from
+  // the panel; a global monitor sees those clicks (mouse clicks only, no keys: needs no permission).
+  $.NSEvent.addGlobalMonitorForEventsMatchingMaskHandler((1 << 1) | (1 << 3), () => hidePanel()); // left, right mouse down
 
   const frame = $.NSMakeRect(0, 0, 1280, 820);
   win = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(frame, 15, $.NSBackingStoreBuffered, false); // titled, closable, miniaturizable, resizable

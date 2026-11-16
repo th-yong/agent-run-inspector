@@ -26,6 +26,7 @@ export const WEB_FILES = [
   'card.js',
   'format.js',
   'graph-layout.js',
+  'mini.js',
   'graph.js',
   'icons.js',
   'live-follow.js',

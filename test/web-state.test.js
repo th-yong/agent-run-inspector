@@ -32,10 +32,9 @@ test('hide round-trips as ?hide=1 and is left out when off', () => {
   assert.equal(toSearch({ s: 'x', tab: 'graph', hide: false }), '?s=x');
 });
 
-test('view=mini round-trips and forces the graph tab', () => {
-  const st = parseState('?view=mini&s=x&tab=timeline');
+test('view=mini round-trips', () => {
+  const st = parseState('?view=mini&s=x');
   assert.equal(st.mini, true);
-  assert.equal(st.tab, 'graph');
   assert.equal(toSearch(st), '?s=x&view=mini');
   assert.equal(parseState('?view=other').mini, false);
 });
