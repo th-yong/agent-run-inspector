@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Agent-team teammates that were stopped or shut down no longer show as Running for ten minutes. A teammate is done when the lead stopped it (`TaskStop`) or heard it shut down, when it approved a shutdown request, or when the lead's shutdown request is its last message. Calls it left open stop showing as running, and the run and the session list show Done.
+
 ## [0.4.2] - 2026-11-16
 
 Readable call bars, an update notice, and the groundwork for npm (not on npm yet; the first npm release is 0.4.3).

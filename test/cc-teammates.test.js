@@ -50,3 +50,34 @@ test('spawnedIds finds teammate ids across long lines and only in complete lines
   const store2 = { readRange: (_id, o, l) => buf2.subarray(o, o + l) };
   assert.deepEqual([...spawnedIds(store2, { fileId: 1, size: buf2.length }, cache)].sort(), ['a@t', 'b@t']);
 });
+
+test('stopped or shut-down teammates are done although their files are fresh', () => {
+  const root = mkdtempSync(join(tmpdir(), 'ari-mates-'));
+  const dir = join(root, '-p-app');
+  mkdirSync(dir);
+  const spawn = (n, id) => [
+    { type: 'assistant', sessionId: LEAD, timestamp: at(1), message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', id, name: 'Agent', input: { name: n } }] } },
+    { type: 'user', sessionId: LEAD, timestamp: at(2), message: { content: [{ type: 'tool_result', tool_use_id: id, content: 'ok' }] },
+      toolUseResult: { status: 'teammate_spawned', teammate_id: `${n}@t` } },
+  ];
+  writeFileSync(join(dir, `${LEAD}.jsonl`), jl([
+    { type: 'user', sessionId: LEAD, cwd: '/p/app', timestamp: at(0), message: { role: 'user', content: 'go' } },
+    ...spawn('asked', 's1'), ...spawn('approved', 's2'), ...spawn('stopped', 's3'),
+    { type: 'assistant', sessionId: LEAD, timestamp: at(20), message: { content: [{ type: 'tool_use', id: 'ts1', name: 'TaskStop', input: { task_id: 'stopped' } }] } },
+    { type: 'user', sessionId: LEAD, timestamp: at(21), message: { content: [{ type: 'tool_result', tool_use_id: 'ts1', content: '{"message":"Successfully stopped task"}' }] } },
+    { type: 'system', subtype: 'turn_duration', sessionId: LEAD, timestamp: at(22) },
+  ]));
+  const mate = (n, i, last) => writeFileSync(join(dir, `00000000-0000-4000-8000-00000000f10${i}.jsonl`), jl([
+    { type: 'user', sessionId: `m${i}`, teamName: 't', agentName: n, timestamp: at(3), message: { role: 'user', content: 'work' } },
+    last,
+  ]));
+  mate('asked', 1, { type: 'user', sessionId: 'm1', timestamp: at(15), message: { role: 'user', content: '<teammate-message teammate_id="team-lead">\n{"type":"shutdown_request","from":"team-lead"}\n</teammate-message>' } });
+  mate('approved', 2, { type: 'assistant', sessionId: 'm2', timestamp: at(16), message: { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'x2', name: 'SendMessage', input: { to: 'team-lead', message: { type: 'shutdown_response', approve: true }, type: 'shutdown_response', approve: true } }] } });
+  mate('stopped', 3, { type: 'assistant', sessionId: 'm3', timestamp: at(10), message: { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'x3', name: 'Read', input: {} }] } });
+
+  const idx = createIndex({ roots: { claude: [{ path: root }] }, source: 'claude' });
+  assert.equal(idx.list()[0].status, 'ok');
+  const { spans } = idx.open(LEAD);
+  for (const n of ['asked', 'approved', 'stopped']) assert.equal(spans.find((s) => s.id === `ext:${n}@t`).status, 'ok', n);
+  assert.deepEqual(spans.filter((s) => s.status === 'running').map((s) => s.name), []); // their open calls do not run on
+});

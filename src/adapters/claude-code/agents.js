@@ -24,6 +24,12 @@ export class AgentCollector {
     this.calls = new Map(); // tool_use id -> call
     this.orphans = new Map(); // result seen before its call
     this.notes = []; // task-notification lines: { ts, text } (matched against ids only)
+    this.stopCalls = new Map(); // TaskStop tool_use id -> task_id
+    this.stopped = new Map(); // teammate name -> when the lead stopped it or learned it shut down
+  }
+
+  #stop(name, ts) {
+    if (name && ts !== null) this.stopped.set(name, Math.max(ts, this.stopped.get(name) ?? ts));
   }
 
   onAssistant(rec, ts, line) {
@@ -31,6 +37,7 @@ export class AgentCollector {
     if (!Array.isArray(content)) return;
     for (const b of content) {
       if (!b || b.type !== 'tool_use' || typeof b.id !== 'string' || typeof b.name !== 'string') continue;
+      if (b.name === 'TaskStop') { const t = str(b.input?.task_id); if (t) this.stopCalls.set(b.id, t); continue; }
       if (!AGENT_TOOLS.has(b.name.toLowerCase()) || this.calls.has(b.id)) continue;
       const i = b.input && typeof b.input === 'object' ? b.input : {};
       const c = {
@@ -62,7 +69,19 @@ export class AgentCollector {
       return;
     }
     const content = rec.message?.content;
+    // teammate messages relayed to the lead: "<name> has shut down." / the teammate approving its shutdown
+    if (typeof content === 'string' && content.includes('teammate-message')) {
+      for (const m of content.matchAll(/"type":"teammate_terminated","message":"([^"]+?) has shut down\./g)) this.#stop(m[1], ts);
+      for (const m of content.matchAll(/"type":"shutdown_approved"[^}]*?"from":"([^"]+)"/g)) this.#stop(m[1], ts);
+    }
     if (!Array.isArray(content)) return;
+    for (const b of content) {
+      const task = b?.type === 'tool_result' ? this.stopCalls.get(b.tool_use_id) : undefined;
+      if (!task) continue;
+      // stopped now, or already not running ("not running (status: completed)", "No task found")
+      const text = typeof b.content === 'string' ? b.content : JSON.stringify(b.content ?? '');
+      if (!b.is_error || /not running|No task found/.test(text)) this.#stop(task, ts);
+    }
     const blocks = content.filter((b) => b && b.type === 'tool_result' && typeof b.tool_use_id === 'string');
     const tur = rec.toolUseResult && typeof rec.toolUseResult === 'object' && blocks.length === 1 ? rec.toolUseResult : {};
     for (const b of blocks) {
@@ -112,7 +131,9 @@ export class AgentCollector {
         if (mate?.mate) {
           mate.claimed = true;
           const last = mate.mtime ?? mate.lastTs;
-          const live = isLive(last, now);
+          // a teammate is done once its turn ended, it shut down, or the lead stopped it after this spawn
+          const stoppedAt = this.stopped.get(key.split('@')[0]);
+          const live = isLive(last, now) && !mate.turnEnded && !mate.shutDown && !(stoppedAt >= c.start);
           const end = live ? null : (mate.lastTs ?? c.start);
           const model = c.model ?? mate.model;
           out.push({
@@ -217,7 +238,7 @@ export function buildSessionTree({ main, subagents = [], now }) {
     const s = new ClaudeCodeSession({ fileId: f.fileId, sessionId: sid, parentId: spanId, depth, now: clock });
     s.push(f.text);
     const lastLlm = s.llm.lastModel();
-    const entry = { agentId: f.agentId, meta, lastTs: s.lastTs, firstTs: s.firstTs, mtime: f.mtime, model: lastLlm, fileId: f.fileId, ...(f.mate ? { mate: true } : {}) };
+    const entry = { agentId: f.agentId, meta, lastTs: s.lastTs, firstTs: s.firstTs, mtime: f.mtime, model: lastLlm, fileId: f.fileId, ...(f.mate ? { mate: true, turnEnded: s.turnEnded, shutDown: s.shutDown } : {}) };
     lookup.add(entry);
     parsed.push({ f, s, entry, spanId, depth });
   }
@@ -225,6 +246,9 @@ export function buildSessionTree({ main, subagents = [], now }) {
   // children first, so the root's status can account for running agents
   const sessions = [mainSession, ...parsed.map((p) => p.s)];
   const children = sessions.flatMap((s) => s.childSpans(lookup));
+  // a stopped teammate's file is still fresh, but a call it left open will never finish
+  const doneMates = new Set(children.filter((c) => c.id.startsWith('ext:') && c.status !== 'running').map((c) => c.id));
+  for (const c of children) if (c.status === 'running' && doneMates.has(c.parentId)) c.status = 'unknown';
   for (const p of parsed) {
     if (p.entry.claimed) continue;
     const m = p.entry.meta;
