@@ -2,6 +2,10 @@ English | [한국어](README.ko.md)
 
 # agent-run-inspector
 
+[![CI](https://github.com/th-yong/agent-run-inspector/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/th-yong/agent-run-inspector/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/th-yong/agent-run-inspector)](LICENSE)
+[![Node](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fth-yong%2Fagent-run-inspector%2Fmain%2Fpackage.json&query=%24.engines.node&label=node&color=339933)](package.json)
+
 A local, read-only inspector for Claude Code and Codex CLI agent runs: see who called whom, what each call cost and where it failed, live, in your browser.
 
 ![Demo: a new run appears, the orchestrator starts agents, and their calls stream in until each one is done](docs/demo.gif)
