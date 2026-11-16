@@ -5,8 +5,9 @@ import { mkdtempSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { startServer } from '../src/server/http.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import {
-  LABEL, buildPlist, installService, uninstallService, loadService, plistFile, serviceFile,
+  APP_ID, LABEL, appDir, buildApp, buildPlist, installService, uninstallService, loadService, plistFile, serviceFile,
 } from '../src/service.js';
 
 const tmpEnv = () => ({ HOME: mkdtempSync(join(tmpdir(), 'ari-svc-')) });
@@ -77,4 +78,28 @@ test('install retries bootstrap while the old instance is still going away', asy
   assert.deepEqual(calls, ['bootout', 'bootstrap', 'bootstrap', 'bootstrap']);
   const never = async (file, args) => { if (args[0] === 'bootstrap') throw new Error('down'); };
   await assert.rejects(installService({ ...opts(env, never), wait: async () => {} }), /down/);
+});
+
+test('buildApp: osacompile, the service-file key, bundle id, icon and an ad-hoc signature; uninstall removes it', async () => {
+  const env = tmpEnv();
+  const calls = [];
+  const run = async (file, args) => {
+    calls.push([file, ...args]);
+    if (file === 'osacompile') { // stand-in for the applet osacompile writes
+      const out = args[args.indexOf('-o') + 1];
+      mkdirSync(join(out, 'Contents', 'Resources'), { recursive: true });
+      writeFileSync(join(out, 'Contents', 'Info.plist'), '<plist/>');
+    }
+  };
+  const app = await buildApp({ env, run });
+  assert.equal(app, appDir(env));
+  const plist = join(app, 'Contents', 'Info.plist');
+  assert.deepEqual(calls.map((c) => c[0]), ['osacompile', 'plutil', 'plutil', 'codesign']);
+  assert.ok(calls[0].includes('-s') && calls[0].at(-1).endsWith('src/macos/app.js'));
+  assert.deepEqual(calls[1], ['plutil', '-replace', 'ARIServiceFile', '-string', serviceFile(env), plist]);
+  assert.deepEqual(calls[2], ['plutil', '-replace', 'CFBundleIdentifier', '-string', APP_ID, plist]);
+  assert.ok(readFileSync(join(app, 'Contents', 'Resources', 'applet.icns')).subarray(0, 4).equals(Buffer.from('icns')));
+  assert.deepEqual(calls[3], ['codesign', '--force', '--sign', '-', app]);
+  assert.equal(await uninstallService({ env, platform: 'darwin', uid: 501, run: async () => {} }), true);
+  assert.ok(!existsSync(app));
 });

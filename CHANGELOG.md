@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Web app manifest and icons: with the service running, Chrome or Edge can install the inspector as an app with its own Dock and Launchpad icon and window. The manifest and icons are the only files served without the sign-in cookie, since browsers fetch them without credentials. `scripts/build-app-icons.js` draws the icons, and the browser tab uses the same mark (it was a plain black square).
 
+- `ari service install` also builds `~/Applications/Agent Run Inspector.app`: its own window, Dock icon and Launchpad entry, signed in at every launch. It is compiled locally from `src/macos/app.js` with the built-in `osacompile`, so no download, compiler or developer signing is needed. The app reads the token from the service file at launch and never stores it.
 - `ari menubar install`: a SwiftBar menu bar item that shows how many runs are going, lists them and the five most recent, and opens a run on click. It reads the service every 30 seconds; its links never carry the token.
 
 ### Changed
+- The mark next to "Run Inspector" at the top left of the page is the app icon (it was a plain gradient square).
 - The "signed out" notice in the web UI also points to `ari open`.
 
 ### Fixed

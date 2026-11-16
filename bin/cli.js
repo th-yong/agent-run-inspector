@@ -12,7 +12,7 @@ import { startApp } from '../src/app.js';
 import { OPEN_MODES, openAddress } from '../src/open.js';
 import { checkForUpdate } from '../src/update-check.js';
 import {
-  COOKIE_MAX_AGE, DEFAULT_PORT, ServiceError, installService, loadService, logFile, serviceUrl, stableNode, uninstallService,
+  COOKIE_MAX_AGE, DEFAULT_PORT, ServiceError, buildApp, installService, loadService, logFile, serviceUrl, stableNode, uninstallService,
 } from '../src/service.js';
 import { fetchSessions, installPlugin, renderMenu, renderProblem, uninstallPlugin } from '../src/menubar.js';
 
@@ -130,7 +130,12 @@ async function serviceCommand(positionals, values, env) {
     if (port === 0) throw new UsageError(MSG.badValue('--port', '1-65535 for a service'));
     const s = await installService({ env, port, node: stableNode(env), cli: fileURLToPath(import.meta.url), run });
     console.log(MSG.serviceInstalled(`http://127.0.0.1:${s.port}/`, logFile(env)));
-    await openAddress(serviceUrl(s), { mode: values['no-open'] ? 'none' : values.open ?? 'browser', env }).catch(() => {});
+    const app = await buildApp({ env, run }).catch(() => null); // the service is fine without the app
+    console.log(app ? MSG.appBuilt(app) : MSG.appFailed);
+    if (!values['no-open']) {
+      if (app) await run('open', [app]).catch(() => {});
+      else await openAddress(serviceUrl(s), { mode: values.open ?? 'browser', env }).catch(() => {});
+    }
     return 0;
   } catch (e) {
     if (e instanceof ServiceError) throw new UsageError(e.message);

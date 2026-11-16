@@ -87,10 +87,10 @@ To open the inspector without a terminal, install it as a service. It then start
 
 ```sh
 npm i -g agent-run-inspector   # the service needs a lasting install, not the npx cache
-ari service install            # opens the browser signed in
+ari service install            # starts the service and opens the app
 ```
 
-The sign-in lasts a year, so a bookmark opens it directly. To get a Dock and Launchpad icon with its own window, open it in Chrome or Edge and choose Install (the icon at the right of the address bar, or the menu's "Install page as app"). If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it. The log is `~/Library/Logs/agent-run-inspector.log`.
+It also builds **Agent Run Inspector.app** in `~/Applications`: its own window, Dock icon and Launchpad entry, signed in at every launch. It is compiled on your Mac with the built-in `osacompile`, so it needs no download or developer signing. If that fails, open the address in Chrome or Edge and choose Install instead. A bookmark of the address works too: the sign-in lasts a year. If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it and the app. The log is `~/Library/Logs/agent-run-inspector.log`.
 
 For a menu bar item, install [SwiftBar](https://swiftbar.app/) (`brew install --cask swiftbar`), open it once to choose its plugin folder, then run `ari menubar install`. The item shows how many runs are going; its menu lists them and the five most recent, and a click opens that run. It refreshes every 30 seconds from the service.
 

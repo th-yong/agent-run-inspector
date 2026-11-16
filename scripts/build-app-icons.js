@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Draws the web app icons (web/icon-192.png, web/icon-512.png; web/icon-32.png for the tab, without padding): the brand mark's blue-to-teal tile
+// Draws the app icons (web/icon-192.png, web/icon-512.png; web/icon-32.png for the tab, without padding;
+// src/macos/AppIcon.icns for the macOS app): the brand mark's blue-to-teal tile
 // (web/app.css .brand i) with a white agent graph (one lead, two workers). No dependencies:
 // shapes are distance functions, 4x4 supersampled, written as PNG with node:zlib.
 // Run: node scripts/build-app-icons.js
@@ -72,6 +73,19 @@ function png(size, K) {
     chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0)),
   ]);
 }
+
+// macOS app icon (src/macos/AppIcon.icns): an ICNS container of PNGs, one per slot.
+const ICNS = [['icp4', 16], ['icp5', 32], ['ic11', 32], ['ic12', 64], ['ic07', 128], ['ic13', 256], ['ic08', 256], ['ic14', 512], ['ic09', 512], ['ic10', 1024]];
+const pngs = new Map();
+const entries = ICNS.map(([type, size]) => {
+  if (!pngs.has(size)) pngs.set(size, png(size, 0.82));
+  const head = Buffer.alloc(8); head.write(type, 0, 'latin1'); head.writeUInt32BE(8 + pngs.get(size).length, 4);
+  return Buffer.concat([head, pngs.get(size)]);
+});
+const icnsHead = Buffer.alloc(8); icnsHead.write('icns', 0, 'latin1');
+icnsHead.writeUInt32BE(8 + entries.reduce((n, e) => n + e.length, 0), 4);
+writeFileSync(new URL('../src/macos/AppIcon.icns', import.meta.url), Buffer.concat([icnsHead, ...entries]));
+console.log('wrote src/macos/AppIcon.icns');
 
 for (const [size, K] of [[32, 1], [192, 0.82], [512, 0.82]]) {
   const file = new URL(`../web/icon-${size}.png`, import.meta.url);

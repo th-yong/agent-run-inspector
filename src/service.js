@@ -1,9 +1,10 @@
 // Service mode (macOS): a LaunchAgent keeps the server running on a fixed port from login.
 // The token lives in a 0600 file the server reads itself; it never goes into the plist
 // (world-readable), the process arguments (visible in ps) or the log.
-import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { delimiter, dirname, join } from 'node:path';
 import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { configPath } from './config.js';
 import { newToken } from './server/auth.js';
 
@@ -16,6 +17,10 @@ const home = (env) => env.HOME || homedir();
 export const serviceFile = (env) => join(dirname(configPath(env)), 'service.json');
 export const plistFile = (env) => join(home(env), 'Library', 'LaunchAgents', `${LABEL}.plist`);
 export const logFile = (env) => join(home(env), 'Library', 'Logs', 'agent-run-inspector.log');
+export const appDir = (env) => join(home(env), 'Applications', 'Agent Run Inspector.app');
+const APP_SRC = fileURLToPath(new URL('./macos/app.js', import.meta.url));
+const APP_ICON = fileURLToPath(new URL('./macos/AppIcon.icns', import.meta.url));
+export const APP_ID = `${LABEL}.app`;
 
 /** { port, token } or null when no service was installed. */
 export function loadService(env) {
@@ -104,12 +109,31 @@ export async function installService({ env, port, node, cli, platform = process.
   }
 }
 
-/** Stops the LaunchAgent and removes it and the token file. Returns false if nothing was installed. */
+/**
+ * Builds ~/Applications/Agent Run Inspector.app with osacompile (built into macOS; no compiler or
+ * signing account): a window that signs in from service.json at each launch, with the app icon.
+ * Returns the app path, or throws; the service works without it.
+ */
+export async function buildApp({ env, run }) {
+  const app = appDir(env);
+  const plist = join(app, 'Contents', 'Info.plist');
+  rmSync(app, { recursive: true, force: true });
+  mkdirSync(dirname(app), { recursive: true });
+  await run('osacompile', ['-l', 'JavaScript', '-s', '-x', '-o', app, APP_SRC]); // -s stay open, -x run-only
+  await run('plutil', ['-replace', 'ARIServiceFile', '-string', serviceFile(env), plist]);
+  await run('plutil', ['-replace', 'CFBundleIdentifier', '-string', APP_ID, plist]);
+  copyFileSync(APP_ICON, join(app, 'Contents', 'Resources', 'applet.icns'));
+  await run('codesign', ['--force', '--sign', '-', app]); // ad-hoc: the edits above broke osacompile's signature
+  return app;
+}
+
+/** Stops the LaunchAgent and removes it, the token file and the app. Returns false if nothing was installed. */
 export async function uninstallService({ env, platform = process.platform, uid = process.getuid?.(), run }) {
   if (platform !== 'darwin') throw new ServiceError('service: only macOS is supported for now');
-  const had = existsSync(plistFile(env)) || existsSync(serviceFile(env));
+  const had = existsSync(plistFile(env)) || existsSync(serviceFile(env)) || existsSync(appDir(env));
   await run('launchctl', ['bootout', `gui/${uid}/${LABEL}`]).catch(() => {});
   rmSync(plistFile(env), { force: true });
   rmSync(serviceFile(env), { force: true });
+  rmSync(appDir(env), { recursive: true, force: true });
   return had;
 }

@@ -52,6 +52,8 @@ export const MSG = {
   menubarDown: 'The inspector service is not answering. Run "ari service install".',
   menubarInstalled: (f) => `Menu bar plugin written: ${f}\nSwiftBar picks it up within a few seconds (refreshes every 30 s).`,
   menubarRemoved: (d) => `Menu bar plugin removed from ${d}`,
+  appBuilt: (p) => `App: ${p} (open it from Launchpad, Spotlight or the Dock)`,
+  appFailed: 'Could not build the app; open the address in Chrome or Edge and choose Install instead.',
   serviceUsage: 'Usage: ari service <install|uninstall> [--port <n>]',
   serviceNone: 'No service is installed. Run "ari service install" first.',
   serviceRemoved: 'Service stopped and removed.',

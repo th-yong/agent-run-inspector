@@ -87,10 +87,10 @@ Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca t
 
 ```sh
 npm i -g agent-run-inspector   # 서비스는 npx 캐시가 아닌 설치본이 필요합니다
-ari service install            # 로그인된 상태로 브라우저가 열립니다
+ari service install            # 서비스를 띄우고 앱을 엽니다
 ```
 
-로그인은 1년 유지되므로 북마크로 바로 열 수 있습니다. Dock·Launchpad 아이콘과 별도 창을 원하면 Chrome 이나 Edge 에서 열고 설치를 고르세요(주소창 오른쪽 아이콘, 또는 메뉴의 "페이지를 앱으로 설치"). 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요. 패키지나 Node 를 업그레이드한 뒤에는 `ari service install` 을 다시 실행해 새 코드로 재시작하세요. `ari service uninstall` 로 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+`~/Applications` 에 **Agent Run Inspector.app** 도 만듭니다. 자체 창·Dock 아이콘·Launchpad 항목이 있고, 실행할 때마다 자동으로 로그인합니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받기나 개발자 서명이 필요 없습니다. 만들기에 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요. 주소를 북마크해도 됩니다(로그인 1년 유지). 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요. 패키지나 Node 를 업그레이드한 뒤에는 `ari service install` 을 다시 실행해 새 코드로 재시작하세요. `ari service uninstall` 이 서비스와 앱을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
 
 메뉴 막대 항목을 원하면 [SwiftBar](https://swiftbar.app/) 를 설치하고(`brew install --cask swiftbar`) 한 번 열어 플러그인 폴더를 고른 뒤 `ari menubar install` 을 실행하세요. 진행 중인 run 수가 보이고, 메뉴에는 그 run 들과 최근 5개가 나오며, 누르면 그 run 이 열립니다. 서비스에서 30초마다 새로 읽습니다.
 
