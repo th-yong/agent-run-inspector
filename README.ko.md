@@ -2,6 +2,10 @@
 
 # agent-run-inspector
 
+[![CI](https://github.com/th-yong/agent-run-inspector/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/th-yong/agent-run-inspector/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/th-yong/agent-run-inspector)](LICENSE)
+[![Node](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fth-yong%2Fagent-run-inspector%2Fmain%2Fpackage.json&query=%24.engines.node&label=node&color=339933)](package.json)
+
 Claude Code 와 Codex CLI 의 에이전트 실행을 로컬 브라우저에서 실시간으로 보는 읽기 전용 도구입니다. 누가 누구를 불렀는지, 호출마다 비용이 얼마인지, 어디서 실패했는지 한눈에 봅니다.
 
 ![데모: 새 실행이 나타나고, orchestrator 가 에이전트를 띄우고, 각 에이전트의 호출이 끝날 때까지 실시간으로 쌓이는 모습](docs/demo.gif)
