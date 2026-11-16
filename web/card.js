@@ -7,6 +7,14 @@ import { iconEl, providerOf, providerSlugs } from './session-list.js';
 
 const known = (n) => typeof n === 'number' && Number.isFinite(n);
 const MIN_BAR = 8; // percent, so a very short call still shows a sliver
+const BAR_FLOOR_MS = 100; // log scale starts here
+
+/** Bar length on a log scale from BAR_FLOOR_MS to maxMs, so one long call does not flatten the rest. */
+export function barPct(ms, maxMs) {
+  const span = Math.log(Math.max(maxMs, 2 * BAR_FLOOR_MS) / BAR_FLOOR_MS);
+  const p = (Math.log(Math.max(ms, 1) / BAR_FLOOR_MS) / span) * 100;
+  return Math.max(MIN_BAR, Math.min(100, p));
+}
 
 /** Span status -> card state. */
 export function statusKey(status) {
@@ -56,7 +64,7 @@ export function callIcon(call) {
   return { type: 'cat', key: call.toolCategory ?? 'other' };
 }
 
-/** The last `shown` calls as display rows. Bars scale to the agent's longest finished call. */
+/** The last `shown` calls as display rows. Bars scale (log) to the agent's longest finished call. */
 export function callRows(calls, shown, compact = false) {
   const maxMs = Math.max(1, ...calls.filter((c) => known(c.end)).map((c) => c.end - c.start));
   return calls.slice(Math.max(0, calls.length - shown)).map((c) => {
@@ -70,7 +78,7 @@ export function callRows(calls, shown, compact = false) {
       error: c.status === 'error',
       running,
       ms,
-      pct: running ? 100 : ms == null ? 0 : Math.max(MIN_BAR, Math.min(100, (ms / maxMs) * 100)),
+      pct: running ? 100 : ms == null ? 0 : barPct(ms, maxMs),
     };
   });
 }

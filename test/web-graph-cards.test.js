@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { prepareGraph, hiddenAgents, foldedAgents } from '../web/graph.js';
-import { cardInfo, callRows, toolLabel, statusKey } from '../web/card.js';
+import { cardInfo, callRows, barPct, toolLabel, statusKey } from '../web/card.js';
 
 // Synthetic spans only.
 const agent = (id, parentId, extra = {}) => ({ id, parentId, kind: 'agent', name: id, status: 'ok', start: 0, end: 10, ...extra });
@@ -67,6 +67,16 @@ test('callRows: last N, earlier count, bars scale to the longest call, running i
   assert.equal(rows.at(-1).running, true);
   assert.equal(rows.at(-1).pct, 100);
   assert.ok(rows[0].pct <= 100 && rows[0].pct >= 8);
+});
+
+test('barPct: log scale keeps short calls apart when one call is very long', () => {
+  const max = 300_000;
+  assert.equal(barPct(max, max), 100);
+  assert.equal(barPct(50, max), 8);
+  assert.ok(Math.abs(barPct(205, max) - 9) < 1);
+  assert.ok(Math.abs(barPct(7_300, max) - 54) < 1);
+  assert.ok(Math.abs(barPct(60_000, max) - 80) < 1);
+  assert.equal(barPct(80, 80), 8);
 });
 
 test('toolLabel: shell command, MCP names, plain names', () => {
