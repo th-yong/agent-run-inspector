@@ -4,6 +4,7 @@
   "description": "Local, read-only inspector for Claude Code and Codex CLI agent runs.",
   "type": "module",
   "private": true,
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },
@@ -18,7 +19,9 @@
     "prices.json",
     "brand-map.json",
     "README.md",
-    "README.ko.md"
+    "README.ko.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
