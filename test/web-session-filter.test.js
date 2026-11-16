@@ -57,8 +57,8 @@ test('periodStart today is local midnight', () => {
 });
 
 test('providerSlugs lists distinct known providers and skips unknown ones', () => {
-  assert.deepEqual(providerSlugs(['claude-opus-4', 'claude-haiku-4', 'gpt-5']), ['claude', 'openai']);
-  assert.deepEqual(providerSlugs(['gemini-2.5-pro', 'mystery-model']), ['googlegemini']);
+  assert.deepEqual(providerSlugs(['claude-opus-4', 'claude-haiku-4', 'gpt-5']), ['claude']); // no OpenAI logo (THIRD_PARTY_NOTICES.md)
+  assert.deepEqual(providerSlugs(['gemini-2.5-pro', 'mystery-model']), []); // no Google logo either
   assert.deepEqual(providerSlugs(undefined), []);
   assert.deepEqual(providerSlugs([null, 3]), []);
 });

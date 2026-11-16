@@ -26,33 +26,32 @@ test('every other slug in brand-map.json has an icon', () => {
   }
 });
 
-test('all colors reach 3:1 on the card background', () => {
+test('colors are the brand color, or the theme text color for black / gray logos only', () => {
   for (const [slug, icon] of Object.entries(ICONS)) {
     assert.ok(icon.path.length > 20, slug);
-    for (const [color, bg] of [[icon.light, LIGHT_BG], [icon.dark, DARK_BG]]) {
-      if (color === 'currentColor') continue; // theme text color: black on light, white on dark
-      assert.ok(contrast(color, bg) >= 3, `${slug} ${color} on ${bg}`);
-    }
+    const brand = icon.light === 'currentColor' ? icon.dark : icon.light;
+    for (const c of [icon.light, icon.dark]) assert.ok(c === brand || c === 'currentColor', `${slug} ${c}`);
   }
-});
-
-test('color rules: openai text in both themes, Claude kept, Slack lightened in dark, GitHub white in dark', () => {
-  assert.deepEqual([ICONS.openai.light, ICONS.openai.dark], ['currentColor', 'currentColor']);
   assert.deepEqual([ICONS.claude.light, ICONS.claude.dark], ['#d97757', '#d97757']);
-  assert.equal(ICONS.github.dark, 'currentColor');
-  assert.notEqual(ICONS.slack.dark, '#4a154b');
-  assert.ok(contrast(ICONS.slack.dark, DARK_BG) >= 3);
+  assert.deepEqual([ICONS.github.light, ICONS.github.dark], ['#181717', 'currentColor']);
+  assert.deepEqual([ICONS.sentry.light, ICONS.sentry.dark], ['#362d59', '#362d59']); // low contrast, but never shifted
 });
 
-test('themeColor: shifts saturated colors, falls back to text for gray or too-far colors', () => {
-  assert.equal(themeColor('#d97757', LIGHT_BG, -1), '#d97757');
-  assert.equal(themeColor('#222222', DARK_BG, +1), 'currentColor');
-  assert.equal(themeColor('#172b4d', DARK_BG, +1), 'currentColor');
-  assert.ok(contrast(themeColor('#4a154b', DARK_BG, +1), DARK_BG) >= 3);
+test('logos the owners do not allow here are not drawn (category symbol instead)', () => {
+  for (const slug of map.noIcon.slugs) assert.equal(hasIcon(slug), false, slug);
+  assert.ok(map.noIcon.slugs.includes('openai') && map.noIcon.slugs.includes('gmail'));
+  assert.ok(!wantedSlugs({ ...map, noIcon: { slugs: ['github'] } }).includes('github'));
+});
+
+test('themeColor: keeps saturated colors, uses text color for gray logos without contrast', () => {
+  assert.equal(themeColor('#d97757', LIGHT_BG), '#d97757');
+  assert.equal(themeColor('#222222', DARK_BG), 'currentColor');
+  assert.equal(themeColor('#4a154b', DARK_BG), '#4a154b');
+  assert.ok(contrast('#ffffff', DARK_BG) > 3);
 });
 
 test('buildSource is deterministic and skips slugs missing from simple-icons', () => {
-  const m = { simpleIconsVersion: '1.0.0', providers: { a: 'foo' }, colorOverrides: {}, tools: [{ slug: 'bar' }, { slug: 'gone' }] };
+  const m = { simpleIconsVersion: '1.0.0', providers: { a: 'foo' }, tools: [{ slug: 'bar' }, { slug: 'gone' }] };
   const icons = { foo: { path: 'M0 0h1v1z', hex: 'D97757' }, bar: { path: 'M1 1h2v2z', hex: '000000' } };
   const a = buildSource(m, icons);
   assert.equal(a, buildSource(m, { ...icons }));
