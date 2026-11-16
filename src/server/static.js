@@ -27,6 +27,7 @@ export const WEB_FILES = [
   'format.js',
   'graph-layout.js',
   'mini.js',
+  'groups.js',
   'graph.js',
   'icons.js',
   'live-follow.js',

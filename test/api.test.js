@@ -125,3 +125,28 @@ test('briefAgents: tool count and the tool running now, per agent, orchestrator 
   assert.deepEqual([w.calls, w.now], [2, 'Bash']);
   assert.ok(!JSON.stringify([m, w]).includes('secret') && !JSON.stringify([m, w]).includes('npm test'));
 });
+
+function put(path, body, { origin = true } = {}) {
+  return new Promise((resolve, reject) => {
+    const headers = { host: `127.0.0.1:${srv.port}`, cookie: `ari_${srv.port}=${srv.token}`, 'content-type': 'application/json' };
+    if (origin) headers.origin = `http://127.0.0.1:${srv.port}`;
+    const r = http.request({ host: '127.0.0.1', port: srv.port, path, method: 'PUT', headers }, (res) => {
+      let b = '';
+      res.on('data', (c) => (b += c));
+      res.on('end', () => resolve({ status: res.statusCode, body: b }));
+    });
+    r.on('error', reject);
+    r.end(JSON.stringify(body));
+  });
+}
+
+test('PUT /api/groups saves groups; GET reads them back; bad documents and missing Origin are refused', async () => {
+  assert.deepEqual(JSON.parse((await get('/api/groups')).body), { groups: [] });
+  const doc = { groups: [{ id: 'shop', name: ' Shop API ', sessions: [A1, A1] }] };
+  assert.equal((await put('/api/groups', doc, { origin: false })).status, 403);
+  assert.equal((await put('/api/groups', { groups: [{ id: 'Bad Id', name: 'x', sessions: [] }] })).status, 400);
+  const r = await put('/api/groups', doc);
+  assert.equal(r.status, 200);
+  assert.deepEqual(JSON.parse((await get('/api/groups')).body), { groups: [{ id: 'shop', name: 'Shop API', sessions: [A1] }] });
+  assert.equal((await get('/api/groups', { cookie: false })).status, 401);
+});

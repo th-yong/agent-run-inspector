@@ -9,6 +9,7 @@ import { createTimeline } from './timeline.js';
 import { createGraph } from './graph.js';
 import { createAgentPanel } from './agent-panel.js';
 import { startMini } from './mini.js';
+import { createGroupPicker, getGroups, loadGroups, onGroups } from './groups.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -61,6 +62,7 @@ function setLive(kind) {
 const list = mount($('list'), {
   onSelect: (id) => select(id),
   getSelected: () => state.s,
+  getGroups,
 });
 
 function renderList() {
@@ -95,6 +97,10 @@ function ensureHead() {
     onHide: (hide) => { state = { ...state, hide }; writeUrl(false); renderMain(); },
   });
   head = { id: state.s, header };
+  const picker = createGroupPicker(() => head?.id ?? null);
+  header.el.querySelector('.run-meta')?.append(picker.el);
+  const destroy = header.destroy.bind(header);
+  header.destroy = () => { picker.destroy(); destroy(); };
   view = el('div', 'view');
   graph?.graph.destroy();
   graph?.panel.destroy();
@@ -261,6 +267,8 @@ if (state.mini) {
     if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = S.meta.how(m.latest); }
   }, () => {});
   showMeta();
+  onGroups(() => list.repaint());
+  loadGroups();
   setInterval(showMeta, 60 * 60 * 1000);
   setLive('connecting');
 

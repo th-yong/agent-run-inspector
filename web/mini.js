@@ -90,6 +90,26 @@ export function miniCard(s, now = Date.now()) {
   return card;
 }
 
+/** Running sessions by group, groups in their saved order, then the ungrouped ones (`group` null). */
+export function bySection(sessions, groups) {
+  const out = [];
+  const left = new Set(sessions.map((s) => s.id));
+  for (const g of groups) {
+    const list = sessions.filter((s) => left.has(s.id) && g.sessions.includes(s.id));
+    for (const s of list) left.delete(s.id);
+    if (list.length) out.push({ group: g, sessions: list });
+  }
+  const rest = sessions.filter((s) => left.has(s.id));
+  if (rest.length) out.push({ group: null, sessions: rest });
+  return out;
+}
+
+function sections(sessions, groups, now) {
+  const parts = bySection(sessions, groups);
+  if (parts.length === 1 && !parts[0].group) return parts[0].sessions.map((s) => miniCard(s, now)); // no groups in use
+  return parts.flatMap(({ group, sessions: list }) => [el('div', 'mini-sec', group?.name ?? S.groups.other), ...list.map((s) => miniCard(s, now))]);
+}
+
 function header(sessions) {
   const h = el('div', 'mini-top');
   const usd = sessions.reduce((sum, s) => sum + (s.totals?.usd ?? 0), 0);
@@ -123,8 +143,9 @@ export function startMini(body) {
       }
       if (!res.ok) throw new Error(String(res.status));
       const { sessions } = await res.json();
+      const groups = await fetch('/api/groups').then((r) => (r.ok ? r.json() : { groups: [] }), () => ({ groups: [] }));
       const now = Date.now();
-      box.replaceChildren(header(sessions), ...(sessions.length ? sessions.map((s) => miniCard(s, now)) : [el('p', 'mini-empty', S.mini.none)]), footer());
+      box.replaceChildren(header(sessions), ...(sessions.length ? sections(sessions, groups.groups ?? [], now) : [el('p', 'mini-empty', S.mini.none)]), footer());
     } catch {
       box.replaceChildren(el('p', 'mini-empty', S.mini.offline), footer());
     }
