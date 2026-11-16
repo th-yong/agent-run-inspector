@@ -25,4 +25,10 @@ jobs:
       - run: npm test
       - name: Version matches the release tag
         run: test "v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
-      - run: npm publish --access public
+      - name: Skip a version that is already on npm (e.g. published by hand)
+        id: check
+        run: |
+          v=$(node -p 'require("./package.json").version')
+          if npm view "agent-run-inspector@$v" version >/dev/null 2>&1; then echo "skip=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.check.outputs.skip != 'true'
+        run: npm publish --access public
