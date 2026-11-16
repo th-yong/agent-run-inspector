@@ -113,17 +113,31 @@ function mateKey(store, file, cache) {
 }
 
 // teammate_ids a lead file has spawned; reads only bytes appended since the last call.
-function spawnedIds(store, file, cache) {
+const MARK = Buffer.from('"teammate_id":"');
+const QUOTE = 0x22;
+export const SCAN_CHUNK = 8 * 1024 * 1024;
+
+export function spawnedIds(store, file, cache) {
   const k = `ids:${file.fileId}`;
   let c = cache.get(k);
   if (!c || file.size < c.offset) c = { offset: 0, ids: new Set() };
-  if (file.size > c.offset) {
-    const text = store.readRange(file.fileId, c.offset, file.size - c.offset).toString('utf8');
-    const nl = text.lastIndexOf('\n');
-    if (nl !== -1) {
-      for (const m of text.slice(0, nl).matchAll(/"teammate_id":"([^"]+)"/g)) c.ids.add(m[1]);
-      c.offset += Buffer.byteLength(text.slice(0, nl + 1));
+  // Searched as bytes, chunk by chunk: lead files can be tens of MB. Only complete lines are consumed.
+  let size = SCAN_CHUNK;
+  while (file.size > c.offset) {
+    const buf = store.readRange(file.fileId, c.offset, Math.min(size, file.size - c.offset));
+    const end = buf.lastIndexOf(0x0a) + 1;
+    if (end === 0) {
+      if (c.offset + buf.length >= file.size) break; // unfinished last line: wait for its newline
+      size *= 2; // one line longer than the chunk
+      continue;
     }
+    size = SCAN_CHUNK;
+    for (let i = buf.indexOf(MARK); i !== -1 && i < end; i = buf.indexOf(MARK, i + 1)) {
+      const from = i + MARK.length;
+      const to = buf.indexOf(QUOTE, from);
+      if (to !== -1 && to < end) c.ids.add(buf.toString('utf8', from, to));
+    }
+    c.offset += end;
   }
   cache.set(k, c);
   return c.ids;
