@@ -6,19 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-16
+
+Readable call bars, an update notice, and the groundwork for npm (not on npm yet; the first npm release is 0.4.3).
+
 ### Added
 - Update notice: once a day the CLI asks the npm registry for the latest version number and prints one line in the terminal when a newer version exists. Nothing else is sent. Off with `--no-update-check`, `ARI_NO_UPDATE_CHECK=1`, `NO_UPDATE_NOTIFIER` or in CI.
 
 ### Changed
 - Call bars in graph cards use a log scale (100 ms up to the agent's longest call), so one long call no longer shrinks every other bar to the minimum.
-
-## [0.4.2] - 2026-11-16
-
-On npm.
-
-### Added
-- Published to the npm registry: `npx agent-run-inspector`, or `npm i -g agent-run-inspector` for the `ari` command. `npx github:th-yong/agent-run-inspector` still runs the latest `main`.
-- Releases are published to npm by GitHub Actions (trusted publishing, with provenance) when a GitHub Release is created.
+- Package metadata for npm (keywords, homepage, repository, author) and a release workflow that publishes to npm when a GitHub Release is created (trusted publishing, with provenance). It skips a version already on npm, and skips everything until the package's first, hand-made npm publish.
 
 ## [0.4.1] - 2026-11-16
 
