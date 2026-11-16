@@ -12,6 +12,7 @@ export const URL_ALLOWLIST = [
   'http://localhost',
   'http://www.w3.org/2000/svg',
   'https://github.com/th-yong/agent-run-inspector',
+  'https://registry.npmjs.org/agent-run-inspector/latest', // update check (src/update-check.js)
 ];
 
 const HANGUL = /[ᄀ-ᇿ㄰-㆏가-힯]/;
