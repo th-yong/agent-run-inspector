@@ -9,6 +9,7 @@ import { createTimeline } from './timeline.js';
 import { createGraph } from './graph.js';
 import { createAgentPanel } from './agent-panel.js';
 import { startMini } from './mini.js';
+import { mountListResize } from './list-resize.js';
 import { createGroupPicker, getGroups, loadGroups, onGroups } from './groups.js';
 
 const $ = (id) => document.getElementById(id);
@@ -267,6 +268,7 @@ if (state.mini) {
     if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = S.meta.how(m.latest); }
   }, () => {});
   showMeta();
+  mountListResize(document.querySelector('.app'), S.list.resize);
   onGroups(() => list.repaint());
   loadGroups();
   setInterval(showMeta, 60 * 60 * 1000);
