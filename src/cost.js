@@ -19,6 +19,11 @@ function checkEntry(id, e) {
   for (const k of RATES) {
     if (k in e && e[k] !== null && !(Number.isFinite(e[k]) && e[k] >= 0)) throw fail(`Bad price for ${id}.${k}`);
   }
+  if ('longContext' in e) {
+    const l = e.longContext;
+    if (!l || typeof l !== 'object' || !(Number.isFinite(l.above) && l.above > 0)) throw fail(`Bad price for ${id}.longContext`);
+    checkEntry(`${id}.longContext`, { ...l, above: undefined });
+  }
 }
 
 /** @param {{models?: object}} base @param {object} [overrides] id -> partial entry */
@@ -40,9 +45,14 @@ export function createPricer(base, overrides = {}) {
   }
 
   function cost(model, tokens) {
-    const e = find(model);
-    if (!e) return { usd: null, basis: 'unknown' };
     const t = tokens ?? {};
+    // A record with no tokens (Claude Code's own "<synthetic>" messages) costs nothing, priced or not.
+    if (RATES.every((k) => !(Number.isFinite(t[k]) && t[k] > 0))) return { usd: 0, basis: 'priced' };
+    let e = find(model);
+    if (!e) return { usd: null, basis: 'unknown' };
+    // A second rate card for long prompts (e.g. Claude Haiku 5.5 above 100K tokens of prompt).
+    const prompt = ['input', 'cacheRead', 'cacheWrite'].reduce((n, k) => n + (Number.isFinite(t[k]) ? t[k] : 0), 0);
+    if (e.longContext && prompt > e.longContext.above) e = e.longContext;
     let usd = 0;
     for (const k of RATES) {
       const n = Number.isFinite(t[k]) ? t[k] : 0;

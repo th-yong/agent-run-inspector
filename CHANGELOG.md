@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- "Partly unknown" cost on Claude Code runs: Claude Haiku 5.5, Claude Sonnet 5, Claude Opus 5 and Claude Fable 5 / 5.1 are now in the price table (Haiku 5.5 with its second rate card above 100K prompt tokens, a new `longContext` field), and Claude Code's own `<synthetic>` messages, which carry no tokens, cost $0 instead of counting as unknown.
 - Claude Code sessions listed as "Untitled session" although they have a title (shown once opened). Long tool output pushed the title record out of the first and last 16 KB the list reads; the list now also searches the last 256 KB for it. On one machine: 61 of 143 untitled before, 19 after, and those 19 have no title at all.
 
 ### Added
