@@ -87,10 +87,23 @@ Inside Orca the address opens as a new Orca browser tab (`orca tab create`). If 
 `ari service install` sets up three things:
 
 - **A background service** that starts at login on `http://127.0.0.1:7317/` (`--port <n>` to change), so the inspector is always ready.
-- **Agent Run Inspector.app** in `~/Applications`, added to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. Its **menu bar item** shows how many runs are going; a click opens a small panel with the running sessions, each with its agents and what they are doing now (click a session to open it in the window), and a right click lists the running sessions. At login the app starts with only the menu bar item, and the window opens from the menu or the Dock. It is built on your Mac with the built-in `osacompile`, so there is nothing to download and no developer signing. If that fails, open the address in Chrome or Edge and choose Install instead.
+- **Agent Run Inspector.app** in `~/Applications`, added to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. It also puts an item in the menu bar (see [The menu bar](#the-menu-bar)). At login the app starts with only the menu bar item, and the window opens from the menu or the Dock. It is built on your Mac with the built-in `osacompile`, so there is nothing to download and no developer signing. If that fails, open the address in Chrome or Edge and choose Install instead.
 - **A sign-in that lasts a year** for that address, so a bookmark works too. If a browser tab says "Signed out", run `ari open`.
 
 The page header shows the version, and a badge when a newer one is out. To update, install the package again and run `ari service install` again; it restarts the service and the app on the new code. `ari service uninstall` removes the service, the app, its Dock icon and its login item. The log is `~/Library/Logs/agent-run-inspector.log`.
+
+### The menu bar
+
+<img src="docs/menubar.png" width="400" alt="Menu bar panel: one running session in the Shop API group, with backend-dev running Bash for 2.4 s and its four agents">
+
+The app's mark sits in the menu bar with the number of sessions running now, so you can follow long runs while you work in other apps.
+
+- **Click** for a panel of the running sessions, grouped by your [groups](#what-you-see). The top line shows how many are running and what they have cost so far.
+- Each session shows its title, project, time, cost, tokens and failed calls. A highlighted line says what it is doing now: the tool and how long it has been in it, "Thinking…" between calls, or **Waiting for you** when it asks you something. When a run has sub-agents, they are listed with a dot each (orange: working, grey: done) and how many are done.
+- **Click a session** to open it in the app window. "Open Agent Run Inspector" at the bottom opens the window as it was.
+- **Right-click** for a plain menu: the running sessions, Open and Quit.
+- The panel closes when you click anywhere else, and it does not bring the app window in front of what you are working on.
+- On a Mac with a notch, the item can be hidden when the menu bar is full. Hold ⌘ and drag menu bar items to make room, or quit an app whose item you don't need.
 
 
 ## Security

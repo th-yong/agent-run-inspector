@@ -20,7 +20,8 @@ export function nowOf(agents) {
   let best = null;
   for (const a of agents) if (a.status === 'running' && a.now && (!best || a.nowStart > best.nowStart)) best = a;
   if (best) return { agent: best, tool: best.now, since: best.nowStart, waiting: WAITING.has(best.now) };
-  const busy = agents.find((a) => a.status === 'running');
+  // no tool running: the deepest working agent (the orchestrator is often just waiting on its sub-agents)
+  const busy = agents.filter((a) => a.status === 'running').sort((x, y) => y.depth - x.depth || y.start - x.start)[0];
   return busy ? { agent: busy, tool: null, since: null, waiting: false } : null;
 }
 
