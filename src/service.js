@@ -117,6 +117,8 @@ export async function installService({ env, port, node, cli, platform = process.
 export async function buildApp({ env, run, version }) {
   const app = appDir(env);
   const plist = join(app, 'Contents', 'Info.plist');
+  // a running copy keeps the old code and version until it is quit; "is running" does not launch it
+  await run('osascript', ['-e', `if application id "${APP_ID}" is running then tell application id "${APP_ID}" to quit`]).catch(() => {});
   rmSync(app, { recursive: true, force: true });
   mkdirSync(dirname(app), { recursive: true });
   await run('osacompile', ['-l', 'JavaScript', '-s', '-x', '-o', app, APP_SRC]); // -s stay open, -x run-only

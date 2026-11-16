@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ari menubar install`: a SwiftBar menu bar item that shows how many runs are going, lists them and the five most recent, and opens a run on click. It reads the service every 30 seconds; its links never carry the token.
 
 ### Changed
+- README demo GIF re-recorded with the app icon and version in the header.
+- Reinstalling the service quits a running copy of the app before rebuilding it, so the new version opens.
 - The mark next to "Run Inspector" at the top left of the page is the app icon (it was a plain gradient square).
 - The "signed out" notice in the web UI also points to `ari open`.
 

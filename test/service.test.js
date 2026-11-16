@@ -94,6 +94,7 @@ test('buildApp: osacompile, the service-file key, bundle id, icon and an ad-hoc 
   const app = await buildApp({ env, run, version: '1.2.3' });
   assert.equal(app, appDir(env));
   const plist = join(app, 'Contents', 'Info.plist');
+  assert.equal(calls.shift()[0], 'osascript'); // quit a running copy first
   assert.deepEqual(calls.map((c) => c[0]), ['osacompile', 'plutil', 'plutil', 'plutil', 'plutil', 'codesign']);
   assert.deepEqual(calls[3].slice(1, 5), ['-replace', 'CFBundleShortVersionString', '-string', '1.2.3']);
   assert.ok(calls[0].includes('-s') && calls[0].at(-1).endsWith('src/macos/app.js'));
