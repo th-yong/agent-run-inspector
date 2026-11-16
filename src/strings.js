@@ -2,7 +2,6 @@ export const HELP = `Usage: ari [options]
        ari roots <list|add|remove> [--codex] [dir]
        ari service <install|uninstall> [--port <n>]
        ari open
-       ari menubar [install|uninstall [dir]]
 
 Local, read-only inspector for Claude Code and Codex CLI agent runs.
 
@@ -28,14 +27,11 @@ Commands:
   roots remove <dir>    Forget a remembered folder
   service install       macOS: keep the inspector running from login on a fixed
                         port (default 7317) with a lasting sign-in, and build
-                        Agent Run Inspector.app (added to the Dock); run again
-                        after an upgrade to restart it
+                        Agent Run Inspector.app (Dock, menu bar item, opens at
+                        login); run again after an upgrade to restart it
   service uninstall     Stop it and remove it (and the app and its Dock icon)
   --no-dock             With service install: do not add the app to the Dock
   open                  Open the running service in the browser (signs in again)
-  menubar install       Add a SwiftBar menu bar item: running runs at a glance
-                        (needs the service and SwiftBar; folder from SwiftBar)
-  menubar uninstall     Remove the menu bar item
 `;
 
 export const MSG = {
@@ -49,12 +45,7 @@ export const MSG = {
   mainAgent: 'Main agent',
   badPrices: (m) => `Error: ${m}`,
   unknownCommand: (c) => `Error: unknown command "${c}"`,
-  menubarUsage: 'Usage: ari menubar [install|uninstall [dir]]',
-  menubarNoSwiftBar: 'SwiftBar has no plugin folder yet. Install SwiftBar (brew install --cask swiftbar), open it once and choose a folder, or pass one: ari menubar install <dir>',
-  menubarDown: 'The inspector service is not answering. Run "ari service install".',
-  menubarInstalled: (f) => `Menu bar plugin written: ${f}\nSwiftBar picks it up within a few seconds (refreshes every 30 s).`,
-  menubarRemoved: (d) => `Menu bar plugin removed from ${d}`,
-  appBuilt: (p) => `App: ${p} (open it from Launchpad, Spotlight or the Dock)`,
+  appBuilt: (p) => `App: ${p} (Dock, Launchpad, Spotlight; its menu bar item shows running runs)`,
   appFailed: 'Could not build the app; open the address in Chrome or Edge and choose Install instead.',
   dockAdded: 'Added to the Dock (skip with --no-dock).',
   dockRemoved: 'Removed from the Dock.',

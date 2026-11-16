@@ -21,6 +21,34 @@ export const appDir = (env) => join(home(env), 'Applications', 'Agent Run Inspec
 const APP_SRC = fileURLToPath(new URL('./macos/app.js', import.meta.url));
 const APP_ICON = fileURLToPath(new URL('./macos/AppIcon.icns', import.meta.url));
 export const APP_ID = `${LABEL}.app`;
+export const LOGIN_LABEL = `${LABEL}.login`;
+export const loginPlistFile = (env) => join(home(env), 'Library', 'LaunchAgents', `${LOGIN_LABEL}.plist`);
+
+/** Opens the app at login, hidden (-g -j) and with --background: only its menu bar item shows. */
+export function buildLoginPlist(app) {
+  const args = ['/usr/bin/open', '-g', '-j', app, '--args', '--background'];
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${LOGIN_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+${args.map((a) => `    <string>${xml(a)}</string>`).join('\n')}
+  </array>
+  <key>RunAtLoad</key><true/>
+</dict>
+</plist>
+`;
+}
+
+/** Registers the login item for the app (replacing an older one). Not started now: install opens the app itself. */
+export async function installLoginItem({ env, app, uid = process.getuid?.(), run }) {
+  writeFileSync(loginPlistFile(env), buildLoginPlist(app));
+  await run('launchctl', ['bootout', `gui/${uid}/${LOGIN_LABEL}`]).catch(() => {});
+  // bootstrap runs RunAtLoad right away; the app is already open by then, so open -g only keeps it in place
+  await run('launchctl', ['bootstrap', `gui/${uid}`, loginPlistFile(env)]).catch(() => {});
+}
 
 /** { port, token } or null when no service was installed. */
 export function loadService(env) {
@@ -140,6 +168,9 @@ export async function uninstallService({ env, platform = process.platform, uid =
   await run('launchctl', ['bootout', `gui/${uid}/${LABEL}`]).catch(() => {});
   rmSync(plistFile(env), { force: true });
   rmSync(serviceFile(env), { force: true });
+  await run('launchctl', ['bootout', `gui/${uid}/${LOGIN_LABEL}`]).catch(() => {});
+  rmSync(loginPlistFile(env), { force: true });
+  if (existsSync(appDir(env))) await run('osascript', ['-e', `if application id "${APP_ID}" is running then tell application id "${APP_ID}" to quit`]).catch(() => {});
   rmSync(appDir(env), { recursive: true, force: true });
   return had;
 }

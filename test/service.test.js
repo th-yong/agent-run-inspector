@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { startServer } from '../src/server/http.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import {
-  APP_ID, LABEL, appDir, buildApp, buildPlist, installService, uninstallService, loadService, plistFile, serviceFile,
+  APP_ID, LABEL, LOGIN_LABEL, appDir, buildApp, buildLoginPlist, buildPlist, installLoginItem, loginPlistFile, installService, uninstallService, loadService, plistFile, serviceFile,
 } from '../src/service.js';
 
 const tmpEnv = () => ({ HOME: mkdtempSync(join(tmpdir(), 'ari-svc-')) });
@@ -104,4 +104,21 @@ test('buildApp: osacompile, the service-file key, bundle id, icon and an ad-hoc 
   assert.deepEqual(calls[5], ['codesign', '--force', '--sign', '-', app]);
   assert.equal(await uninstallService({ env, platform: 'darwin', uid: 501, run: async () => {} }), true);
   assert.ok(!existsSync(app));
+});
+
+test('login item opens the app hidden with --background; uninstall removes it', async () => {
+  const env = tmpEnv();
+  const app = appDir(env);
+  const plist = buildLoginPlist('/U/Applications/A & B.app');
+  assert.ok(plist.includes(`<string>${LOGIN_LABEL}</string>`));
+  assert.ok(plist.includes('<string>/usr/bin/open</string>\n    <string>-g</string>\n    <string>-j</string>\n    <string>/U/Applications/A &amp; B.app</string>\n    <string>--args</string>\n    <string>--background</string>'));
+  assert.ok(!plist.includes('KeepAlive'));
+  mkdirSync(join(env.HOME, 'Library', 'LaunchAgents'), { recursive: true });
+  const r = recorder();
+  await installLoginItem({ env, app, uid: 501, run: r.run });
+  assert.ok(existsSync(loginPlistFile(env)));
+  assert.deepEqual(r.calls, [`launchctl bootout gui/501/${LOGIN_LABEL}`, `launchctl bootstrap gui/501 ${loginPlistFile(env)}`]);
+  await uninstallService({ env, platform: 'darwin', uid: 501, run: r.run });
+  assert.ok(!existsSync(loginPlistFile(env)));
+  assert.ok(r.calls.includes(`launchctl bootout gui/501/${LOGIN_LABEL}`));
 });

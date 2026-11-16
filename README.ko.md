@@ -21,7 +21,7 @@ npm i -g github:th-yong/agent-run-inspector
 ari service install
 ```
 
-이게 전부입니다. **Agent Run Inspector** 가 자체 창으로 열리고 Dock 에 남으며, Mac 을 켜면 함께 시작되므로 다시 터미널을 열 필요가 없습니다. 자세한 내용과 메뉴 막대 항목은 [The Mac app](#the-mac-app) 을 보세요.
+이게 전부입니다. **Agent Run Inspector** 가 자체 창으로 열리고 Dock 에 남으며, Mac 을 켜면 함께 시작되므로 다시 터미널을 열 필요가 없습니다. 메뉴 막대에 진행 중인 run 수도 보여 줍니다. 자세한 내용은 [The Mac app](#the-mac-app) 을 보세요.
 
 ### 어디서나: 한 번 써 보기
 
@@ -63,8 +63,6 @@ npx github:th-yong/agent-run-inspector
 | `ari service uninstall` | 서비스 멈추고 지우기 |
 | `--no-dock` | `service install` 때 앱을 Dock 에 넣지 않음 |
 | `ari open` | 실행 중인 서비스를 브라우저로 열기 |
-| `ari menubar install [dir]` | SwiftBar 메뉴 막대 항목 추가 (아래 참고) |
-| `ari menubar uninstall [dir]` | 그 항목 지우기 |
 
 ## Finding your logs
 
@@ -89,12 +87,11 @@ Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca t
 `ari service install` 은 세 가지를 준비합니다.
 
 - **백그라운드 서비스**: 로그인할 때 `http://127.0.0.1:7317/` 에서 시작되어(`--port <n>` 으로 변경) 언제든 열 수 있습니다.
-- **Agent Run Inspector.app**: `~/Applications` 에 만들고 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고 실행할 때마다 자동으로 로그인합니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받을 것도, 개발자 서명도 없습니다. 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요.
+- **Agent Run Inspector.app**: `~/Applications` 에 만들고 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고 실행할 때마다 자동으로 로그인합니다. **메뉴 막대 항목**에 진행 중인 run 수가 보이고, 메뉴에는 그 run 들과 최근 5개가 나오며, 누르면 그 run 이 열립니다. 로그인할 때는 메뉴 막대 항목만 띄우고, 창은 메뉴나 Dock 에서 엽니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받을 것도, 개발자 서명도 없습니다. 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요.
 - **1년 유지되는 로그인**: 그 주소를 북마크해도 됩니다. 브라우저 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요.
 
-화면 머리에 버전이 보이고, 새 버전이 나오면 배지가 뜹니다. 업데이트는 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+화면 머리에 버전이 보이고, 새 버전이 나오면 배지가 뜹니다. 업데이트는 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘·로그인 항목을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
 
-메뉴 막대 항목을 원하면 [SwiftBar](https://swiftbar.app/) 를 설치하고(`brew install --cask swiftbar`) 한 번 열어 플러그인 폴더를 고른 뒤 `ari menubar install` 을 실행하세요. 진행 중인 run 수가 보이고, 메뉴에는 그 run 들과 최근 5개가 나오며, 누르면 그 run 이 열립니다. 서비스에서 30초마다 새로 읽습니다.
 
 ## Security
 
