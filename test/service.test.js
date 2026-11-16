@@ -64,3 +64,17 @@ test('a service token gives a lasting cookie; a normal start keeps a session coo
     await plain.close();
   }
 });
+
+test('install retries bootstrap while the old instance is still going away', async () => {
+  const env = tmpEnv();
+  let fails = 2;
+  const calls = [];
+  const run = async (file, args) => {
+    calls.push(args[0]);
+    if (args[0] === 'bootstrap' && fails-- > 0) throw Object.assign(new Error('x'), { stderr: 'Bootstrap failed: 5: Input/output error' });
+  };
+  await installService({ ...opts(env, run), wait: async () => {} });
+  assert.deepEqual(calls, ['bootout', 'bootstrap', 'bootstrap', 'bootstrap']);
+  const never = async (file, args) => { if (args[0] === 'bootstrap') throw new Error('down'); };
+  await assert.rejects(installService({ ...opts(env, never), wait: async () => {} }), /down/);
+});
