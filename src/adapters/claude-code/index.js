@@ -5,6 +5,8 @@ import { providerOf } from '../../model/provider.js';
 import { MSG } from '../../strings.js';
 
 const DEFAULT_RUNNING_MS = 10 * 60 * 1000;
+/** stop_reason values of an answer that hands the turn back to the user. */
+export const ENDS_TURN = new Set(['end_turn', 'stop_sequence']);
 
 /** Id of the root agent span under the session span (Codex: `cx:<sid>:main`). */
 export const rootAgentId = (sessionId) => `${sessionId}:main`;
@@ -35,6 +37,9 @@ export class ClaudeCodeSession {
     this.firstTs = null;
     this.lastTs = null;
     this.title = undefined;
+    // The last turn closed and nothing came after it: the model's final answer (stop_reason end_turn)
+    // or system/turn_duration (not written for every turn).
+    this.turnEnded = false;
     this.cwd = undefined;
     this.branch = undefined;
     this.sessionSeq = 0;
@@ -94,11 +99,13 @@ export class ClaudeCodeSession {
         this.llm.onApiRequest(rec, ts);
         break;
       case 'assistant':
+        this.turnEnded = ENDS_TURN.has(rec.message?.stop_reason);
         this.llm.onAssistant(rec, ts, line, this.prevTs);
         this.tools.onAssistant(rec, ts, line);
         this.agents.onAssistant(rec, ts, line);
         break;
       case 'user':
+        this.turnEnded = false;
         this.tools.onUser(rec, ts);
         this.agents.onUser(rec, ts);
         break;
@@ -129,6 +136,7 @@ export class ClaudeCodeSession {
     } else if (rec.subtype === 'turn_duration' && Number.isFinite(rec.durationMs)) {
       this.turns.push({ ts, durationMs: rec.durationMs }); // reference value only
     }
+    if (rec.subtype === 'turn_duration') this.turnEnded = true; // the agent waits for the user now
   }
 
   /** @returns {import('../../model/types.js').RunSpan[]} */
@@ -137,7 +145,8 @@ export class ClaudeCodeSession {
     const start = this.firstTs ?? 0;
     const end = this.lastTs ?? start;
     const now = this.now ?? Date.now();
-    const running = now - end < DEFAULT_RUNNING_MS && now >= end;
+    // Recent writes mean running, unless the last turn has ended (waiting for the user).
+    const running = !this.turnEnded && now - end < DEFAULT_RUNNING_MS && now >= end;
     const status = children.some((s) => s.status === 'running') || running ? 'running' : 'ok';
     return {
       id: this.sessionId ?? '',

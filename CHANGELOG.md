@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- A run waiting for the user is no longer shown as Running for ten minutes after its last write. Claude Code: the last turn ended with the model's final answer (`end_turn`) or `turn_duration`. Codex: the last turn ended with `task_complete` or `turn_aborted`. Sub-agents or teammates that are still working keep the run Running, and a new prompt makes it Running again.
+
 ## [0.4.0] - 2026-11-16
 
 Agent-team teammates inside their run, brand logos that follow their owners' guidelines, and a public repository under the MIT License.
