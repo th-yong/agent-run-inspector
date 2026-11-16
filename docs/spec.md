@@ -258,7 +258,8 @@ interface SessionSummary {
 - 실행 방법
   - 지금(공개 레포): `npx github:th-yong/agent-run-inspector` — 로그인 없이 누구나. npm 레지스트리 배포(`npx agent-run-inspector`)는 첫 배포 대기 중.
   - 나중(공개 결정 후): `npx agent-run-inspector`.
-- 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `--open[=auto|orca|browser|none]`, `--session <id>`, `--no-update-check`, `roots add|list|remove`.
+- 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `--open[=auto|orca|browser|none]`, `--session <id>`, `--no-update-check`, `roots add|list|remove`, `service install|uninstall`, `open`.
+- 서비스 모드(macOS, `src/service.js`): `ari service install` 이 LaunchAgent(`~/Library/LaunchAgents/io.github.th-yong.agent-run-inspector.plist`, `KeepAlive: Crashed` 만)를 등록하고 `node bin/cli.js --service` 를 로그인 때 띄운다. 고정 포트(기본 7317)와 고정 토큰은 `service.json`(0600)에서 서버가 직접 읽는다 — plist·인자·로그에 토큰 없음, 주소도 출력 안 함. 쿠키는 Max-Age 1년. `ari open` 은 토큰 주소로 다시 연다. npx 캐시 경로에서는 설치 거부. 기본 `ari` 실행은 그대로(실행마다 새 토큰, 세션 쿠키).
 - Claude Code 플러그인(덧붙임, **v0.3.0 뒤**로 미룸 — 아직 없음): 같은 레포에 `.claude-plugin/plugin.json` + `commands/inspect.md`(슬래시 명령 `/inspect` → `npx -y github:th-yong/agent-run-inspector --session $CLAUDE_SESSION_ID` 로 지금 세션을 바로 엶). 설치: `/plugin marketplace add th-yong/agent-run-inspector` → `/plugin install agent-run-inspector`. 핵심 기능은 CLI 쪽에만 있다.
 - Codex: 플러그인 체계에 기대지 않는다. 터미널에서 같은 `npx` 명령.
 

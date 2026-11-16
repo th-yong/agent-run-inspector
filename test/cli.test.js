@@ -145,3 +145,13 @@ test('--prices with an unreadable or invalid file -> error, exit 2', () => {
     assert.match(r.stderr, /price file/i);
   }
 });
+
+test('service commands: usage errors and "no service" without an install', () => {
+  const h = tmp();
+  for (const args of [['open'], ['--service'], ['service', 'install', 'extra'], ['service', 'bogus']]) {
+    const r = run(args, h);
+    assert.equal(r.status, 2, args.join(' '));
+  }
+  assert.match(run(['open'], h).stderr, /No service is installed/);
+  assert.match(run(['service', 'bogus'], h).stderr, /Usage: ari service/);
+});

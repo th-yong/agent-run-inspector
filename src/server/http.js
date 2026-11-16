@@ -17,11 +17,12 @@ function plain(res, status, text, extra = {}) {
   res.end(text + '\n');
 }
 
-// startServer({ port = 0, webDir, handler }) -> { server, port, token, url, close }
+// startServer({ port = 0, webDir, handler, token, cookieMaxAge }) -> { server, port, token, url, close }
+// A given `token` and `cookieMaxAge` are for service mode (a fixed token that survives restarts);
+// by default each start makes a new token and a session cookie.
 // `handler(req, res)` is called for authenticated requests that are not static files;
 // return true if it answered. Anything else is a 404.
-export async function startServer({ port = 0, webDir = DEFAULT_WEB_DIR, handler } = {}) {
-  const token = newToken();
+export async function startServer({ port = 0, webDir = DEFAULT_WEB_DIR, handler, token = newToken(), cookieMaxAge } = {}) {
   let boundPort = 0;
 
   const server = http.createServer(async (req, res) => {
@@ -42,7 +43,7 @@ export async function startServer({ port = 0, webDir = DEFAULT_WEB_DIR, handler 
         if (!tokenMatches(url.searchParams.get('t'), token)) return plain(res, 401, 'Unauthorized');
         url.searchParams.delete('t');
         res.statusCode = 302;
-        res.setHeader('Set-Cookie', setCookieHeader(boundPort, token));
+        res.setHeader('Set-Cookie', setCookieHeader(boundPort, token, cookieMaxAge));
         res.setHeader('Location', url.pathname + url.search);
         res.setHeader('Cache-Control', 'no-store');
         return res.end();

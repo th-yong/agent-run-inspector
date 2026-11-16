@@ -53,6 +53,9 @@ node bin/cli.js
 | `ari roots list` | Show the log folders in use |
 | `ari roots add <dir>` | Remember a Claude Code folder (`--codex` for Codex) |
 | `ari roots remove <dir>` | Forget a remembered folder |
+| `ari service install` | macOS: keep it running from login (see below) |
+| `ari service uninstall` | Stop and remove the service |
+| `ari open` | Open the running service in the browser |
 
 ## Finding your logs
 
@@ -72,12 +75,24 @@ ari roots add --codex ~/some/codex/sessions
 
 Inside Orca the address opens as a new Orca browser tab (`orca tab create`). If that fails, or outside Orca, it falls back to the default browser. `--open=none` or `--no-open` only prints the address.
 
+## Run in the background (macOS)
+
+To open the inspector without a terminal, install it as a service. It then starts at login and stays on `http://127.0.0.1:7317/` (`--port <n>` to change):
+
+```sh
+npm i -g agent-run-inspector   # the service needs a lasting install, not the npx cache
+ari service install            # opens the browser signed in
+```
+
+The sign-in lasts a year, so a bookmark opens it directly. If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it. The log is `~/Library/Logs/agent-run-inspector.log`.
+
 ## Security
 
 Run logs can hold customer data and secrets, so nothing leaves your machine except what you see on screen.
 
 - The server listens on `127.0.0.1` only.
 - Each run makes a random token. The first address carries it once, then it becomes an HttpOnly, SameSite=Strict cookie and disappears from the address bar. Requests without the cookie get 401. Host and Origin headers are checked.
+- The service (`ari service install`) instead keeps one token in `~/.config/agent-run-inspector/service.json` (readable by you only), and its cookie lasts a year. The token is never in the LaunchAgent file, the process arguments or the log. `ari service uninstall` deletes it; installing again keeps it.
 - One outside request at most: once a day the CLI asks the npm registry for the latest version number of this package and prints a line in the terminal if there is a newer one. It sends nothing about you or your logs. Turn it off with `--no-update-check` or `ARI_NO_UPDATE_CHECK=1` (also off when `CI` or `NO_UPDATE_NOTIFIER` is set). Scripts and icons ship in the package and text uses the system's own fonts: no CDN, web fonts or telemetry.
 - Read-only: log files are never written or deleted. The screen never sends a file path; files are found by opaque ids and must stay inside the known log folders.
 

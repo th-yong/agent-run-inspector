@@ -11,10 +11,10 @@ import { MSG } from './strings.js';
 /**
  * @param {{ config: object, roots: {claude: object[], codex: object[]}, port?: number, source?: string,
  *   since?: string, redact?: 'basic'|'strict', prices?: string, session?: string,
- *   webDir?: string, usePolling?: boolean }} opts
+ *   webDir?: string, usePolling?: boolean, token?: string, cookieMaxAge?: number }} opts
  * @returns {Promise<{ url: string, port: number, close: () => Promise<void> }>}
  */
-export async function startApp({ config, roots, port = 0, source, since, redact, prices, session, webDir, usePolling }) {
+export async function startApp({ config, roots, port = 0, source, since, redact, prices, session, webDir, usePolling, token, cookieMaxAge }) {
   const pricer = loadPrices({ file: prices, config: config.prices });
   const index = createIndex({ roots, source, since, watcherNamePatterns: config.watcherNamePatterns, pricer });
   const redactor = createRedactor({ mode: redact ?? 'off' });
@@ -33,7 +33,7 @@ export async function startApp({ config, roots, port = 0, source, since, redact,
     return false;
   };
 
-  const srv = await startServer({ port, handler, ...(webDir ? { webDir } : {}) });
+  const srv = await startServer({ port, handler, token, cookieMaxAge, ...(webDir ? { webDir } : {}) });
   const watcher = createWatcher({
     roots: [...roots.claude, ...roots.codex].map((r) => r.path),
     store: index.store,

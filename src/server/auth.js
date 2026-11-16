@@ -31,8 +31,8 @@ export function hasValidCookie(req, port, token) {
   return tokenMatches(parseCookies(req.headers.cookie)[cookieName(port)], token);
 }
 
-export function setCookieHeader(port, token) {
-  return `${cookieName(port)}=${token}; HttpOnly; SameSite=Strict; Path=/`;
+export function setCookieHeader(port, token, maxAge) {
+  return `${cookieName(port)}=${token}; HttpOnly; SameSite=Strict; Path=/${maxAge ? `; Max-Age=${maxAge}` : ''}`;
 }
 
 export function hostAllowed(host, port) {

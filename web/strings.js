@@ -8,7 +8,7 @@ export const S = {
     turnOn: 'Hide message text, tool inputs and errors', turnOff: 'Show message text again',
     locked: 'The server was started with redaction on; it cannot be turned off here',
   },
-  auth: { restarted: 'Server restarted. Open the new address printed in the terminal.', detail: 'This tab belongs to an earlier run, so the server no longer accepts it.' },
+  auth: { restarted: 'Signed out. Open the new address printed in the terminal, or run "ari open" if the inspector runs as a service.', detail: 'The server was restarted or this tab lost its sign-in, so the server no longer accepts it.' },
   list: {
     heading: 'Sessions',
     loading: 'Loading sessions…',
