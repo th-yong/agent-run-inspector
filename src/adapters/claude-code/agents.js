@@ -100,10 +100,30 @@ export class AgentCollector {
   spans({ lastTs, now, lookup }) {
     const out = [];
     const base = { parentId: this.ctx.parentId, sessionId: this.ctx.sessionId, source: 'claude-code', kind: 'agent' };
+    // the same teammate spawned again: only the latest call keeps the ext:<key> node
+    const lastSpawn = new Map();
+    for (const c of this.calls.values()) if (c.status === 'teammate_spawned') lastSpawn.set(c.teammateId ?? c.id, c);
     for (const c of this.calls.values()) {
+      if (c.status === 'teammate_spawned' && lastSpawn.get(c.teammateId ?? c.id) !== c) continue;
       const ref = { fileId: this.ctx.fileId, line: c.line };
       if (c.status === 'teammate_spawned') {
         const key = c.teammateId ?? c.id;
+        const mate = lookup?.find(undefined, key);
+        if (mate?.mate) {
+          mate.claimed = true;
+          const last = mate.mtime ?? mate.lastTs;
+          const live = isLive(last, now);
+          const end = live ? null : (mate.lastTs ?? c.start);
+          const model = c.model ?? mate.model;
+          out.push({
+            ...base, id: externalSpanId(key), name: c.name ?? key.split('@')[0], status: live ? 'running' : 'ok',
+            start: c.start, end, ref: { fileId: mate.fileId, line: 1 }, depth: this.ctx.depth + 1, role: 'worker',
+            ...(c.agentType ? { agentType: c.agentType } : {}), ...(c.task ? { task: c.task } : {}),
+            ...(model ? { model, provider: providerOf(model) } : {}),
+            lastActivity: end ?? last ?? c.start, seq: c.seq,
+          });
+          continue;
+        }
         const name = c.name ?? c.teammateId?.split('@')[0] ?? c.agentType ?? 'teammate';
         out.push({
           ...base, id: externalSpanId(key), name, status: 'unknown', start: c.start, end: null, ref,
@@ -173,7 +193,8 @@ export class AgentLookup {
 /**
  * Parse a main file plus its `subagents/` files into one span tree.
  * @param {{ main: { fileId: string, text: string },
- *   subagents?: { fileId: string, agentId: string, text: string, meta?: object, mtime?: number }[],
+ *   subagents?: { fileId: string, agentId: string, text: string, meta?: object, mtime?: number, mate?: boolean }[],
+ *   (mate: an agent-team teammate's own session file, agentId = its `name@team`)
  *   now?: number }} input
  */
 export function buildSessionTree({ main, subagents = [], now }) {
@@ -185,14 +206,18 @@ export function buildSessionTree({ main, subagents = [], now }) {
 
   const lookup = new AgentLookup();
   const parsed = [];
+  const lastMate = new Map(subagents.filter((f) => f.mate).map((f) => [f.agentId, f]));
   for (const f of subagents) {
     const meta = f.meta && typeof f.meta === 'object' ? f.meta : {};
-    const spanId = str(meta.toolUseId) ? agentSpanId(meta.toolUseId) : orphanSpanId(f.agentId);
+    // a teammate file hangs under the lead's teammate_spawned span (ext:<name@team>); an older file of a
+    // respawned teammate gets its own node under the root instead
+    const spanId = f.mate ? (lastMate.get(f.agentId) === f ? externalSpanId(f.agentId) : orphanSpanId(`${f.agentId}~${f.fileId}`))
+      : str(meta.toolUseId) ? agentSpanId(meta.toolUseId) : orphanSpanId(f.agentId);
     const depth = Number.isFinite(meta.spawnDepth) ? meta.spawnDepth : 1;
     const s = new ClaudeCodeSession({ fileId: f.fileId, sessionId: sid, parentId: spanId, depth, now: clock });
     s.push(f.text);
     const lastLlm = s.llm.lastModel();
-    const entry = { agentId: f.agentId, meta, lastTs: s.lastTs, firstTs: s.firstTs, mtime: f.mtime, model: lastLlm };
+    const entry = { agentId: f.agentId, meta, lastTs: s.lastTs, firstTs: s.firstTs, mtime: f.mtime, model: lastLlm, fileId: f.fileId, ...(f.mate ? { mate: true } : {}) };
     lookup.add(entry);
     parsed.push({ f, s, entry, spanId, depth });
   }
@@ -211,7 +236,7 @@ export function buildSessionTree({ main, subagents = [], now }) {
     const model = m.model ?? p.entry.model;
     children.push({
       id: p.spanId, parentId: rootId, sessionId: sid, source: 'claude-code', kind: 'agent',
-      name: str(m.name) ?? str(m.agentType) ?? 'Agent', status,
+      name: str(m.name) ?? str(m.agentType) ?? (p.f.mate ? p.f.agentId.split('@')[0] : 'Agent'), status,
       start: p.entry.firstTs ?? 0, end, ref: { fileId: p.f.fileId, line: 1 }, depth: p.depth, role: 'worker',
       ...(str(m.agentType) ? { agentType: m.agentType } : {}),
       ...(str(m.description) ? { task: m.description } : {}),

@@ -57,7 +57,8 @@ export function createIndex({ roots, source = 'all', since, watcherNamePatterns 
     applyRoles(value.spans, watcherNamePatterns);
     applyCosts(value.spans, pricer);
     // Claude Code's own cost-state (last one in the file's tail) wins for the session total.
-    value.reportedUsd = entry.source === 'claude-code'
+    // ...unless teammates' files are part of the run: the lead's cost-state does not count them.
+    value.reportedUsd = entry.source === 'claude-code' && !entry.subs.some((s) => s.mate)
       ? reportedUsdOf(readEnds(store, entry.main.fileId, entry.main.size).tail.findLast((r) => r.type === 'cost-state'))
       : null;
     const { usd, basis, partial } = computeTotals(value.spans, { reportedUsd: value.reportedUsd }).total ?? {};
