@@ -8,7 +8,7 @@ English | [한국어](README.ko.md)
 
 A local, read-only inspector for Claude Code and Codex CLI agent runs: see who called whom, what each call cost and where it failed, live, in your browser.
 
-![Demo: a new run appears, the orchestrator starts agents, and their calls stream in until each one is done](docs/demo.gif)
+![Demo: the run "Add rate limiting to the login API" appears; the orchestrator starts a planner, then a backend developer and a test writer, then a reviewer; their calls stream in, a failed test run is opened to show its details, and the run ends with a pull request](docs/demo.webp)
 
 ## Get started
 

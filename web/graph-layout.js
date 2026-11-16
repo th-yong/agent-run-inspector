@@ -104,24 +104,22 @@ function normalizeOpts(opts) {
   const o = opts ?? {};
   return {
     width: Math.max(0, Math.floor(o.width ?? 0)),
-    detailOpen: !!o.detailOpen,
     hidden: o.hidden instanceof Set ? o.hidden : new Set(o.hidden ?? []),
     folded: o.folded instanceof Set ? o.folded : new Set(o.folded ?? []),
   };
 }
 
 /**
- * layoutGraph(spans, { width, detailOpen, hidden, folded })
+ * layoutGraph(spans, { width, hidden, folded })
  *  spans: RunSpan[] (only kind 'agent' is used; fields id, parentId, role, start, task, callCount)
  *  width: container width in px. <= 760 gives a vertical list (childless siblings in a grid); otherwise the graph.
- *  detailOpen: the 360px detail panel is open (graph mode: layout width - 360).
  *  hidden: Set of agent ids to leave out (their subtree goes too).
  *  folded: Set of agent ids drawn as the one-line folded card.
  */
 export function layoutGraph(spans, opts) {
   const o = normalizeOpts(opts);
   const list = o.width <= NARROW_MAX;
-  const width = list ? o.width : o.width - (o.detailOpen ? DETAIL_W : 0);
+  const width = o.width; // the detail panel floats over the graph, so opening it never rewraps rows
   const { roots, visible } = buildTree(spans, o.hidden);
   const dense = visible.length > DENSE_OVER;
   const base = { mode: list ? 'list' : 'graph', width, dense, cardWidth: dense ? CARD_W_DENSE : CARD_W };

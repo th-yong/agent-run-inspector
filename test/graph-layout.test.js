@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutGraph, CARD_W, CARD_W_DENSE, WATCH_W, GAP_X, GAP_Y, NARROW_MAX, INDENT, LIST_GAP, GRID_MIN, DETAIL_W } from '../web/graph-layout.js';
+import { layoutGraph, CARD_W, CARD_W_DENSE, WATCH_W, GAP_X, GAP_Y, NARROW_MAX, INDENT, LIST_GAP, GRID_MIN } from '../web/graph-layout.js';
 
 // Synthetic agent spans only.
 const root = (extra = {}) => ({ id: 'r', parentId: null, kind: 'agent', start: 0, callCount: 7, task: 't', ...extra });
@@ -139,25 +139,6 @@ test('watcher sits beside the orchestrator with a dashed straight line', () => {
   assertEdgesClear(r);
 });
 
-test('watcher that cannot sit beside the orchestrator falls to its own row', () => {
-  const spans = [root(), { id: 'w', parentId: 'r', kind: 'agent', role: 'watcher', start: 0.5, callCount: 3, task: 't' }];
-  const r = layoutGraph(spans, { width: 761, detailOpen: true });
-  const m = byId(r);
-  assert.ok(m.get('w').y >= m.get('r').y + m.get('r').h + GAP_Y);
-  assertNoOverlap(r);
-  assertInside(r, 761 - DETAIL_W);
-});
-
-test('detail panel open narrows the layout by 360', () => {
-  const closed = layoutGraph([root(), ...kids(4)], { width: 1100 });
-  const open = layoutGraph([root(), ...kids(4)], { width: 1100, detailOpen: true });
-  assert.equal(open.width, 1100 - DETAIL_W);
-  assertInside(open, 1100 - DETAIL_W);
-  assert.ok(new Set(closed.cards.filter((c) => c.depth === 1).map((c) => c.y)).size === 1);
-  assert.ok(new Set(open.cards.filter((c) => c.depth === 1).map((c) => c.y)).size > 1);
-  assertNoOverlap(open);
-});
-
 test('folded card is shorter and keeps its place in the flow', () => {
   const plain = layoutGraph([root(), ...kids(2)], { width: 1000 });
   const folded = layoutGraph([root(), ...kids(2)], { width: 1000, folded: new Set(['r']) });
@@ -212,13 +193,9 @@ test('narrow width: vertical list, depth first, parent -> watcher -> children, i
   assertNoOverlap(r);
 });
 
-test('390 wide is a list; 761 wide is a graph; detail open does not switch to list', () => {
+test('390 wide is a list; 761 wide is a graph', () => {
   assert.equal(layoutGraph([root(), ...kids(2)], { width: 390 }).mode, 'list');
   assert.equal(layoutGraph([root(), ...kids(2)], { width: NARROW_MAX + 1 }).mode, 'graph');
-  const open = layoutGraph([root(), ...kids(2)], { width: 800, detailOpen: true });
-  assert.equal(open.mode, 'graph');
-  const listOpen = layoutGraph([root(), ...kids(2)], { width: 390, detailOpen: true });
-  assert.equal(listOpen.width, 390);
 });
 
 test('edge path: starts at parent bottom centre, ends at child top centre, rounded elbow', () => {
