@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Menu bar panel: instead of one run's graph, it lists every running session with its agents, what each is doing now (the tool it is in, or thinking), its call count, and the session's time, cost and tokens. The panel fits its height to the list. A click on a session opens it in the window. The right-click menu no longer lists recent runs. `GET /api/live` serves this view (agent names, states and tool names only).
+- Session list: Running and Recent have clear section bars (Running tinted, with counts) and a gap between them.
 - Session list: Today is the default period, and the Recent section folds with a click (remembered in the browser).
 - Session list: the token count is left out when it is not known yet (it showed "0 tok" for runs that were never opened and had no cost record), and reads "tokens".
 

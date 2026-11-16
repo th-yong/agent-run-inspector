@@ -263,9 +263,14 @@ export function mount(box, { onSelect, getSelected, onFilter, getGroups = () => 
     const selected = getSelected();
     const parts = [];
     const row = (s) => sessionRow(s, { selected: s.id === selected, now, group: filter.group === 'all' ? groups.find((g) => g.sessions.includes(s.id))?.name : null });
-    if (running.length) parts.push(el('div', 'group-label', S.list.running), ...running.map(row));
+    if (running.length) {
+      const h = el('div', 'group-label is-run');
+      h.append(el('span', 'dot pulse'), el('span', 'gl-t', S.list.running), el('span', 'gl-n num', String(running.length)));
+      parts.push(h, ...running.map(row));
+    }
     if (recent.length) {
-      const fold = el('button', 'group-label fold', `${recentFolded ? '▸' : '▾'} ${S.list.recent} · ${recent.length}`);
+      const fold = el('button', 'group-label fold');
+      fold.append(el('span', `gl-chev${recentFolded ? ' shut' : ''}`, '▾'), el('span', 'gl-t', S.list.recent), el('span', 'gl-n num', String(recent.length)));
       fold.type = 'button';
       fold.dataset.act = 'fold';
       fold.setAttribute('aria-expanded', String(!recentFolded));
