@@ -19,10 +19,10 @@ Claude Code 와 Codex CLI 의 에이전트 실행을 로컬 브라우저에서 �
 이 도구들이 이미 디스크에 남기는 실행 기록을 읽습니다. 에이전트 쪽에는 아무것도 설치하지 않습니다(훅·프록시 없음). Node 22 이상, 런타임 의존성 없음, 빌드 단계 없음.
 
 ```sh
-npx github:th-yong/agent-run-inspector
+npx agent-run-inspector
 ```
 
-`http://127.0.0.1:<port>/?t=<token>` 을 출력하고 엽니다. `npm i -g github:th-yong/agent-run-inspector` 뒤에는 짧은 이름 `ari` 도 쓸 수 있습니다.
+`http://127.0.0.1:<port>/?t=<token>` 을 출력하고 엽니다. `npm i -g agent-run-inspector` 뒤에는 짧은 이름 `ari` 도 쓸 수 있습니다. 마지막 릴리스 대신 최신 `main` 을 실행하려면 `npx github:th-yong/agent-run-inspector` 를 쓰세요.
 
 ### Run from a local clone
 

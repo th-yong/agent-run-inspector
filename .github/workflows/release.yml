@@ -1,0 +1,28 @@
+name: Publish to npm
+
+# Runs when a GitHub Release is published. Uses npm trusted publishing (OIDC): no token is stored here.
+# Set it up once on npmjs.com: package settings -> Trusted publisher -> GitHub Actions,
+# repository th-yong/agent-run-inspector, workflow file release.yml.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for npm trusted publishing and provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest # trusted publishing needs npm 11.5.1 or newer
+      - run: npm test
+      - name: Version matches the release tag
+        run: test "v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
+      - run: npm publish --access public

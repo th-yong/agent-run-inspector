@@ -256,7 +256,7 @@ interface SessionSummary {
 - npm 패키지 `agent-run-inspector`, 실행 파일 `agent-run-inspector`(별칭 `ari`). Node ≥ 22(Node 20 은 2026-04 지원 종료), **런타임 의존성 0**(Node 내장 `http`·`fs`·`readline` 만), 빌드 단계 없음 → GitHub 에서 바로 설치해도 그대로 동작.
 - 구성: `bin/cli.js`, `src/server/`(HTTP·보안·API), `src/index/`(색인), `src/live/`(감시·tail·SSE), `src/adapters/claude-code/`, `src/adapters/codex/`, `src/model/`(합계·가리기·상세), `src/cost.js`, `src/open.js`, `prices.json`, `brand-map.json`, `web/`(HTML·CSS·JS 그대로), `README.md`·`README.ko.md`. `package.json` 의 `files` 가 이것만 담는다(테스트·docs·scripts 제외).
 - 실행 방법
-  - 지금(공개 레포, 2026-11-16 전환): `npx github:th-yong/agent-run-inspector` — 로그인 없이 누구나.
+  - 지금(공개 레포, npm 배포): `npx agent-run-inspector` — 로그인 없이 누구나. 최신 `main` 은 `npx github:th-yong/agent-run-inspector`.
   - 나중(공개 결정 후): `npx agent-run-inspector`.
 - 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `--open[=auto|orca|browser|none]`, `--session <id>`, `roots add|list|remove`.
 - Claude Code 플러그인(덧붙임, **v0.3.0 뒤**로 미룸 — 아직 없음): 같은 레포에 `.claude-plugin/plugin.json` + `commands/inspect.md`(슬래시 명령 `/inspect` → `npx -y github:th-yong/agent-run-inspector --session $CLAUDE_SESSION_ID` 로 지금 세션을 바로 엶). 설치: `/plugin marketplace add th-yong/agent-run-inspector` → `/plugin install agent-run-inspector`. 핵심 기능은 CLI 쪽에만 있다.

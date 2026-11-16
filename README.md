@@ -19,10 +19,10 @@ A local, read-only inspector for Claude Code and Codex CLI agent runs: see who c
 It reads the run logs those tools already write to disk. Nothing is installed into the agents (no hooks, no proxy). Node 22 or newer, no runtime dependencies, no build step.
 
 ```sh
-npx github:th-yong/agent-run-inspector
+npx agent-run-inspector
 ```
 
-It prints `http://127.0.0.1:<port>/?t=<token>` and opens it. After `npm i -g github:th-yong/agent-run-inspector` the short name `ari` works too.
+It prints `http://127.0.0.1:<port>/?t=<token>` and opens it. After `npm i -g agent-run-inspector` the short name `ari` works too. To run the latest `main` instead of the last release, use `npx github:th-yong/agent-run-inspector`.
 
 ### Run from a local clone
 
