@@ -36,3 +36,17 @@ test('agent-team teammate files fold into the lead, also from a worktree folder'
   assert.equal(qa.status, 'running');
   assert.ok(spans.some((s) => s.kind === 'llm' && s.parentId === qa.id)); // its calls hang under it
 });
+
+test('spawnedIds finds teammate ids across long lines and only in complete lines', async () => {
+  const { spawnedIds, SCAN_CHUNK } = await import('../src/index/scan.js');
+  const long = `{"pad":"${'x'.repeat(SCAN_CHUNK + 10)}"}\n`;
+  const text = `${long}{"toolUseResult":{"teammate_id":"a@t"}}\n{"toolUseResult":{"teammate_id":"b@t"}}`; // last line unfinished
+  const buf = Buffer.from(text);
+  const store = { readRange: (_id, o, l) => buf.subarray(o, o + l) };
+  const cache = new Map();
+  const file = { fileId: 1, size: buf.length };
+  assert.deepEqual([...spawnedIds(store, file, cache)], ['a@t']);
+  const buf2 = Buffer.concat([buf, Buffer.from('\n')]);
+  const store2 = { readRange: (_id, o, l) => buf2.subarray(o, o + l) };
+  assert.deepEqual([...spawnedIds(store2, { fileId: 1, size: buf2.length }, cache)].sort(), ['a@t', 'b@t']);
+});
