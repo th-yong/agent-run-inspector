@@ -6,31 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- Codex runs on `gpt-5-codex`, `gpt-5.1-codex` and `gpt-5.2-codex` have a cost (rates supplied by the user from OpenAI / OpenRouter: $1.25 / $10 with cached input $0.125, and $1.75 / $14 with $0.175). `gpt-5.1-codex-max` and `gpt-6-astra` stay unpriced.
-- "Partly unknown" cost on Claude Code runs: Claude Haiku 5.5, Claude Sonnet 5, Claude Opus 5 and Claude Fable 5 / 5.1 are now in the price table (Haiku 5.5 with its second rate card above 100K prompt tokens, a new `longContext` field), and Claude Code's own `<synthetic>` messages, which carry no tokens, cost $0 instead of counting as unknown.
-- Claude Code sessions listed as "Untitled session" although they have a title (shown once opened). Long tool output pushed the title record out of the first and last 16 KB the list reads; the list now also searches the last 256 KB for it. On one machine: 61 of 143 untitled before, 19 after, and those 19 have no title at all.
+## [0.5.0] - 2026-11-16
+
+A Mac app with a menu bar item, and the inspector running in the background so it opens without a terminal. Not on npm yet; install from GitHub.
 
 ### Added
-- `ari service install` (macOS): a LaunchAgent keeps the inspector running from login on a fixed port (7317 by default) with a sign-in that lasts a year, so a bookmark or a Dock app opens it without a terminal. `ari open` signs a browser in again, and `ari service uninstall` removes it. The token stays in a file only you can read and never appears in the LaunchAgent, the process arguments or the log.
-
-- Web app manifest and icons: with the service running, Chrome or Edge can install the inspector as an app with its own Dock and Launchpad icon and window. The manifest and icons are the only files served without the sign-in cookie, since browsers fetch them without credentials. `scripts/build-app-icons.js` draws the icons, and the browser tab uses the same mark (it was a plain black square).
-
-- `ari service install` also builds `~/Applications/Agent Run Inspector.app`: its own window, Dock icon and Launchpad entry, signed in at every launch. It is compiled locally from `src/macos/app.js` with the built-in `osacompile`, so no download, compiler or developer signing is needed. The app reads the token from the service file at launch and never stores it.
-- `ari service install` adds the app to the Dock once (`--no-dock` to skip); `ari service uninstall` takes it out again. Only the app's own Dock entry is touched.
-- Version info: the page header shows the version, and an "Update" badge (with how to update) when the daily npm check found a newer one, so app users see it without a terminal. The app's Info.plist carries the version too (Finder's Get Info, About). `GET /api/meta` returns `{ version, latest }`.
-- A click on the menu bar item opens a popover with a mini view: the newest running run and its agent graph, live, with "Open in window" to continue in the app window. A right click shows the text menu (recent runs, Open, Quit).
-- Narrow graph (the popover, small windows): running agents come first, and finished one-line cards share rows two at a time instead of one long column. Narrow cards show only the ✓ mark and keep their footer on one line.
-- The app has a menu bar item: the number of running runs, a menu with them and the five most recent, and a click opens that run. It refreshes every 10 seconds from the service. A login item starts the app at login with only the menu bar item; the window opens from the menu or the Dock. No SwiftBar or other app is needed.
+- `ari service install` (macOS) sets up three things:
+  - a background service that starts at login on `http://127.0.0.1:7317/` (`--port` to change), with a sign-in that lasts a year;
+  - **Agent Run Inspector.app** in `~/Applications`, added to the Dock (`--no-dock` to skip): its own window, Launchpad entry and Spotlight name, signed in at every launch. It is compiled on the Mac from `src/macos/app.js` with the built-in `osacompile`, so nothing is downloaded and no compiler or developer signing is needed;
+  - a login item that starts the app with only its menu bar item.
+  Running it again after an upgrade restarts the service and the app on the new code. `ari service uninstall` removes all of it, and `ari open` signs a browser in again. The token stays in a file only you can read and is never in the LaunchAgent, the process arguments, the app or the log.
+- Menu bar item: the number of running runs next to the app's mark. A click opens a popover with the newest running run and its live agent graph, with "Open in window" for the full view; a right click lists running and recent runs, Open and Quit. No SwiftBar or other app is needed.
+- Version and updates: the page header shows the version, and an "Update" badge (with how to update) when the daily npm check finds a newer one, so app users see it without a terminal (the terminal line came in 0.4.2). The service checks again every 6 hours. The app's Info.plist carries the version. `GET /api/meta` returns `{ version, latest }`.
+- Web app manifest and icons, so Chrome or Edge can also install the page as an app. The manifest and icons are the only files served without the sign-in cookie, since browsers fetch them without credentials. `scripts/build-app-icons.js` draws all icons.
 
 ### Changed
-- README demo GIF re-recorded with the app icon and version in the header.
-- Reinstalling the service quits a running copy of the app before rebuilding it, so the new version opens.
-- The mark next to "Run Inspector" at the top left of the page is the app icon (it was a plain gradient square).
+- README starts with "Get started": the Mac app in two commands, or a one-off `npx` run. The demo GIF is re-recorded.
+- The page's top-left mark and the browser tab icon are the app icon (they were a gradient square and a black square).
+- Narrow graph (the popover, small windows): running agents come first, and finished one-line cards share rows two at a time instead of one long column; narrow cards show only the ✓ mark.
 - The "signed out" notice in the web UI also points to `ari open`.
 
 ### Fixed
-- Agent-team teammates that were stopped or shut down no longer show as Running for ten minutes. A teammate is done when the lead stopped it (`TaskStop`) or heard it shut down, when it approved a shutdown request, or when the lead's shutdown request is its last message. Calls it left open stop showing as running, and the run and the session list show Done.
+- Agent-team teammates that were stopped or shut down no longer show as Running for ten minutes. A teammate is done when the lead stopped it (`TaskStop`) or heard it shut down, when it approved a shutdown request, or when the lead's shutdown request is its last message; calls it left open stop showing as running.
+- Sessions listed as "Untitled session" although they have a title (shown once opened): long tool output pushed the title out of the first and last 16 KB the list reads; the list now also searches the last 256 KB. On one machine: 61 of 143 untitled before, 19 after, and those 19 have no title at all.
+- "Partly unknown" cost: Claude Haiku 5.5, Claude Sonnet 5, Claude Opus 5 and Claude Fable 5 / 5.1 are in the price table (Haiku 5.5 with its second rate card above 100K prompt tokens, a new `longContext` field); `gpt-5-codex`, `gpt-5.1-codex` and `gpt-5.2-codex` too (rates supplied by the user); and Claude Code's own `<synthetic>` messages, which carry no tokens, cost $0 instead of counting as unknown.
+- Reinstalling the service while it runs no longer fails with "Bootstrap failed: 5", and a running copy of the app is quit before it is rebuilt.
 
 ## [0.4.2] - 2026-11-16
 
@@ -138,7 +138,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.3.0...v0.4.0
