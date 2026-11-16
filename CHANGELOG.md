@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `ari service install` (macOS): a LaunchAgent keeps the inspector running from login on a fixed port (7317 by default) with a sign-in that lasts a year, so a bookmark or a Dock app opens it without a terminal. `ari open` signs a browser in again, and `ari service uninstall` removes it. The token stays in a file only you can read and never appears in the LaunchAgent, the process arguments or the log.
+
+### Changed
+- The "signed out" notice in the web UI also points to `ari open`.
+
 ### Fixed
 - Agent-team teammates that were stopped or shut down no longer show as Running for ten minutes. A teammate is done when the lead stopped it (`TaskStop`) or heard it shut down, when it approved a shutdown request, or when the lead's shutdown request is its last message. Calls it left open stop showing as running, and the run and the session list show Done.
 

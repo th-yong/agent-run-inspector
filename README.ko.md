@@ -53,6 +53,9 @@ node bin/cli.js
 | `ari roots list` | 쓰고 있는 기록 폴더 보기 |
 | `ari roots add <dir>` | Claude Code 폴더 기억 (Codex 는 `--codex`) |
 | `ari roots remove <dir>` | 기억한 폴더 잊기 |
+| `ari service install` | macOS: 로그인할 때부터 계속 실행 (아래 참고) |
+| `ari service uninstall` | 서비스 멈추고 지우기 |
+| `ari open` | 실행 중인 서비스를 브라우저로 열기 |
 
 ## Finding your logs
 
@@ -72,12 +75,24 @@ ari roots add --codex ~/some/codex/sessions
 
 Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca tab create`). 실패하거나 Orca 밖이면 기본 브라우저로 엽니다. `--open=none` 이나 `--no-open` 은 주소만 출력합니다.
 
+## Run in the background (macOS)
+
+터미널 없이 열고 싶다면 서비스로 설치하세요. 로그인할 때 시작되어 `http://127.0.0.1:7317/` 에 계속 떠 있습니다(`--port <n>` 으로 변경).
+
+```sh
+npm i -g agent-run-inspector   # 서비스는 npx 캐시가 아닌 설치본이 필요합니다
+ari service install            # 로그인된 상태로 브라우저가 열립니다
+```
+
+로그인은 1년 유지되므로 북마크로 바로 열 수 있습니다. 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요. 패키지나 Node 를 업그레이드한 뒤에는 `ari service install` 을 다시 실행해 새 코드로 재시작하세요. `ari service uninstall` 로 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+
 ## Security
 
 실행 기록에는 고객 데이터나 비밀이 있을 수 있으므로, 화면에 보이는 것 말고는 이 컴퓨터 밖으로 나가지 않습니다.
 
 - 서버는 `127.0.0.1` 에서만 듣습니다.
 - 실행마다 무작위 토큰을 만듭니다. 첫 주소에 한 번 담기고, 이후 HttpOnly·SameSite=Strict 쿠키로 바뀌며 주소창에서 사라집니다. 쿠키 없는 요청은 401 입니다. Host·Origin 헤더도 검사합니다.
+- 서비스(`ari service install`)는 대신 토큰 하나를 `~/.config/agent-run-inspector/service.json`(본인만 읽기 가능)에 두고, 쿠키는 1년 유지됩니다. 토큰은 LaunchAgent 파일·프로세스 인자·로그 어디에도 남지 않습니다. `ari service uninstall` 이 지우고, 다시 설치하면 그대로 씁니다.
 - 외부 요청은 많아야 하나: 하루에 한 번 npm 레지스트리에 이 패키지의 최신 버전 번호만 묻고, 더 새 버전이 있으면 터미널에 한 줄 알려 줍니다. 사용자나 기록에 관한 정보는 보내지 않습니다. `--no-update-check` 나 `ARI_NO_UPDATE_CHECK=1` 로 끌 수 있습니다(`CI`·`NO_UPDATE_NOTIFIER` 가 있으면 저절로 꺼짐). 스크립트·아이콘은 패키지 안에 있고 글꼴은 시스템 글꼴을 씁니다: CDN·웹 글꼴·텔레메트리 없음.
 - 읽기 전용: 기록 파일을 쓰거나 지우지 않습니다. 화면은 파일 경로를 보내지 않고, 파일은 불투명 id 로만 찾으며 알려진 기록 폴더 안이어야 합니다.
 

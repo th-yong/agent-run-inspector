@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
+import { parseArgs, promisify } from 'node:util';
 import { resolve } from 'node:path';
 import { HELP, MSG } from '../src/strings.js';
 import { loadConfig, saveConfig } from '../src/config.js';
@@ -9,6 +11,9 @@ import { realDir, resolveRoots } from '../src/roots.js';
 import { startApp } from '../src/app.js';
 import { OPEN_MODES, openAddress } from '../src/open.js';
 import { checkForUpdate } from '../src/update-check.js';
+import {
+  COOKIE_MAX_AGE, DEFAULT_PORT, ServiceError, installService, loadService, logFile, serviceUrl, stableNode, uninstallService,
+} from '../src/service.js';
 
 const pkgUrl = new URL('../package.json', import.meta.url);
 const { version } = JSON.parse(readFileSync(pkgUrl, 'utf8'));
@@ -18,6 +23,7 @@ const OPTIONS = {
   open: { type: 'string' },
   'no-open': { type: 'boolean' },
   'no-update-check': { type: 'boolean' },
+  service: { type: 'boolean' }, // set by the LaunchAgent (ari service install), not meant to be typed
   root: { type: 'string', multiple: true },
   'codex-root': { type: 'string', multiple: true },
   source: { type: 'string' },
@@ -110,6 +116,35 @@ function rootsCommand(positionals, values, env) {
   return 0;
 }
 
+async function serviceCommand(positionals, values, env) {
+  const [, action, ...extra] = positionals;
+  if ((action !== 'install' && action !== 'uninstall') || extra.length) throw new UsageError(MSG.serviceUsage);
+  const run = promisify(execFile);
+  try {
+    if (action === 'uninstall') {
+      console.log((await uninstallService({ env, run })) ? MSG.serviceRemoved : MSG.serviceNone);
+      return 0;
+    }
+    const port = values.port === undefined ? loadService(env)?.port ?? DEFAULT_PORT : Number(values.port);
+    if (port === 0) throw new UsageError(MSG.badValue('--port', '1-65535 for a service'));
+    const s = await installService({ env, port, node: stableNode(env), cli: fileURLToPath(import.meta.url), run });
+    console.log(MSG.serviceInstalled(`http://127.0.0.1:${s.port}/`, logFile(env)));
+    await openAddress(serviceUrl(s), { mode: values['no-open'] ? 'none' : values.open ?? 'browser', env }).catch(() => {});
+    return 0;
+  } catch (e) {
+    if (e instanceof ServiceError) throw new UsageError(e.message);
+    if (e.code === 'ENOENT' || e.stderr !== undefined) throw new UsageError(MSG.serviceFailed(String(e.stderr || e.message).trim()));
+    throw e;
+  }
+}
+
+async function openCommand(values, env) {
+  const s = loadService(env);
+  if (!s) throw new UsageError(MSG.serviceNone);
+  await openAddress(serviceUrl(s), { mode: values['no-open'] ? 'none' : values.open ?? 'auto', env });
+  return 0;
+}
+
 async function main(argv, env) {
   const { values, positionals } = parseCli(argv);
   if (values.help) {
@@ -121,7 +156,12 @@ async function main(argv, env) {
     return 0;
   }
   if (positionals[0] === 'roots') return rootsCommand(positionals, values, env);
+  if (positionals[0] === 'service') return serviceCommand(positionals, values, env);
+  if (positionals[0] === 'open' && positionals.length === 1) return openCommand(values, env);
   if (positionals.length) throw new UsageError(MSG.unknownCommand(positionals[0]));
+  // Service mode: fixed port and token from the token file, a lasting cookie, no address printed (the log is not secret).
+  const svc = values.service ? loadService(env) : null;
+  if (values.service && !svc) throw new UsageError(MSG.serviceNone);
   const cfg = loadConfigOrFail(env);
   try {
     loadPrices({ file: values.prices, config: cfg.prices }); // fail early on a bad price file
@@ -144,7 +184,8 @@ async function main(argv, env) {
     app = await startApp({
       config: cfg,
       roots,
-      port: values.port === undefined ? 0 : Number(values.port),
+      port: svc ? svc.port : values.port === undefined ? 0 : Number(values.port),
+      ...(svc ? { token: svc.token, cookieMaxAge: COOKIE_MAX_AGE } : {}),
       source: values.source,
       since: values.since,
       redact: values.redact,
@@ -152,8 +193,8 @@ async function main(argv, env) {
       session: values.session,
     });
   } catch (e) {
-    if (e.code === 'EADDRINUSE') throw new UsageError(MSG.portInUse(values.port));
-    if (e.code === 'EACCES') throw new UsageError(MSG.portDenied(values.port));
+    if (e.code === 'EADDRINUSE') throw new UsageError(MSG.portInUse(svc?.port ?? values.port));
+    if (e.code === 'EACCES') throw new UsageError(MSG.portDenied(svc?.port ?? values.port));
     throw e;
   }
   return new Promise((done) => {
@@ -166,8 +207,11 @@ async function main(argv, env) {
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
     // Print only after the handlers exist: a signal that arrives before then would kill the process with the default action.
-    console.log(app.url);
-    openAddress(app.url, { mode: values['no-open'] ? 'none' : values.open ?? 'auto', env }).catch(() => {});
+    if (svc) console.log(MSG.serviceStarted(`http://127.0.0.1:${svc.port}/`));
+    else {
+      console.log(app.url);
+      openAddress(app.url, { mode: values['no-open'] ? 'none' : values.open ?? 'auto', env }).catch(() => {});
+    }
     if (!values['no-update-check']) {
       checkForUpdate({ version, env }).then((v) => { if (v && !stopping) console.error(MSG.updateAvailable(version, v)); }, () => {});
     }

@@ -1,5 +1,7 @@
 export const HELP = `Usage: ari [options]
        ari roots <list|add|remove> [--codex] [dir]
+       ari service <install|uninstall> [--port <n>]
+       ari open
 
 Local, read-only inspector for Claude Code and Codex CLI agent runs.
 
@@ -23,6 +25,11 @@ Commands:
   roots list            Show the log folders in use
   roots add <dir>       Remember a Claude Code folder (--codex for Codex)
   roots remove <dir>    Forget a remembered folder
+  service install       macOS: keep the inspector running from login on a fixed
+                        port (default 7317) with a lasting sign-in; run again
+                        after an upgrade to restart it
+  service uninstall     Stop it and remove it
+  open                  Open the running service in the browser (signs in again)
 `;
 
 export const MSG = {
@@ -36,6 +43,12 @@ export const MSG = {
   mainAgent: 'Main agent',
   badPrices: (m) => `Error: ${m}`,
   unknownCommand: (c) => `Error: unknown command "${c}"`,
+  serviceUsage: 'Usage: ari service <install|uninstall> [--port <n>]',
+  serviceNone: 'No service is installed. Run "ari service install" first.',
+  serviceRemoved: 'Service stopped and removed.',
+  serviceFailed: (m) => `Error: launchctl failed: ${m}`,
+  serviceInstalled: (url, log) => `Service running at ${url} (starts at login). Log: ${log}\nOpen it any time with "ari open".`,
+  serviceStarted: (url) => `Service listening on ${url}`,
   rootsUsage: 'Usage: ari roots <list|add|remove> [--codex] [dir]',
   rootsNeedDir: 'Error: a folder is required',
   notADirectory: (p) => `Error: not a directory: ${p}`,
