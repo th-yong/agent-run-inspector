@@ -6,7 +6,7 @@
 //  no markers and no `role` on the root; CC `turns` are duration points, Codex's are bands;
 //  Codex sub-agent links may be inferred (linkApprox / startApprox).
 import { basename } from 'node:path';
-import { readEnds, readHead } from './scan.js';
+import { HEAD_BYTES, TAIL_BYTES, findLastTitle, readEnds, readHead } from './scan.js';
 import { createCodexParser } from '../adapters/codex/index.js';
 import { linkCodexAgents } from '../adapters/codex/agents.js';
 import { AgentCollector, buildSessionTree } from '../adapters/claude-code/agents.js';
@@ -77,7 +77,9 @@ function quickClaude(entry, store, now) {
     if (typeof r.gitBranch === 'string' && r.gitBranch) branch ??= r.gitBranch;
     first ??= ts(r);
   }
-  const title = lastOf([...head, ...tail], (r) => r.type === 'ai-title' && r.aiTitle)?.aiTitle;
+  // A title outside both windows (long tool output around it) is found by a byte search of the end.
+  const title = lastOf([...head, ...tail], (r) => r.type === 'ai-title' && r.aiTitle)?.aiTitle
+    ?? (entry.main.size > HEAD_BYTES + TAIL_BYTES ? findLastTitle(store, entry.main.fileId, entry.main.size) : undefined);
   const lastTs = lastOf(tail, (r) => ts(r) !== null);
   const last = lastTs ? ts(lastTs) : entry.main.mtimeMs;
   const cost = lastOf(tail, (r) => r.type === 'cost-state');
