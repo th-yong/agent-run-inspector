@@ -6,8 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-16
+
+Runs waiting for the user show as done.
+
 ### Fixed
 - A run waiting for the user is no longer shown as Running for ten minutes after its last write. Claude Code: the last turn ended with the model's final answer (`end_turn`) or `turn_duration`. Codex: the last turn ended with `task_complete` or `turn_aborted`. Sub-agents or teammates that are still working keep the run Running, and a new prompt makes it Running again.
+
+### Changed
+- `LICENSE` holds only the standard MIT text, so GitHub detects it as MIT. The note that the license does not cover third-party brand names and logos is in the README and `THIRD_PARTY_NOTICES.md`.
 
 ## [0.4.0] - 2026-11-16
 
@@ -94,7 +101,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.1.0...v0.2.0
