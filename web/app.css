@@ -87,6 +87,8 @@ body.lost .app, body.lost .live, body.lost .redact-btn { display: none; }
 .chip { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
 .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .group-label { padding: 10px 14px 4px; font-size: 11px; color: var(--faint); font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.group-label.fold { display: block; width: 100%; text-align: left; background: none; border: 0; font-family: inherit; cursor: pointer; }
+.group-label.fold:hover { color: var(--text); }
 .provs { display: inline-flex; align-items: center; gap: 4px; }
 .pi { width: 12px; height: 12px; fill: light-dark(var(--il), var(--id)); flex: none; }
 .sess .proj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 12em; }
@@ -423,3 +425,18 @@ body.mini { height: auto; background: var(--bg); }
 .mini-openapp { align-self: center; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 0; padding: 4px 8px; cursor: pointer; border-radius: 6px; }
 .mini-openapp:hover { color: var(--text); background: var(--panel-2); }
 .dot.err { background: var(--err); }
+.mini-sec { font-size: 11px; font-weight: 600; color: var(--muted); padding: 4px 4px 0; }
+/* session groups: list chips, row tag, run header picker */
+.grp-tag { font-size: 10.5px; color: var(--llm); background: var(--llm-soft); border-radius: 999px; padding: 0 7px; margin-left: 6px; white-space: nowrap; flex: none; }
+.grp-pick select, .grp-new { font: inherit; font-size: 12px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+.grp-new { width: 180px; }
+.grp-chips .chip.add { border-style: dashed; color: var(--muted); }
+.grp-chips .chip.drop { border-color: var(--llm); color: var(--llm); background: var(--llm-soft); }
+.grp-chips .grp-new { width: 150px; }
+.grp-menu { position: fixed; z-index: 50; min-width: 180px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); padding: 4px; display: flex; flex-direction: column; }
+.grp-menu-h { font-size: 11px; color: var(--faint); padding: 4px 8px; }
+.grp-menu-i { font: inherit; font-size: 12.5px; text-align: left; color: var(--text); background: none; border: 0; border-radius: 5px; padding: 5px 8px; cursor: pointer; }
+.grp-menu-i:hover { background: var(--panel-2); }
+.grp-menu-i.on { color: var(--llm); }
+.grp-menu-i.danger { color: var(--err); }
+.grp-menu .grp-new { margin: 2px 4px; }

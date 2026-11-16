@@ -6,8 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Session groups: make a group with "+ New group" above the list, then drag sessions onto it, right-click a session, or pick the group in the run header. A group chip filters the list to its sessions; right-click a chip to delete it. The menu bar panel shows running sessions by group. Groups are saved in `groups.json` next to `config.json` (`GET`/`PUT /api/groups`).
+
 ### Changed
 - Menu bar panel: instead of one run's graph, it lists every running session with its agents, what each is doing now (the tool it is in, or thinking), its call count, and the session's time, cost and tokens. The panel fits its height to the list. A click on a session opens it in the window. The right-click menu no longer lists recent runs. `GET /api/live` serves this view (agent names, states and tool names only).
+- Session list: Today is the default period, and the Recent section folds with a click (remembered in the browser).
 - Session list: the token count is left out when it is not known yet (it showed "0 tok" for runs that were never opened and had no cost record), and reads "tokens".
 
 ### Fixed

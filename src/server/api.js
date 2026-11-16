@@ -4,6 +4,24 @@ import { computeTotals } from '../model/totals.js';
 import { createRedactor } from '../model/redact.js';
 import { createDetailRoutes } from './api-detail.js';
 import { createLiveHub } from '../live/sse.js';
+import { createGroupStore } from '../groups.js';
+
+const MAX_GROUPS_BODY = 256 * 1024;
+
+function readJson(req, max) {
+  return new Promise((resolve) => {
+    let n = 0;
+    const chunks = [];
+    req.on('data', (c) => {
+      n += c.length;
+      if (n > max) { resolve(null); req.destroy(); } else chunks.push(c);
+    });
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { resolve(null); }
+    });
+    req.on('error', () => resolve(null));
+  });
+}
 
 const json = (res, status, body) => {
   const data = JSON.stringify(body);
@@ -39,7 +57,7 @@ export function briefAgents(spans) {
  *   roots: { claude?: {path:string, origin?:string}[], codex?: {path:string, origin?:string}[] } }} opts
  * @returns {(req, res) => Promise<boolean>}
  */
-export function createApiHandler({ index, roots = {}, meta = { version: null, latest: null }, redactor = createRedactor(), pingMs, live = createLiveHub({ index, redactor, pingMs }) }) {
+export function createApiHandler({ index, roots = {}, meta = { version: null, latest: null }, redactor = createRedactor(), groups = createGroupStore(), pingMs, live = createLiveHub({ index, redactor, pingMs }) }) {
   // Every response is serialized here, so redaction cannot be skipped by a route.
   const send = (res, status, kind, body) => json(res, status, redactor.apply(kind, body));
   const detail = createDetailRoutes({ index, redactor, send });
@@ -66,6 +84,13 @@ export function createApiHandler({ index, roots = {}, meta = { version: null, la
     const { pathname } = url;
     if (detail.matches(pathname)) return detail.handle(req, res, url);
     if (pathname === '/api/meta' && req.method === 'GET') return send(res, 200, 'meta', { version: meta.version, latest: meta.latest });
+    if (pathname === '/api/groups') { // the user's session groups (groups.json)
+      if (req.method === 'GET') return send(res, 200, 'raw', groups.get());
+      if (req.method !== 'PUT') { res.setHeader('Allow', 'GET, PUT'); return fail(res, 405, 'method_not_allowed'); }
+      if (req.headers.origin === undefined) return fail(res, 403, 'forbidden'); // a browser always sends Origin on PUT
+      const saved = groups.set(await readJson(req, MAX_GROUPS_BODY));
+      return saved ? send(res, 200, 'raw', saved) : fail(res, 400, 'bad_request');
+    }
     if (pathname === '/api/live' && req.method === 'GET') { // running sessions with their agents (menu bar)
       const sessions = index.list().filter((x) => x.status === 'running')
         .map((x) => { const o = openSession(x.id); return o && { ...o.summary, agents: briefAgents(o.spans) }; })

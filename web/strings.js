@@ -18,6 +18,12 @@ export const S = {
     progress: (d, n) => `${d}/${n} done`,
     openApp: 'Open Agent Run Inspector',
   },
+  groups: {
+    label: 'Group', all: 'All groups', none: 'No group', newOption: 'New group…', newPlaceholder: 'Group name, then Enter',
+    other: 'No group',
+    add: '+ New group', addTo: 'Add to group', remove: 'Remove from group', del: 'Delete group',
+    dropHint: 'Drop a session here to add it to this group',
+  },
   meta: { update: (v) => `Update ${v}`, how: (v) => `Version ${v} is out. Run "npm i -g agent-run-inspector", then "ari service install" if you use the app or the service.` },
   auth: { restarted: 'Signed out. Open the new address printed in the terminal, or run "ari open" if the inspector runs as a service.', detail: 'The server was restarted or this tab lost its sign-in, so the server no longer accepts it.' },
   list: {

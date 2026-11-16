@@ -1,6 +1,7 @@
 // Session list column: filters, search, running-first grouping, empty states. Pure helpers are exported for tests;
 // the DOM part only touches `document` when mount() is called.
 import { S } from './strings.js';
+import { createGroup, setGroupOf, showGroupChipMenu, showGroupMenu } from './groups.js';
 import { fmtDuration, fmtTokens } from './format.js';
 import { hasIcon, getIcon } from './icons.js';
 
@@ -46,12 +47,13 @@ export function periodStart(period, now) {
   return 0;
 }
 
-/** Sessions that are running always stay, whatever the period. */
-export function filterSessions(sessions, { source = 'all', period = 'all', query = '' } = {}, now = Date.now()) {
+/** Sessions that are running always stay, whatever the period. `only`: a Set of ids (a group), or null. */
+export function filterSessions(sessions, { source = 'all', period = 'all', query = '', only = null } = {}, now = Date.now()) {
   const since = periodStart(period, now);
   const q = String(query).trim().toLowerCase();
   return sessions.filter((s) => {
     if (source !== 'all' && s.source !== source) return false;
+    if (only && !only.has(s.id)) return false;
     if (s.status !== 'running' && since && touched(s) < since) return false;
     if (q && !`${s.title ?? ''}\n${s.project ?? ''}`.toLowerCase().includes(q)) return false;
     return true;
@@ -109,15 +111,17 @@ export function iconEl(slug) {
   return svg;
 }
 
-export function sessionRow(s, { selected = false, now = Date.now() } = {}) {
+export function sessionRow(s, { selected = false, now = Date.now(), group = null } = {}) {
   const row = el('button', 'sess');
   row.type = 'button';
   row.dataset.id = s.id;
+  row.draggable = true; // onto a group chip
   if (selected) row.setAttribute('aria-current', 'true');
   const t = el('div', 't');
   const badge = el('span', `badge ${s.source === 'codex' ? 'cx' : 'cc'}`, S.sourceBadge[s.source] ?? '?');
   badge.title = S.sourceTip(S.source[s.source] ?? s.source);
   t.append(badge, el('span', 'name', s.title || S.list.untitled));
+  if (group) t.append(el('span', 'grp-tag', group));
   if (s.status === 'running') {
     const dot = el('span', 'dot pulse');
     dot.title = S.status.running;
@@ -175,9 +179,12 @@ export function emptyBlock(roots) {
  * Builds the list column once (search box and chips stay put so typing is never interrupted) and returns
  * { update({ sessions, error }), filter() }. `onSelect(id)` is called when a row is chosen.
  */
-export function mount(box, { onSelect, getSelected, onFilter }) {
-  const filter = { source: 'all', period: 'all', query: '' };
+export function mount(box, { onSelect, getSelected, onFilter, getGroups = () => [] }) {
+  const filter = { source: 'all', period: 'today', query: '', group: 'all' };
   let data = { sessions: null, error: false };
+  // "Recent" can be folded (long lists); remembered per browser.
+  let recentFolded = false;
+  try { recentFolded = localStorage.getItem('ari.recentFolded') === '1'; } catch { /* storage blocked */ }
 
   const head = el('div', 'list-head');
   const search = el('input', 'search');
@@ -206,7 +213,10 @@ export function mount(box, { onSelect, getSelected, onFilter }) {
   });
   const filters = el('div', 'row-flex wrap');
   filters.append(srcSeg);
-  head.append(search, filters, chips);
+  const grpChips = el('div', 'row-flex wrap grp-chips');
+  grpChips.setAttribute('role', 'group');
+  grpChips.setAttribute('aria-label', S.groups.label);
+  head.append(search, filters, chips, grpChips);
   const body = el('div', 'list-body');
   box.replaceChildren(head, body);
 
@@ -219,11 +229,29 @@ export function mount(box, { onSelect, getSelected, onFilter }) {
   function paint() {
     for (const b of srcBtns) b.setAttribute('aria-pressed', String(b.dataset.v === filter.source));
     for (const b of perBtns) b.setAttribute('aria-pressed', String(b.dataset.v === filter.period));
+    const groups = getGroups();
+    if (filter.group !== 'all' && !groups.some((g) => g.id === filter.group)) filter.group = 'all';
+    if (!grpChips.contains(document.activeElement)) { // keep a name being typed
+      const chipsOut = [{ id: 'all', name: S.groups.all }, ...groups].map((g) => {
+        const b = el('button', 'chip', g.name);
+        b.type = 'button';
+        b.dataset.g = g.id;
+        b.setAttribute('aria-pressed', String(g.id === filter.group));
+        if (g.id !== 'all') b.title = S.groups.dropHint;
+        return b;
+      });
+      const add = el('button', 'chip add', S.groups.add);
+      add.type = 'button';
+      add.dataset.g = 'new';
+      add.title = S.groups.dropHint;
+      grpChips.replaceChildren(...chipsOut, add);
+    }
     const { sessions, error } = data;
     if (!sessions) return void body.replaceChildren(note(error ? S.list.loadFailed : S.list.loading));
     if (!sessions.length) return void body.replaceChildren(note(S.list.none));
     const now = Date.now();
-    const shown = filterSessions(sessions, filter, now);
+    const only = filter.group === 'all' ? null : new Set(groups.find((g) => g.id === filter.group)?.sessions ?? []);
+    const shown = filterSessions(sessions, { ...filter, only }, now);
     if (!shown.length) {
       const wider = widerPeriod(filter.period);
       const btn = el('button', 'link', wider ? S.list.widen : S.list.clear);
@@ -234,10 +262,15 @@ export function mount(box, { onSelect, getSelected, onFilter }) {
     const { running, recent } = groupSessions(shown);
     const selected = getSelected();
     const parts = [];
-    for (const [label, list] of [[S.list.running, running], [S.list.recent, recent]]) {
-      if (!list.length) continue;
-      parts.push(el('div', 'group-label', label));
-      for (const s of list) parts.push(sessionRow(s, { selected: s.id === selected, now }));
+    const row = (s) => sessionRow(s, { selected: s.id === selected, now, group: filter.group === 'all' ? groups.find((g) => g.sessions.includes(s.id))?.name : null });
+    if (running.length) parts.push(el('div', 'group-label', S.list.running), ...running.map(row));
+    if (recent.length) {
+      const fold = el('button', 'group-label fold', `${recentFolded ? '▸' : '▾'} ${S.list.recent} · ${recent.length}`);
+      fold.type = 'button';
+      fold.dataset.act = 'fold';
+      fold.setAttribute('aria-expanded', String(!recentFolded));
+      parts.push(fold);
+      if (!recentFolded) parts.push(...recent.map(row));
     }
     body.replaceChildren(...parts);
   }
@@ -257,15 +290,74 @@ export function mount(box, { onSelect, getSelected, onFilter }) {
     const b = e.target.closest('button');
     if (b) change({ period: b.dataset.v });
   });
+  // New group from the list: the "+" chip becomes a name field; a session dropped on it goes in.
+  function newGroupField(sessionId = null) {
+    const input = el('input', 'grp-new');
+    input.placeholder = S.groups.newPlaceholder;
+    input.maxLength = 40;
+    const end = (ok) => {
+      const name = input.value.trim();
+      input.remove();
+      if (ok && name) createGroup(name, sessionId).catch(() => paint()); else paint();
+    };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') end(true); if (e.key === 'Escape') end(false); });
+    input.addEventListener('blur', () => { if (input.isConnected) end(true); });
+    grpChips.querySelector('[data-g="new"]')?.replaceWith(input);
+    input.focus();
+  }
+  grpChips.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.g === 'new') newGroupField();
+    else change({ group: b.dataset.g });
+  });
+  // drag a session row onto a group chip
+  let dragged = null;
+  body.addEventListener('dragstart', (e) => {
+    dragged = e.target.closest?.('.sess')?.dataset.id ?? null;
+    if (dragged) { e.dataTransfer.setData('text/plain', dragged); e.dataTransfer.effectAllowed = 'move'; }
+  });
+  body.addEventListener('dragend', () => { dragged = null; for (const c of grpChips.querySelectorAll('.drop')) c.classList.remove('drop'); });
+  const target = (e) => { const b = e.target.closest?.('button[data-g]'); return b && b.dataset.g !== 'all' ? b : null; };
+  grpChips.addEventListener('dragover', (e) => {
+    const b = dragged && target(e);
+    for (const c of grpChips.querySelectorAll('.drop')) if (c !== b) c.classList.remove('drop');
+    if (b) { e.preventDefault(); b.classList.add('drop'); }
+  });
+  grpChips.addEventListener('drop', (e) => {
+    const b = target(e);
+    if (!b || !dragged) return;
+    e.preventDefault();
+    if (b.dataset.g === 'new') newGroupField(dragged);
+    else setGroupOf(dragged, b.dataset.g).catch(() => {});
+  });
+  grpChips.addEventListener('contextmenu', (e) => {
+    const b = target(e);
+    if (!b || b.dataset.g === 'new') return;
+    e.preventDefault();
+    showGroupChipMenu(e.clientX, e.clientY, b.dataset.g);
+  });
+  body.addEventListener('contextmenu', (e) => {
+    const row = e.target.closest('.sess');
+    if (!row) return;
+    e.preventDefault();
+    showGroupMenu(e.clientX, e.clientY, row.dataset.id);
+  });
   body.addEventListener('click', (e) => {
     const act = e.target.closest('[data-act]');
     if (act?.dataset.act === 'widen') {
       change({ period: widerPeriod(filter.period) ?? 'all' });
       return;
     }
+    if (act?.dataset.act === 'fold') {
+      recentFolded = !recentFolded;
+      try { localStorage.setItem('ari.recentFolded', recentFolded ? '1' : '0'); } catch { /* storage blocked */ }
+      paint();
+      return;
+    }
     if (act?.dataset.act === 'clear') {
       search.value = '';
-      change({ source: 'all', period: 'all', query: '' });
+      change({ source: 'all', period: 'all', query: '', group: 'all' });
       return;
     }
     const row = e.target.closest('.sess');
@@ -275,6 +367,7 @@ export function mount(box, { onSelect, getSelected, onFilter }) {
   paint();
   return {
     update(next) { data = next; paint(); },
+    repaint: paint,
     filter: () => ({ ...filter }),
   };
 }

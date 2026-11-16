@@ -7,6 +7,7 @@ import { startServer } from './server/http.js';
 import { createWatcher } from './live/watch.js';
 import { loadPrices } from './cost.js';
 import { MSG } from './strings.js';
+import { createGroupStore, groupsPath } from './groups.js';
 
 /**
  * @param {{ config: object, roots: {claude: object[], codex: object[]}, port?: number, source?: string,
@@ -18,7 +19,7 @@ export async function startApp({ meta, config, roots, port = 0, source, since, r
   const pricer = loadPrices({ file: prices, config: config.prices });
   const index = createIndex({ roots, source, since, watcherNamePatterns: config.watcherNamePatterns, pricer });
   const redactor = createRedactor({ mode: redact ?? 'off' });
-  const api = createApiHandler({ index, roots, redactor, meta });
+  const api = createApiHandler({ index, roots, redactor, meta, groups: createGroupStore({ file: groupsPath() }) });
 
   // Served only when web/ has no index.html yet, so "/" never looks broken.
   const handler = async (req, res) => {

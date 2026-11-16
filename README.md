@@ -33,7 +33,7 @@ It opens the inspector in your browser and runs until you press Ctrl+C.
 
 ## What you see
 
-- **Session list**: running sessions on top, then recent ones. Filter by tool (Claude Code, Codex CLI) and period, or search by title or project. Agent-team teammates are folded into the run that started them instead of being listed on their own.
+- **Session list**: running sessions on top, then recent ones (fold them with a click). Filter by tool (Claude Code, Codex CLI) and period (Today by default), or search by title or project. **Groups**: make one with "+ New group", then drag sessions onto it or right-click a session; pick a group to see only its sessions. Groups are kept in `~/.config/agent-run-inspector/groups.json`. Agent-team teammates are folded into the run that started them instead of being listed on their own.
 - **Graph**: one card per agent, from the orchestrator down. Each card shows its latest calls, status, cost, time and call count. Click a card to total that agent; "Hide finished agents" keeps only the ones still working.
 - **Timeline**: every agent and call on one time axis, with turns and context compactions. Open a call to see its details.
 - **Totals**: time, cost, tokens, model calls, tool calls and errors for the whole run or the selected agent.
