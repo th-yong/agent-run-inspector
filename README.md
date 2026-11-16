@@ -21,7 +21,7 @@ npm i -g github:th-yong/agent-run-inspector
 ari service install
 ```
 
-That's all. **Agent Run Inspector** opens in its own window and stays in your Dock, and it starts with your Mac, so you never need the terminal again. Details and the optional menu bar item: [The Mac app](#the-mac-app).
+That's all. **Agent Run Inspector** opens in its own window and stays in your Dock, and it starts with your Mac, so you never need the terminal again. It also puts a menu bar item up that counts running runs. Details: [The Mac app](#the-mac-app).
 
 ### Anywhere: try it once
 
@@ -63,8 +63,6 @@ It opens the inspector in your browser and runs until you press Ctrl+C.
 | `ari service uninstall` | Stop and remove the service |
 | `--no-dock` | With `service install`: do not add the app to the Dock |
 | `ari open` | Open the running service in the browser |
-| `ari menubar install [dir]` | Add a SwiftBar menu bar item (see below) |
-| `ari menubar uninstall [dir]` | Remove it |
 
 ## Finding your logs
 
@@ -89,12 +87,11 @@ Inside Orca the address opens as a new Orca browser tab (`orca tab create`). If 
 `ari service install` sets up three things:
 
 - **A background service** that starts at login on `http://127.0.0.1:7317/` (`--port <n>` to change), so the inspector is always ready.
-- **Agent Run Inspector.app** in `~/Applications`, added to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. It is built on your Mac with the built-in `osacompile`, so there is nothing to download and no developer signing. If that fails, open the address in Chrome or Edge and choose Install instead.
+- **Agent Run Inspector.app** in `~/Applications`, added to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. Its **menu bar item** shows how many runs are going; the menu lists them and the five most recent, and a click opens that run. At login the app starts with only the menu bar item, and the window opens from the menu or the Dock. It is built on your Mac with the built-in `osacompile`, so there is nothing to download and no developer signing. If that fails, open the address in Chrome or Edge and choose Install instead.
 - **A sign-in that lasts a year** for that address, so a bookmark works too. If a browser tab says "Signed out", run `ari open`.
 
-The page header shows the version, and a badge when a newer one is out. To update, install the package again and run `ari service install` again; it restarts the service and the app on the new code. `ari service uninstall` removes the service, the app and its Dock icon. The log is `~/Library/Logs/agent-run-inspector.log`.
+The page header shows the version, and a badge when a newer one is out. To update, install the package again and run `ari service install` again; it restarts the service and the app on the new code. `ari service uninstall` removes the service, the app, its Dock icon and its login item. The log is `~/Library/Logs/agent-run-inspector.log`.
 
-For a menu bar item, install [SwiftBar](https://swiftbar.app/) (`brew install --cask swiftbar`), open it once to choose its plugin folder, then run `ari menubar install`. The item shows how many runs are going; its menu lists them and the five most recent, and a click opens that run. It refreshes every 30 seconds from the service.
 
 ## Security
 
