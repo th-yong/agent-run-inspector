@@ -12,7 +12,7 @@ Claude Code 와 Codex CLI 의 에이전트 실행을 로컬 브라우저에서 �
 
 ## Get started
 
-Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록을 읽습니다. 에이전트 쪽에는 아무것도 설치하지 않습니다(훅·프록시 없음). Node 22 이상이 필요합니다.
+Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록을 읽습니다. 에이전트 쪽에는 아무것도 설치하지 않습니다(훅·프록시 없음). Node 22 이상이 필요합니다(`node -v` 로 확인). Mac 에 없으면 `brew install node`([Homebrew](https://brew.sh))나 [nodejs.org](https://nodejs.org) 설치 파일로 설치하세요. `npm i -g` 가 `EACCES` 로 실패하면 nodejs.org 설치 파일로 깐 Node 라서 그렇습니다: `sudo` 대신 Homebrew 의 Node 나 [nvm](https://github.com/nvm-sh/nvm) 을 쓰세요.
 
 ### Mac: 앱으로 쓰기
 
