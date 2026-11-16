@@ -41,7 +41,7 @@ test('code blocks, tables, images and npx lines match', () => {
   assert.deepEqual(images(ko), images(en));
   assert.ok(images(en).includes('docs/demo.gif'));
   assert.deepEqual(npxLines(ko), npxLines(en));
-  assert.ok(npxLines(en).some((l) => l.trim() === 'npx agent-run-inspector'));
+  assert.ok(npxLines(en).some((l) => l.includes('npx github:th-yong/agent-run-inspector')));
 });
 
 test('option tables list every flag that --help prints', () => {
