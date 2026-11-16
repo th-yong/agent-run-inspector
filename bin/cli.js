@@ -14,6 +14,7 @@ import { checkForUpdate } from '../src/update-check.js';
 import {
   COOKIE_MAX_AGE, DEFAULT_PORT, ServiceError, installService, loadService, logFile, serviceUrl, stableNode, uninstallService,
 } from '../src/service.js';
+import { fetchSessions, installPlugin, renderMenu, renderProblem, uninstallPlugin } from '../src/menubar.js';
 
 const pkgUrl = new URL('../package.json', import.meta.url);
 const { version } = JSON.parse(readFileSync(pkgUrl, 'utf8'));
@@ -138,6 +139,41 @@ async function serviceCommand(positionals, values, env) {
   }
 }
 
+// SwiftBar keeps its plugin folder in its preferences; "ari menubar install <dir>" overrides it.
+async function swiftBarDir(dir) {
+  if (dir) return resolve(dir);
+  try {
+    const { stdout } = await promisify(execFile)('defaults', ['read', 'com.ameba.SwiftBar', 'PluginDirectory']);
+    return String(stdout).trim().replace(/^~(?=\/|$)/, process.env.HOME ?? '');
+  } catch {
+    throw new UsageError(MSG.menubarNoSwiftBar);
+  }
+}
+
+async function menubarCommand(positionals, env) {
+  const [, action, dir, ...extra] = positionals;
+  if (action === undefined) {
+    const svc = loadService(env);
+    if (!svc) { console.log(renderProblem(MSG.serviceNone)); return 0; }
+    try {
+      const sessions = await fetchSessions(svc);
+      console.log(renderMenu(sessions, { base: `http://127.0.0.1:${svc.port}/`, now: Date.now(), node: stableNode(env), cli: fileURLToPath(import.meta.url) }));
+    } catch {
+      console.log(renderProblem(MSG.menubarDown));
+    }
+    return 0;
+  }
+  if ((action !== 'install' && action !== 'uninstall') || extra.length) throw new UsageError(MSG.menubarUsage);
+  const target = await swiftBarDir(dir);
+  if (action === 'uninstall') {
+    uninstallPlugin(target);
+    console.log(MSG.menubarRemoved(target));
+    return 0;
+  }
+  console.log(MSG.menubarInstalled(installPlugin(target, { node: stableNode(env), cli: fileURLToPath(import.meta.url) })));
+  return 0;
+}
+
 async function openCommand(values, env) {
   const s = loadService(env);
   if (!s) throw new UsageError(MSG.serviceNone);
@@ -157,6 +193,7 @@ async function main(argv, env) {
   }
   if (positionals[0] === 'roots') return rootsCommand(positionals, values, env);
   if (positionals[0] === 'service') return serviceCommand(positionals, values, env);
+  if (positionals[0] === 'menubar') return menubarCommand(positionals, env);
   if (positionals[0] === 'open' && positionals.length === 1) return openCommand(values, env);
   if (positionals.length) throw new UsageError(MSG.unknownCommand(positionals[0]));
   // Service mode: fixed port and token from the token file, a lasting cookie, no address printed (the log is not secret).

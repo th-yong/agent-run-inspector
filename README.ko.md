@@ -60,6 +60,8 @@ node bin/cli.js
 | `ari service install` | macOS: 로그인할 때부터 계속 실행 (아래 참고) |
 | `ari service uninstall` | 서비스 멈추고 지우기 |
 | `ari open` | 실행 중인 서비스를 브라우저로 열기 |
+| `ari menubar install [dir]` | SwiftBar 메뉴 막대 항목 추가 (아래 참고) |
+| `ari menubar uninstall [dir]` | 그 항목 지우기 |
 
 ## Finding your logs
 
@@ -89,6 +91,8 @@ ari service install            # 로그인된 상태로 브라우저가 열립�
 ```
 
 로그인은 1년 유지되므로 북마크로 바로 열 수 있습니다. Dock·Launchpad 아이콘과 별도 창을 원하면 Chrome 이나 Edge 에서 열고 설치를 고르세요(주소창 오른쪽 아이콘, 또는 메뉴의 "페이지를 앱으로 설치"). 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요. 패키지나 Node 를 업그레이드한 뒤에는 `ari service install` 을 다시 실행해 새 코드로 재시작하세요. `ari service uninstall` 로 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+
+메뉴 막대 항목을 원하면 [SwiftBar](https://swiftbar.app/) 를 설치하고(`brew install --cask swiftbar`) 한 번 열어 플러그인 폴더를 고른 뒤 `ari menubar install` 을 실행하세요. 진행 중인 run 수가 보이고, 메뉴에는 그 run 들과 최근 5개가 나오며, 누르면 그 run 이 열립니다. 서비스에서 30초마다 새로 읽습니다.
 
 ## Security
 

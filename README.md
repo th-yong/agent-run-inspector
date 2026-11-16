@@ -60,6 +60,8 @@ node bin/cli.js
 | `ari service install` | macOS: keep it running from login (see below) |
 | `ari service uninstall` | Stop and remove the service |
 | `ari open` | Open the running service in the browser |
+| `ari menubar install [dir]` | Add a SwiftBar menu bar item (see below) |
+| `ari menubar uninstall [dir]` | Remove it |
 
 ## Finding your logs
 
@@ -89,6 +91,8 @@ ari service install            # opens the browser signed in
 ```
 
 The sign-in lasts a year, so a bookmark opens it directly. To get a Dock and Launchpad icon with its own window, open it in Chrome or Edge and choose Install (the icon at the right of the address bar, or the menu's "Install page as app"). If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it. The log is `~/Library/Logs/agent-run-inspector.log`.
+
+For a menu bar item, install [SwiftBar](https://swiftbar.app/) (`brew install --cask swiftbar`), open it once to choose its plugin folder, then run `ari menubar install`. The item shows how many runs are going; its menu lists them and the five most recent, and a click opens that run. It refreshes every 30 seconds from the service.
 
 ## Security
 
