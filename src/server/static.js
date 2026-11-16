@@ -11,7 +11,7 @@ const TYPES = {
 
 // Served without the cookie: browsers fetch the web app manifest and its icons without credentials.
 // They hold nothing about the logs.
-export const PUBLIC_FILES = ['manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+export const PUBLIC_FILES = ['manifest.webmanifest', 'icon-32.png', 'icon-192.png', 'icon-512.png'];
 
 // The only files the server will ever hand out, keyed by request path.
 // No path is ever built from the request: unknown paths are simply 404.
@@ -39,10 +39,7 @@ export const WEB_FILES = [
   'timeline.js',
 ];
 
-// Inline favicon for <link rel="icon" href="...">; /favicon.ico is not served (it arrives
-// cross-site and cookie-less).
-export const FAVICON_HREF =
-  'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%23111%27/%3E%3C/svg%3E';
+// The tab icon is /icon-32.png (public); /favicon.ico is not served (it arrives cross-site and cookie-less).
 
 function lookup(pathname, files) {
   const name = pathname === '/' ? 'index.html' : pathname.slice(1);

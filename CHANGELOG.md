@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `ari service install` (macOS): a LaunchAgent keeps the inspector running from login on a fixed port (7317 by default) with a sign-in that lasts a year, so a bookmark or a Dock app opens it without a terminal. `ari open` signs a browser in again, and `ari service uninstall` removes it. The token stays in a file only you can read and never appears in the LaunchAgent, the process arguments or the log.
 
-- Web app manifest and icons: with the service running, Chrome or Edge can install the inspector as an app with its own Dock and Launchpad icon and window. The manifest and icons are the only files served without the sign-in cookie, since browsers fetch them without credentials. `scripts/build-app-icons.js` draws the icons.
+- Web app manifest and icons: with the service running, Chrome or Edge can install the inspector as an app with its own Dock and Launchpad icon and window. The manifest and icons are the only files served without the sign-in cookie, since browsers fetch them without credentials. `scripts/build-app-icons.js` draws the icons, and the browser tab uses the same mark (it was a plain black square).
 
 ### Changed
 - The "signed out" notice in the web UI also points to `ari open`.

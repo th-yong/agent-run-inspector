@@ -22,4 +22,6 @@ test('the web app manifest and its icons are public files that exist', async () 
     assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, i.sizes); // PNG IHDR width x height
   }
   assert.ok(readFileSync(web('index.html'), 'utf8').includes('rel="manifest" href="/manifest.webmanifest"'));
+  const icon = readFileSync(web('index.html'), 'utf8').match(/<link rel="icon"[^>]*href="\/([^"]+)"/)?.[1];
+  assert.ok(PUBLIC_FILES.includes(icon), 'the tab icon is a public file'); // fetched without the cookie too
 });
