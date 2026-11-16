@@ -2,8 +2,9 @@
 // "ari service install" compiles this file with osacompile (JavaScript for Automation, built into
 // macOS) into a stay-open applet, so no compiler or signing account is needed. Port and token are read
 // from the file named by Info.plist key ARIServiceFile at launch, never stored in the app.
-// Launched with --background (at login), it starts with only the menu bar item; the window opens from
-// the menu or the Dock. Runs in the JXA engine, not Node (ObjC bridge: $.NSWindow, ...).
+// Launched with --background (at login), it starts with only the menu bar item. A click on the item
+// opens a popover with the mini view (?view=mini: running run and its graph); a right click shows a
+// text menu (recent runs, Open, Quit). The window opens from either, or from the Dock. Runs in the JXA engine, not Node (ObjC bridge: $.NSWindow, ...).
 /* global ObjC, $, Ref */
 ObjC.import('Cocoa');
 ObjC.import('WebKit');
@@ -15,6 +16,9 @@ let web = null;
 let item = null;
 let handler = null;
 let svc = null;
+let pop = null;
+let popWeb = null;
+let rightMenu = null;
 
 function readService() {
   const path = ObjC.unwrap($.NSBundle.mainBundle.objectForInfoDictionaryKey('ARIServiceFile')) || '';
@@ -37,9 +41,22 @@ function signIn() {
   svc = readService();
   if (!svc) return page('The inspector service is not installed. Run <code>ari service install</code>.');
   go(`${base()}?t=${svc.token}`);
+  if (popWeb) popWeb.loadRequest($.NSURLRequest.requestWithURL($.NSURL.URLWithString(`${base()}?t=${svc.token}&view=mini`)));
+}
+
+// A page that never loaded (the service was not up yet, e.g. right after login) has no title: sign in again.
+const notLoaded = (view) => !view.loading && !ObjC.unwrap(view.title);
+
+function togglePopover() {
+  if (pop.shown) return pop.performClose(null);
+  if (notLoaded(popWeb)) signIn();
+  pop.showRelativeToRectOfViewPreferredEdge(item.button.bounds, item.button, 1); // below the item
+  $.NSApplication.sharedApplication.activateIgnoringOtherApps(true);
 }
 
 function showWindow(sessionId) {
+  if (pop && pop.shown) pop.performClose(null);
+  if (!sessionId && notLoaded(web)) signIn();
   if (sessionId && svc) go(`${base()}?s=${encodeURIComponent(sessionId)}`);
   win.makeKeyAndOrderFront(null);
   $.NSApplication.sharedApplication.activateIgnoringOtherApps(true);
@@ -94,7 +111,7 @@ function refresh() {
   menu.addItem($.NSMenuItem.separatorItem);
   menu.addItem(menuItem('Open Agent Run Inspector', 'openApp:'));
   menu.addItem(menuItem('Quit', 'quitApp:'));
-  item.menu = menu;
+  rightMenu = menu;
 }
 
 ObjC.registerSubclass({
@@ -104,6 +121,30 @@ ObjC.registerSubclass({
     'openRun:': { types: ['void', ['id']], implementation: (sender) => showWindow(ObjC.unwrap(sender.representedObject)) },
     'openApp:': { types: ['void', ['id']], implementation: () => showWindow(null) },
     'quitApp:': { types: ['void', ['id']], implementation: () => $.NSApplication.sharedApplication.terminate(null) },
+    'itemClicked:': {
+      types: ['void', ['id']],
+      implementation: () => {
+        const ev = $.NSApplication.sharedApplication.currentEvent;
+        const right = ev && !ev.isNil() && (ev.type === 4 || (ev.modifierFlags & (1 << 18))); // right mouse up, or control-click
+        if (right && rightMenu) item.popUpStatusItemMenu(rightMenu);
+        else togglePopover();
+      },
+    },
+  },
+});
+
+// The popover page asks for the window: window.webkit.messageHandlers.ari.postMessage({ open: sessionId }).
+ObjC.registerSubclass({
+  name: 'ARIBridge',
+  protocols: ['WKScriptMessageHandler'],
+  methods: {
+    'userContentController:didReceiveScriptMessage:': {
+      types: ['void', ['id', 'id']],
+      implementation: (controller, message) => {
+        const body = ObjC.deepUnwrap(message.body) || {};
+        if (typeof body.open === 'string') showWindow(body.open || null);
+      },
+    },
   },
 });
 
@@ -114,6 +155,20 @@ function run() {
   icon.template = true;
   item.button.image = icon;
   item.button.imagePosition = 2; // image left of the count
+  item.button.target = handler;
+  item.button.action = 'itemClicked:';
+  item.button.sendActionOn((1 << 2) | (1 << 4)); // left and right mouse up
+
+  const popSize = $.NSMakeRect(0, 0, 400, 560);
+  const popConfig = $.WKWebViewConfiguration.alloc.init;
+  popConfig.userContentController.addScriptMessageHandlerName($.ARIBridge.alloc.init, 'ari');
+  popWeb = $.WKWebView.alloc.initWithFrameConfiguration(popSize, popConfig);
+  const popView = $.NSViewController.alloc.init;
+  popView.view = popWeb;
+  pop = $.NSPopover.alloc.init;
+  pop.contentSize = $.NSMakeSize(400, 560);
+  pop.behavior = 1; // transient: closes on a click outside
+  pop.contentViewController = popView;
 
   const frame = $.NSMakeRect(0, 0, 1280, 820);
   win = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(frame, 15, $.NSBackingStoreBuffered, false); // titled, closable, miniaturizable, resizable

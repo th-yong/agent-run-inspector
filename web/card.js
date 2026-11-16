@@ -137,7 +137,8 @@ export function providerTile(model) {
   return box;
 }
 
-const BADGE = { running: S.status.running, done: `✓ ${S.status.ok}`, failed: `▲ ${S.status.error}`, cancelled: S.status.cancelled, unknown: S.status.unknown };
+// [mark, word]: a tight card (narrow grid cell) shows only the mark when there is one
+const BADGE = { done: ['✓', S.status.ok], failed: ['▲', S.status.error], cancelled: [null, S.status.cancelled], unknown: [null, S.status.unknown] };
 
 /** Builds one card element; fill it with updateCard(). */
 export function createCard() {
@@ -244,6 +245,7 @@ export function updateCard(c, d) {
   root.style.left = `${box.x}px`;
   root.style.top = `${box.y}px`;
   root.style.width = `${box.w}px`;
+  root.classList.toggle('tight', box.w < 200); // a narrow grid cell: badge mark only
   root.style.height = `${box.h}px`;
   root.dataset.status = info.status;
   root.classList.toggle('watch', info.watcher);
@@ -268,7 +270,8 @@ export function updateCard(c, d) {
   if (c.badgeKey !== info.status) {
     c.badgeKey = info.status;
     c.badge.className = `g-badge ${info.status}`;
-    c.badge.replaceChildren(...(info.status === 'running' ? [el('i', 'spin'), S.status.running] : [BADGE[info.status]]));
+    const [mark, word] = info.status === 'running' ? [el('i', 'spin'), S.status.running] : BADGE[info.status] ?? [null, S.status.unknown];
+    c.badge.replaceChildren(...(mark ? [mark, el('span', 'bw', word)] : [word]));
   }
 
   c.task.textContent = info.watcher && !info.task ? S.graph.watcher : info.task;

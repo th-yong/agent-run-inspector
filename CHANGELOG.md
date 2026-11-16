@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ari service install` also builds `~/Applications/Agent Run Inspector.app`: its own window, Dock icon and Launchpad entry, signed in at every launch. It is compiled locally from `src/macos/app.js` with the built-in `osacompile`, so no download, compiler or developer signing is needed. The app reads the token from the service file at launch and never stores it.
 - `ari service install` adds the app to the Dock once (`--no-dock` to skip); `ari service uninstall` takes it out again. Only the app's own Dock entry is touched.
 - Version info: the page header shows the version, and an "Update" badge (with how to update) when the daily npm check found a newer one, so app users see it without a terminal. The app's Info.plist carries the version too (Finder's Get Info, About). `GET /api/meta` returns `{ version, latest }`.
+- A click on the menu bar item opens a popover with a mini view: the newest running run and its agent graph, live, with "Open in window" to continue in the app window. A right click shows the text menu (recent runs, Open, Quit).
+- Narrow graph (the popover, small windows): running agents come first, and finished one-line cards share rows two at a time instead of one long column. Narrow cards show only the ✓ mark and keep their footer on one line.
 - The app has a menu bar item: the number of running runs, a menu with them and the five most recent, and a click opens that run. It refreshes every 10 seconds from the service. A login item starts the app at login with only the menu bar item; the window opens from the menu or the Dock. No SwiftBar or other app is needed.
 
 ### Changed

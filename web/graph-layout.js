@@ -18,6 +18,7 @@ export const SCROLL_PAD = 48; // .g-scroll side padding, both sides
 export const panelBeside = (canvasWidth) => canvasWidth + SCROLL_PAD >= PANEL_BESIDE_MIN;
 export const INDENT = 18; // list mode, per depth
 export const LIST_GAP = 8;
+export const GRID_MIN = 150; // list mode: finished (one-line) sibling cards share a row when two fit this wide
 export const RECENT_CALLS = 5;
 export const RECENT_CALLS_DENSE = 3;
 
@@ -112,7 +113,7 @@ function normalizeOpts(opts) {
 /**
  * layoutGraph(spans, { width, detailOpen, hidden, folded })
  *  spans: RunSpan[] (only kind 'agent' is used; fields id, parentId, role, start, task, callCount)
- *  width: container width in px. <= 760 gives a vertical list; otherwise the graph.
+ *  width: container width in px. <= 760 gives a vertical list (childless siblings in a grid); otherwise the graph.
  *  detailOpen: the 360px detail panel is open (graph mode: layout width - 360).
  *  hidden: Set of agent ids to leave out (their subtree goes too).
  *  folded: Set of agent ids drawn as the one-line folded card.
@@ -153,14 +154,53 @@ export function layoutGraph(spans, opts) {
 function layoutList(roots, mk, metrics, width) {
   const cards = [];
   let y = 0;
+  const xAt = (depth) => Math.min(depth * INDENT, Math.max(0, width - 1));
   const walk = (n, depth) => {
-    const x = Math.min(depth * INDENT, Math.max(0, width - 1));
+    const x = xAt(depth);
     const c = mk(n, x, y, Math.max(1, width - x));
     c.indent = depth;
     cards.push(c);
     y += c.h + LIST_GAP;
-    for (const w of n.watchers) walk(w, depth + 1);
-    for (const k of n.kids) walk(k, depth + 1);
+    let leaves = []; // consecutive siblings without children: laid out as a grid
+    const flush = () => {
+      if (leaves.length) grid(leaves, depth + 1);
+      leaves = [];
+    };
+    // running agents first (stable: start order within each group), so what is working is on top
+    const kids = [...n.watchers, ...n.kids].sort((a, b) => (b.status === 'running') - (a.status === 'running'));
+    for (const k of kids) {
+      if (k.watchers.length || k.kids.length) { flush(); walk(k, depth + 1); } else leaves.push(k);
+    }
+    flush();
+  };
+  // Many agents would make one long column; finished siblings with no children (one-line cards) fill
+  // rows instead. Cards that show calls keep the full width.
+  const grid = (nodes, depth) => {
+    const full = nodes.filter((k) => !mk(k, 0, 0).folded);
+    if (full.length) { for (const k of full) grid1(k, depth); nodes = nodes.filter((k) => !full.includes(k)); }
+    if (!nodes.length) return;
+    const x = xAt(depth);
+    const avail = Math.max(1, width - x);
+    const cols = Math.max(1, Math.min(nodes.length, Math.floor((avail + LIST_GAP) / (GRID_MIN + LIST_GAP))));
+    const w = cols === 1 ? avail : (avail - (cols - 1) * LIST_GAP) / cols;
+    for (let i = 0; i < nodes.length; i += cols) {
+      let rowH = 0;
+      nodes.slice(i, i + cols).forEach((k, j) => {
+        const c = mk(k, x + j * (w + LIST_GAP), y, w);
+        c.indent = depth;
+        if (j > 0) c.noBranch = true; // the └ mark belongs to the first card of a row
+        cards.push(c);
+        rowH = Math.max(rowH, c.h);
+      });
+      y += rowH + LIST_GAP;
+    }
+  };
+  const grid1 = (k, depth) => {
+    const x = xAt(depth);
+    const c = mk(k, x, y, Math.max(1, width - x));
+    c.indent = depth;
+    cards.push(c);
+    y += c.h + LIST_GAP;
   };
   for (const r of roots) if (metrics.has(r.id)) walk(r, 0);
   return { cards, edges: [], height: Math.max(0, y - LIST_GAP) };

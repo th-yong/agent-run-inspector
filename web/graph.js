@@ -248,7 +248,7 @@ export function createGraph({ onSelect }) {
     drawEdges(motion);
     const wantBranch = new Set();
     for (const box of layout.cards) {
-      if (layout.mode !== 'list' || !(box.indent > 0)) continue;
+      if (layout.mode !== 'list' || !(box.indent > 0) || box.noBranch) continue;
       wantBranch.add(box.id);
       let b = branches.get(box.id);
       if (!b) { b = el('span', 'g-branch'); b.setAttribute('aria-hidden', 'true'); branches.set(box.id, b); canvas.append(b); }
