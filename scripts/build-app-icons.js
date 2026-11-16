@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Draws the web app icons (web/icon-192.png, web/icon-512.png): the brand mark's blue-to-teal tile
+// Draws the web app icons (web/icon-192.png, web/icon-512.png; web/icon-32.png for the tab, without padding): the brand mark's blue-to-teal tile
 // (web/app.css .brand i) with a white agent graph (one lead, two workers). No dependencies:
 // shapes are distance functions, 4x4 supersampled, written as PNG with node:zlib.
 // Run: node scripts/build-app-icons.js
@@ -21,9 +21,8 @@ const roundRect = (x, y, half, r) => {
 const LEAD = [0.5, 0.31]; const W1 = [0.31, 0.69]; const W2 = [0.69, 0.69];
 
 /** [r, g, b, a] at unit coordinates. */
-function sample(px, py) {
-  // the tile fills 82% of the canvas, like macOS app icons (padding for the Dock)
-  const K = 0.82;
+function sample(px, py, K) {
+  // K: share of the canvas the tile fills; 0.82 pads it like macOS app icons for the Dock
   const x = (px - 0.5) / K + 0.5; const y = (py - 0.5) / K + 0.5;
   if (roundRect(x, y, 0.5, 0.225) > 0) return [0, 0, 0, 0];
   const glyph = Math.min(
@@ -38,7 +37,7 @@ function sample(px, py) {
   return [...FROM.map((c, i) => Math.round(c + (TO[i] - c) * t)), 255];
 }
 
-function png(size) {
+function png(size, K) {
   const N = 4;
   const raw = Buffer.alloc(size * (size * 4 + 1));
   for (let py = 0; py < size; py++) {
@@ -47,7 +46,7 @@ function png(size) {
       const acc = [0, 0, 0, 0];
       for (let sy = 0; sy < N; sy++) {
         for (let sx = 0; sx < N; sx++) {
-          const [r, g, b, a] = sample((px + (sx + 0.5) / N) / size, (py + (sy + 0.5) / N) / size);
+          const [r, g, b, a] = sample((px + (sx + 0.5) / N) / size, (py + (sy + 0.5) / N) / size, K);
           acc[0] += r * a; acc[1] += g * a; acc[2] += b * a; acc[3] += a;
         }
       }
@@ -74,8 +73,8 @@ function png(size) {
   ]);
 }
 
-for (const size of [192, 512]) {
+for (const [size, K] of [[32, 1], [192, 0.82], [512, 0.82]]) {
   const file = new URL(`../web/icon-${size}.png`, import.meta.url);
-  writeFileSync(file, png(size));
+  writeFileSync(file, png(size, K));
   console.log(`wrote web/icon-${size}.png`);
 }
