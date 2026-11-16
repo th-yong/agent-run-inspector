@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-16
+
+On npm.
+
+### Added
+- Published to the npm registry: `npx agent-run-inspector`, or `npm i -g agent-run-inspector` for the `ari` command. `npx github:th-yong/agent-run-inspector` still runs the latest `main`.
+- Releases are published to npm by GitHub Actions (trusted publishing, with provenance) when a GitHub Release is created.
+
 ## [0.4.1] - 2026-11-16
 
 Runs waiting for the user show as done.
@@ -101,7 +109,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.2.0...v0.3.0

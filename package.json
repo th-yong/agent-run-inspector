@@ -1,9 +1,25 @@
 {
   "name": "agent-run-inspector",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Local, read-only inspector for Claude Code and Codex CLI agent runs.",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "agents",
+    "inspector",
+    "observability",
+    "cli"
+  ],
+  "homepage": "https://github.com/th-yong/agent-run-inspector#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/th-yong/agent-run-inspector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/th-yong/agent-run-inspector/issues"
+  },
+  "author": "th-yong",
   "type": "module",
-  "private": true,
   "license": "MIT",
   "engines": {
     "node": ">=22"
