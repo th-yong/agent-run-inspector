@@ -15,6 +15,7 @@ const dark = window.matchMedia('(prefers-color-scheme: dark)');
 
 let state = parseState(location.search);
 let sessions = null; // null = not loaded yet
+let miniPicked = false; // view=mini picks a running run once, on the first list
 let listError = false;
 let rootsTried = false;
 let roots = null; // folders searched, fetched only when the list is empty
@@ -246,6 +247,17 @@ onAuthLost(() => {
 });
 mountRedactToggle($('redactBtn'));
 $('appName').textContent = S.appName;
+if (state.mini) {
+  document.body.classList.add('mini');
+  // Inside the Mac app the popover hands the run to the app window (native message handler "ari").
+  const bridge = window.webkit?.messageHandlers?.ari;
+  if (bridge) {
+    const open = el('button', 'mini-open', S.mini.open);
+    open.type = 'button';
+    open.addEventListener('click', () => bridge.postMessage({ open: state.s ?? '' }));
+    document.body.append(open);
+  }
+}
 // Version, and a newer one when the server's daily npm check found it (app users never see the terminal).
 const showMeta = () => fetchMeta().then((m) => {
   $('ver').textContent = m.version ? `v${m.version}` : '';
@@ -273,7 +285,18 @@ window.addEventListener('popstate', () => {
 });
 
 watchList({
-  onList: (all) => { sessions = all; listError = false; renderList(); renderMain(); },
+  onList: (all) => {
+    sessions = all;
+    listError = false;
+    // The popover opens on the newest running run; back goes to the list.
+    if (state.mini && !miniPicked) {
+      miniPicked = true;
+      const live = all.find((s) => s.status === 'running');
+      if (live && !state.s) return select(live.id);
+    }
+    renderList();
+    renderMain();
+  },
   onSession: (summary) => { sessions = upsertSession(sessions ?? [], summary); listGate.request(); },
   onStatus: (s) => {
     if (s === 'list-error') { listError = true; renderList(); } else setConn('list', s);

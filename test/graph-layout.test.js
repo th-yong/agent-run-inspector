@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutGraph, CARD_W, CARD_W_DENSE, WATCH_W, GAP_X, GAP_Y, NARROW_MAX, DETAIL_W } from '../web/graph-layout.js';
+import { layoutGraph, CARD_W, CARD_W_DENSE, WATCH_W, GAP_X, GAP_Y, NARROW_MAX, INDENT, LIST_GAP, GRID_MIN, DETAIL_W } from '../web/graph-layout.js';
 
 // Synthetic agent spans only.
 const root = (extra = {}) => ({ id: 'r', parentId: null, kind: 'agent', start: 0, callCount: 7, task: 't', ...extra });
@@ -273,4 +273,36 @@ test('panelBeside: the detail column stacks under the graph in a narrow run colu
   assert.equal(panelBeside(979 - 48), false);
   assert.equal(panelBeside(980 - 48), true);
   assert.equal(panelBeside(1072), true);
+});
+
+test('narrow width: finished one-line siblings share rows (a grid); cards with calls keep the full width', () => {
+  const folded = new Set(['c0', 'c1', 'c2', 'c3', 'c4']);
+  const r = layoutGraph([root(), ...kids(6)], { width: 400, folded });
+  const m = byId(r);
+  const k = ['c0', 'c1', 'c2', 'c3', 'c4'].map((id) => m.get(id));
+  const x = INDENT;
+  const w = (400 - x - LIST_GAP) / 2;
+  assert.equal(m.get('c5').w, 400 - x); // not folded: full width, before the grid
+  assert.ok(m.get('c5').y < k[0].y);
+  assert.deepEqual(k.map((c) => c.x), [x, x + w + LIST_GAP, x, x + w + LIST_GAP, x]);
+  assert.ok(k.every((c) => Math.abs(c.w - w) < 1e-9));
+  assert.equal(k[0].y, k[1].y); // same row
+  assert.ok(k[2].y > k[0].y && k[4].y > k[2].y);
+  assert.ok(k[1].noBranch && !k[0].noBranch);
+  assertNoOverlap(r);
+  const one = byId(layoutGraph([root(), ...kids(3)], { width: 300, folded }));
+  assert.ok(['c0', 'c1', 'c2'].every((id) => one.get(id).x === INDENT && one.get(id).w === 300 - INDENT));
+  assert.ok(GRID_MIN * 2 + LIST_GAP > 300 - INDENT);
+});
+test('narrow width: running siblings come before finished ones, start order kept within each group', () => {
+  const spans = [root(), ...kids(4)];
+  spans[1].status = 'ok';
+  spans[2].status = 'running';
+  spans[3].status = 'ok';
+  spans[4].status = 'running';
+  const r = layoutGraph(spans, { width: 400 });
+  assert.deepEqual(r.cards.map((c) => c.id), ['r', 'c1', 'c3', 'c0', 'c2']);
+  const wide = layoutGraph(spans, { width: 1200 }); // the wide graph keeps its order
+  const m = byId(wide);
+  assert.ok(m.get('c0').x < m.get('c1').x);
 });

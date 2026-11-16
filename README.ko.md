@@ -87,7 +87,7 @@ Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca t
 `ari service install` 은 세 가지를 준비합니다.
 
 - **백그라운드 서비스**: 로그인할 때 `http://127.0.0.1:7317/` 에서 시작되어(`--port <n>` 으로 변경) 언제든 열 수 있습니다.
-- **Agent Run Inspector.app**: `~/Applications` 에 만들고 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고 실행할 때마다 자동으로 로그인합니다. **메뉴 막대 항목**에 진행 중인 run 수가 보이고, 메뉴에는 그 run 들과 최근 5개가 나오며, 누르면 그 run 이 열립니다. 로그인할 때는 메뉴 막대 항목만 띄우고, 창은 메뉴나 Dock 에서 엽니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받을 것도, 개발자 서명도 없습니다. 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요.
+- **Agent Run Inspector.app**: `~/Applications` 에 만들고 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고 실행할 때마다 자동으로 로그인합니다. **메뉴 막대 항목**에 진행 중인 run 수가 보이고, 누르면 작은 팝오버에 진행 중인 run 의 에이전트 그래프가 나옵니다("Open in window" 로 크게 보기). 우클릭하면 최근 run 목록이 나옵니다. 로그인할 때는 메뉴 막대 항목만 띄우고, 창은 메뉴나 Dock 에서 엽니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받을 것도, 개발자 서명도 없습니다. 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요.
 - **1년 유지되는 로그인**: 그 주소를 북마크해도 됩니다. 브라우저 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요.
 
 화면 머리에 버전이 보이고, 새 버전이 나오면 배지가 뜹니다. 업데이트는 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘·로그인 항목을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
