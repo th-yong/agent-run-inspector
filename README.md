@@ -47,6 +47,7 @@ node bin/cli.js
 | `--redact[=strict]` | Hide message bodies (`strict`: hide more) |
 | `--prices <file>` | Price table that overrides the built-in one |
 | `--session <id>` | Open this session directly |
+| `--no-update-check` | Do not check npm for a newer version |
 | `-v, --version` | Print the version |
 | `-h, --help` | Show the help |
 | `ari roots list` | Show the log folders in use |
@@ -77,7 +78,7 @@ Run logs can hold customer data and secrets, so nothing leaves your machine exce
 
 - The server listens on `127.0.0.1` only.
 - Each run makes a random token. The first address carries it once, then it becomes an HttpOnly, SameSite=Strict cookie and disappears from the address bar. Requests without the cookie get 401. Host and Origin headers are checked.
-- Zero outside requests: scripts and icons ship in the package and text uses the system's own fonts. No CDN, web fonts, telemetry or update check.
+- One outside request at most: once a day the CLI asks the npm registry for the latest version number of this package and prints a line in the terminal if there is a newer one. It sends nothing about you or your logs. Turn it off with `--no-update-check` or `ARI_NO_UPDATE_CHECK=1` (also off when `CI` or `NO_UPDATE_NOTIFIER` is set). Scripts and icons ship in the package and text uses the system's own fonts: no CDN, web fonts or telemetry.
 - Read-only: log files are never written or deleted. The screen never sends a file path; files are found by opaque ids and must stay inside the known log folders.
 
 ### Redaction

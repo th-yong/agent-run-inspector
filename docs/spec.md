@@ -244,7 +244,7 @@ interface SessionSummary {
 - CORS 헤더 없음. 응답에 `Content-Security-Policy: default-src 'self'; img-src 'self' data:; connect-src 'self'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`.
 - 경로 순회 방지: 화면·API 는 파일 경로를 절대 받지 않는다. 세션·span 은 색인이 준 불투명 id 로만 찾는다. 서버 안에서 파일을 열 때도 `realpath` 가 등록된 기록 폴더 안인지 확인(심볼릭 링크로 밖을 가리키면 거절). 정적 파일은 패키지 `web/` 안에서 고정 목록으로만 제공.
 - 읽기 전용: 기록 파일을 쓰거나 지우지 않는다.
-- 외부 요청 없음: 화면 자산(글꼴·스크립트)은 전부 패키지 안에 넣는다. CDN·텔레메트리·업데이트 확인 없음. 브라우저 열기는 `open`/`xdg-open`/`start` 를 인자 배열로 실행(셸 문자열 아님).
+- 외부 요청은 업데이트 확인 하나뿐: CLI 가 하루 한 번 `registry.npmjs.org/agent-run-inspector/latest` 에서 버전 번호만 받아 새 버전이면 stderr 에 한 줄 알린다(`src/update-check.js`, 결과는 설정 폴더 `update-check.json` 에 캐시, 2초 타임아웃, 실패는 조용히 무시). `--no-update-check`·`ARI_NO_UPDATE_CHECK`·`NO_UPDATE_NOTIFIER`·`CI` 로 끔. 화면 자산(글꼴·스크립트)은 전부 패키지 안에 넣는다. CDN·텔레메트리 없음. 브라우저 열기는 `open`/`xdg-open`/`start` 를 인자 배열로 실행(셸 문자열 아님).
 - 마스킹: `--redact`(또는 화면 오른쪽 위 토글, 서버가 켜고 끄며 화면 혼자 끄지 못함)
   - 입력·출력 미리보기 → "(1,234자 숨김)" 처럼 길이만.
   - 도구 입력은 키 이름만, 값 숨김. 객체 **키 자체가 민감할 수 있다**(조사 중 파일 경로가 객체 키로 쓰인 경우를 봄) → 마스킹 모드에서 키도 경로처럼 보이면 숨김.
@@ -258,7 +258,7 @@ interface SessionSummary {
 - 실행 방법
   - 지금(공개 레포): `npx github:th-yong/agent-run-inspector` — 로그인 없이 누구나. npm 레지스트리 배포(`npx agent-run-inspector`)는 첫 배포 대기 중.
   - 나중(공개 결정 후): `npx agent-run-inspector`.
-- 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `--open[=auto|orca|browser|none]`, `--session <id>`, `roots add|list|remove`.
+- 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `--open[=auto|orca|browser|none]`, `--session <id>`, `--no-update-check`, `roots add|list|remove`.
 - Claude Code 플러그인(덧붙임, **v0.3.0 뒤**로 미룸 — 아직 없음): 같은 레포에 `.claude-plugin/plugin.json` + `commands/inspect.md`(슬래시 명령 `/inspect` → `npx -y github:th-yong/agent-run-inspector --session $CLAUDE_SESSION_ID` 로 지금 세션을 바로 엶). 설치: `/plugin marketplace add th-yong/agent-run-inspector` → `/plugin install agent-run-inspector`. 핵심 기능은 CLI 쪽에만 있다.
 - Codex: 플러그인 체계에 기대지 않는다. 터미널에서 같은 `npx` 명령.
 

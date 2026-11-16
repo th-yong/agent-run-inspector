@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const cli = fileURLToPath(new URL('../../bin/cli.js', import.meta.url));
 
 export function launch(args, home, extraEnv = {}) {
-  const child = spawn(process.execPath, [cli, ...args], { env: { PATH: process.env.PATH, HOME: home, ...extraEnv }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [cli, ...args], { env: { PATH: process.env.PATH, HOME: home, ARI_NO_UPDATE_CHECK: '1', ...extraEnv }, stdio: ['ignore', 'pipe', 'pipe'] });
   const out = { stdout: '', stderr: '' };
   const waiters = [];
   const poke = () => waiters.splice(0).forEach((w) => w());

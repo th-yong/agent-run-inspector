@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Update notice: once a day the CLI asks the npm registry for the latest version number and prints one line in the terminal when a newer version exists. Nothing else is sent. Off with `--no-update-check`, `ARI_NO_UPDATE_CHECK=1`, `NO_UPDATE_NOTIFIER` or in CI.
+
 ### Changed
 - Call bars in graph cards use a log scale (100 ms up to the agent's longest call), so one long call no longer shrinks every other bar to the minimum.
 

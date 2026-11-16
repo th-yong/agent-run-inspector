@@ -8,6 +8,7 @@ import { loadPrices } from '../src/cost.js';
 import { realDir, resolveRoots } from '../src/roots.js';
 import { startApp } from '../src/app.js';
 import { OPEN_MODES, openAddress } from '../src/open.js';
+import { checkForUpdate } from '../src/update-check.js';
 
 const pkgUrl = new URL('../package.json', import.meta.url);
 const { version } = JSON.parse(readFileSync(pkgUrl, 'utf8'));
@@ -16,6 +17,7 @@ const OPTIONS = {
   port: { type: 'string' },
   open: { type: 'string' },
   'no-open': { type: 'boolean' },
+  'no-update-check': { type: 'boolean' },
   root: { type: 'string', multiple: true },
   'codex-root': { type: 'string', multiple: true },
   source: { type: 'string' },
@@ -166,6 +168,9 @@ async function main(argv, env) {
     // Print only after the handlers exist: a signal that arrives before then would kill the process with the default action.
     console.log(app.url);
     openAddress(app.url, { mode: values['no-open'] ? 'none' : values.open ?? 'auto', env }).catch(() => {});
+    if (!values['no-update-check']) {
+      checkForUpdate({ version, env }).then((v) => { if (v && !stopping) console.error(MSG.updateAvailable(version, v)); }, () => {});
+    }
   });
 }
 

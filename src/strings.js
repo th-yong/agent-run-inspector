@@ -15,6 +15,7 @@ Options:
   --redact[=strict]     Hide message bodies (strict: hide more)
   --prices <file>       Price table that overrides the built-in one
   --session <id>        Open this session directly
+  --no-update-check     Do not check npm for a newer version (once a day)
   -v, --version         Print the version
   -h, --help            Show this help
 
@@ -28,6 +29,7 @@ export const MSG = {
   unknownOption: (m) => `Error: ${m}`,
   badValue: (flag, hint) => `Error: invalid value for ${flag} (${hint})`,
   conflictOpen: 'Error: --open and --no-open cannot be used together',
+  updateAvailable: (cur, next) => `Update available: ${cur} -> ${next}. Run "npm i -g agent-run-inspector" or use "npx agent-run-inspector@latest".`,
   untitledSession: 'Untitled session',
   toolFailed: 'Tool call failed',
   agentFailed: 'Agent call failed',

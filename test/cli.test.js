@@ -12,7 +12,7 @@ const tmp = () => realpathSync(mkdtempSync(join(tmpdir(), 'ari-cli-')));
 const run = (args, home, extraEnv = {}) =>
   spawnSync(process.execPath, [cli, ...args], {
     encoding: 'utf8',
-    env: { PATH: process.env.PATH, HOME: home, ...extraEnv },
+    env: { PATH: process.env.PATH, HOME: home, ARI_NO_UPDATE_CHECK: '1', ...extraEnv },
   });
 const cfgFile = (home) => join(home, '.config', 'agent-run-inspector', 'config.json');
 

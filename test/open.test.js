@@ -120,7 +120,7 @@ const waitLog = async (log, n) => {
   }
   return existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : [];
 };
-const env = (s, extra) => ({ PATH: `${s.bin}:${dirname(process.execPath)}:/usr/bin:/bin`, ...extra });
+const env = (s, extra) => ({ PATH: `${s.bin}:${dirname(process.execPath)}:/usr/bin:/bin`, ARI_NO_UPDATE_CHECK: '1', ...extra });
 
 test('cli in Orca opens a tab via orca and prints the address first', { skip: !posix }, async () => {
   const s = stubDir({ orca: `echo '${okJson}'` });
