@@ -140,3 +140,29 @@ test('index.open on the Claude Code fixture: reported total (session 1) vs no re
   }
   assert.ok(reported >= 1 && unknown >= 1);
 });
+
+test('longContext: a second rate card above a prompt size (Claude Haiku 5.5: 100K)', () => {
+  const p = loadPrices();
+  const small = p.cost('claude-haiku-5-5', { input: 1000, cacheRead: 90000, output: 1000 });
+  assert.ok(Math.abs(small.usd - (1000 * 0.1 + 90000 * 0.01 + 1000 * 0.5) / 1e6) < 1e-12);
+  const large = p.cost('claude-haiku-5-5', { input: 1000, cacheRead: 150000, output: 1000 });
+  assert.ok(Math.abs(large.usd - (1000 * 0.5 + 150000 * 0.05 + 1000 * 2.5) / 1e6) < 1e-12);
+  assert.equal(large.basis, 'priced');
+  assert.throws(() => createPricer({ models: { x: { input: 1, longContext: { input: 2 } } } }), /longContext/);
+  assert.throws(() => createPricer({ models: { x: { input: 1, longContext: { above: 10, input: -1 } } } }), /longContext/);
+});
+
+test('a record with no tokens costs nothing, even for a model not in the table ("<synthetic>")', () => {
+  const p = loadPrices();
+  assert.deepEqual(p.cost('<synthetic>', { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }), { usd: 0, basis: 'priced' });
+  assert.deepEqual(p.cost('<synthetic>', {}), { usd: 0, basis: 'priced' });
+  assert.equal(p.cost('<synthetic>', { output: 5 }).basis, 'unknown');
+});
+
+test('Claude models seen in real logs are priced: Opus 5, Sonnet 5, Fable 5 / 5.1, Haiku 5.5', () => {
+  const p = loadPrices();
+  for (const m of ['claude-opus-5', 'claude-sonnet-5', 'claude-fable-5', 'claude-fable-5-1', 'claude-haiku-5-5', 'claude-opus-5-5[1m]']) {
+    assert.equal(p.cost(m, { input: 10, output: 10, cacheRead: 10, cacheWrite: 10 }).basis, 'priced', m);
+  }
+  assert.ok(Math.abs(p.cost('claude-opus-5', { input: 1e6, output: 1e6, cacheRead: 1e6, cacheWrite: 1e6 }).usd - (5 + 25 + 0.5 + 6.25)) < 1e-9);
+});
