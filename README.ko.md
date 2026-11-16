@@ -10,6 +10,27 @@ Claude Code 와 Codex CLI 의 에이전트 실행을 로컬 브라우저에서 �
 
 ![데모: 새 실행이 나타나고, orchestrator 가 에이전트를 띄우고, 각 에이전트의 호출이 끝날 때까지 실시간으로 쌓이는 모습](docs/demo.gif)
 
+## Get started
+
+Claude Code 와 Codex CLI 가 이미 디스크에 남기는 실행 기록을 읽습니다. 에이전트 쪽에는 아무것도 설치하지 않습니다(훅·프록시 없음). Node 22 이상이 필요합니다.
+
+### Mac: 앱으로 쓰기
+
+```sh
+npm i -g github:th-yong/agent-run-inspector
+ari service install
+```
+
+이게 전부입니다. **Agent Run Inspector** 가 자체 창으로 열리고 Dock 에 남으며, Mac 을 켜면 함께 시작되므로 다시 터미널을 열 필요가 없습니다. 자세한 내용과 메뉴 막대 항목은 [The Mac app](#the-mac-app) 을 보세요.
+
+### 어디서나: 한 번 써 보기
+
+```sh
+npx github:th-yong/agent-run-inspector
+```
+
+브라우저에서 열리고, Ctrl+C 를 누를 때까지 실행됩니다.
+
 ## What you see
 
 - **세션 목록**: 실행 중인 세션이 위, 최근 세션이 아래에 나옵니다. 도구(Claude Code, Codex CLI)·기간으로 거르거나 제목·프로젝트로 찾습니다. 에이전트 팀의 팀원(teammate)은 따로 나오지 않고, 자신을 띄운 실행 안에 묶여 보입니다.
@@ -17,25 +38,6 @@ Claude Code 와 Codex CLI 의 에이전트 실행을 로컬 브라우저에서 �
 - **타임라인**: 모든 에이전트와 호출을 한 시간 축에 놓고 턴·컨텍스트 압축 시점도 표시합니다. 호출을 열면 자세한 내용이 보입니다.
 - **합계**: 실행 전체나 고른 에이전트의 시간, 비용, 토큰, 모델 호출, 도구 호출, 오류.
 - **실시간**: 기록에 새 줄이 생기면 새로 고침 없이 1초 안팎에 화면에 반영됩니다.
-
-## Install and run
-
-이 도구들이 이미 디스크에 남기는 실행 기록을 읽습니다. 에이전트 쪽에는 아무것도 설치하지 않습니다(훅·프록시 없음). Node 22 이상, 런타임 의존성 없음, 빌드 단계 없음.
-
-```sh
-npx github:th-yong/agent-run-inspector
-```
-
-`http://127.0.0.1:<port>/?t=<token>` 을 출력하고 엽니다. `npm i -g github:th-yong/agent-run-inspector` 뒤에는 짧은 이름 `ari` 도 쓸 수 있습니다.
-
-### Run from a local clone
-
-```sh
-git clone https://github.com/th-yong/agent-run-inspector.git
-cd agent-run-inspector
-node bin/cli.js
-# 또는: npm link 후 ari 실행
-```
 
 ## Options
 
@@ -82,16 +84,15 @@ ari roots add --codex ~/some/codex/sessions
 
 Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca tab create`). 실패하거나 Orca 밖이면 기본 브라우저로 엽니다. `--open=none` 이나 `--no-open` 은 주소만 출력합니다.
 
-## Run in the background (macOS)
+## The Mac app
 
-터미널 없이 열고 싶다면 서비스로 설치하세요. 로그인할 때 시작되어 `http://127.0.0.1:7317/` 에 계속 떠 있습니다(`--port <n>` 으로 변경).
+`ari service install` 은 세 가지를 준비합니다.
 
-```sh
-npm i -g agent-run-inspector   # 서비스는 npx 캐시가 아닌 설치본이 필요합니다
-ari service install            # 서비스를 띄우고 앱을 엽니다
-```
+- **백그라운드 서비스**: 로그인할 때 `http://127.0.0.1:7317/` 에서 시작되어(`--port <n>` 으로 변경) 언제든 열 수 있습니다.
+- **Agent Run Inspector.app**: `~/Applications` 에 만들고 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고 실행할 때마다 자동으로 로그인합니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받을 것도, 개발자 서명도 없습니다. 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요.
+- **1년 유지되는 로그인**: 그 주소를 북마크해도 됩니다. 브라우저 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요.
 
-`~/Applications` 에 **Agent Run Inspector.app** 도 만들어 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고, 실행할 때마다 자동으로 로그인합니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받기나 개발자 서명이 필요 없습니다. 만들기에 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요. 주소를 북마크해도 됩니다(로그인 1년 유지). 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요. 패키지나 Node 를 업그레이드한 뒤에는 `ari service install` 을 다시 실행해 새 코드로 재시작하세요. `ari service uninstall` 이 서비스·앱·Dock 아이콘을 지웁니다. 화면 머리에 버전이 보이고, npm 에 새 버전이 있으면 배지가 뜹니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+화면 머리에 버전이 보이고, 새 버전이 나오면 배지가 뜹니다. 업데이트는 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
 
 메뉴 막대 항목을 원하면 [SwiftBar](https://swiftbar.app/) 를 설치하고(`brew install --cask swiftbar`) 한 번 열어 플러그인 폴더를 고른 뒤 `ari menubar install` 을 실행하세요. 진행 중인 run 수가 보이고, 메뉴에는 그 run 들과 최근 5개가 나오며, 누르면 그 run 이 열립니다. 서비스에서 30초마다 새로 읽습니다.
 
@@ -124,6 +125,17 @@ Claude Code(메인 세션, 하위 에이전트, 에이전트 팀의 팀원)와 C
 - Claude Code 팀원은 기록 폴더가 리더와 같거나 그 아래일 때만(예: 리더 프로젝트의 `.claude/worktrees/...` 워크트리) 리더에 묶입니다. 그 밖이면 별도 세션으로 나옵니다. 팀원이 띄운 하위 에이전트는 아직 그리지 않습니다.
 - 작업 폴더가 다른 실행(예: Orca 워크트리마다 하나씩)은 각각 별도 세션으로 나옵니다.
 - 비용은 아는 모델이어야 계산되고, 모르는 모델은 토큰만 보입니다.
+
+## Development
+
+```sh
+git clone https://github.com/th-yong/agent-run-inspector.git
+cd agent-run-inspector
+node bin/cli.js        # 또는: npm link 후 ari 실행
+npm test && npm run lint
+```
+
+앱 없이 `ari` 를 실행하면 `http://127.0.0.1:<port>/?t=<token>` 을 출력하고 엽니다. 토큰은 그 실행 동안만 브라우저를 로그인시킵니다.
 
 ## Third-party assets
 

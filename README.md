@@ -10,6 +10,27 @@ A local, read-only inspector for Claude Code and Codex CLI agent runs: see who c
 
 ![Demo: a new run appears, the orchestrator starts agents, and their calls stream in until each one is done](docs/demo.gif)
 
+## Get started
+
+It reads the run logs Claude Code and Codex CLI already write to disk. Nothing is installed into the agents (no hooks, no proxy). You need Node 22 or newer.
+
+### On a Mac: use it as an app
+
+```sh
+npm i -g github:th-yong/agent-run-inspector
+ari service install
+```
+
+That's all. **Agent Run Inspector** opens in its own window and stays in your Dock, and it starts with your Mac, so you never need the terminal again. Details and the optional menu bar item: [The Mac app](#the-mac-app).
+
+### Anywhere: try it once
+
+```sh
+npx github:th-yong/agent-run-inspector
+```
+
+It opens the inspector in your browser and runs until you press Ctrl+C.
+
 ## What you see
 
 - **Session list**: running sessions on top, then recent ones. Filter by tool (Claude Code, Codex CLI) and period, or search by title or project. Agent-team teammates are folded into the run that started them instead of being listed on their own.
@@ -17,25 +38,6 @@ A local, read-only inspector for Claude Code and Codex CLI agent runs: see who c
 - **Timeline**: every agent and call on one time axis, with turns and context compactions. Open a call to see its details.
 - **Totals**: time, cost, tokens, model calls, tool calls and errors for the whole run or the selected agent.
 - **Live**: new lines in the logs show up within about a second, with no reload.
-
-## Install and run
-
-It reads the run logs those tools already write to disk. Nothing is installed into the agents (no hooks, no proxy). Node 22 or newer, no runtime dependencies, no build step.
-
-```sh
-npx github:th-yong/agent-run-inspector
-```
-
-It prints `http://127.0.0.1:<port>/?t=<token>` and opens it. After `npm i -g github:th-yong/agent-run-inspector` the short name `ari` works too.
-
-### Run from a local clone
-
-```sh
-git clone https://github.com/th-yong/agent-run-inspector.git
-cd agent-run-inspector
-node bin/cli.js
-# or: npm link, then run ari
-```
 
 ## Options
 
@@ -82,16 +84,15 @@ ari roots add --codex ~/some/codex/sessions
 
 Inside Orca the address opens as a new Orca browser tab (`orca tab create`). If that fails, or outside Orca, it falls back to the default browser. `--open=none` or `--no-open` only prints the address.
 
-## Run in the background (macOS)
+## The Mac app
 
-To open the inspector without a terminal, install it as a service. It then starts at login and stays on `http://127.0.0.1:7317/` (`--port <n>` to change):
+`ari service install` sets up three things:
 
-```sh
-npm i -g agent-run-inspector   # the service needs a lasting install, not the npx cache
-ari service install            # starts the service and opens the app
-```
+- **A background service** that starts at login on `http://127.0.0.1:7317/` (`--port <n>` to change), so the inspector is always ready.
+- **Agent Run Inspector.app** in `~/Applications`, added to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. It is built on your Mac with the built-in `osacompile`, so there is nothing to download and no developer signing. If that fails, open the address in Chrome or Edge and choose Install instead.
+- **A sign-in that lasts a year** for that address, so a bookmark works too. If a browser tab says "Signed out", run `ari open`.
 
-It also builds **Agent Run Inspector.app** in `~/Applications` and adds it to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. It is compiled on your Mac with the built-in `osacompile`, so it needs no download or developer signing. If that fails, open the address in Chrome or Edge and choose Install instead. A bookmark of the address works too: the sign-in lasts a year. If a tab says "Signed out", run `ari open`. Run `ari service install` again after upgrading the package or Node, so the service restarts on the new code. `ari service uninstall` removes it, the app and its Dock icon. The page header shows the version, and a badge when a newer one is on npm. The log is `~/Library/Logs/agent-run-inspector.log`.
+The page header shows the version, and a badge when a newer one is out. To update, install the package again and run `ari service install` again; it restarts the service and the app on the new code. `ari service uninstall` removes the service, the app and its Dock icon. The log is `~/Library/Logs/agent-run-inspector.log`.
 
 For a menu bar item, install [SwiftBar](https://swiftbar.app/) (`brew install --cask swiftbar`), open it once to choose its plugin folder, then run `ari menubar install`. The item shows how many runs are going; its menu lists them and the five most recent, and a click opens that run. It refreshes every 30 seconds from the service.
 
@@ -124,6 +125,17 @@ Claude Code (main sessions, sub-agents, agent-team teammates) and Codex CLI (rol
 - A Claude Code teammate is joined to its lead only when its log folder is the lead's own or one below it (for example a `.claude/worktrees/...` worktree of the lead's project). Otherwise it is listed as a session of its own. Sub-agents started by a teammate are not drawn yet.
 - Every run in its own working folder (for example one Orca worktree each) is listed as its own session.
 - Cost needs a known model; unknown models show tokens only.
+
+## Development
+
+```sh
+git clone https://github.com/th-yong/agent-run-inspector.git
+cd agent-run-inspector
+node bin/cli.js        # or: npm link, then run ari
+npm test && npm run lint
+```
+
+Without the app, `ari` prints `http://127.0.0.1:<port>/?t=<token>` and opens it; the token signs the browser in for that run only.
 
 ## Third-party assets
 
