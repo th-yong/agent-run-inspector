@@ -4,7 +4,7 @@
 
 The icon shapes come from [simple-icons](https://github.com/simple-icons/simple-icons) 15.22.0, released under CC0-1.0, and are inlined without a dependency (`scripts/build-icons.js`, mapping in `brand-map.json`). The icons appear next to model and tool names only so you can tell which provider or service a call belongs to. This project is not affiliated with, sponsored by or endorsed by any of these companies.
 
-CC0 covers the copyright in the simple-icons files only. It does not grant any trademark right: each name and logo remains a trademark of its owner, and the owner's brand guidelines apply.
+The MIT License in `LICENSE` covers this project's code only, not these names and logos. CC0 covers the copyright in the simple-icons files only. It does not grant any trademark right: each name and logo remains a trademark of its owner, and the owner's brand guidelines apply.
 
 ### Attributions required by the logo licenses
 
