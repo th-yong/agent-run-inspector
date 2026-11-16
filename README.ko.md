@@ -24,14 +24,10 @@ npx github:th-yong/agent-run-inspector
 
 `http://127.0.0.1:<port>/?t=<token>` 을 출력하고 엽니다. `npm i -g github:th-yong/agent-run-inspector` 뒤에는 짧은 이름 `ari` 도 쓸 수 있습니다.
 
-### Private repository access
-
-레포가 비공개입니다. 먼저 collaborator 초대를 수락하고, `gh auth login` 이나 레포를 읽을 수 있는 git 자격 증명으로 로그인하세요.
-
 ### Run from a local clone
 
 ```sh
-git clone git@github.com:th-yong/agent-run-inspector.git
+git clone https://github.com/th-yong/agent-run-inspector.git
 cd agent-run-inspector
 node bin/cli.js
 # 또는: npm link 후 ari 실행

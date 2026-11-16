@@ -1,6 +1,6 @@
 name: CI
 
-# Private repo: Actions minutes are billed, and macOS runners count 10x.
+# Written for a private repo (billed minutes, macOS counted 10x); the repo is public since 2026-11-16.
 # Run once per PR update (not again for the branch push), plus main, on Linux only.
 # macOS is covered by local runs (development happens on macOS).
 on:

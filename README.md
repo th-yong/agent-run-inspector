@@ -24,14 +24,10 @@ npx github:th-yong/agent-run-inspector
 
 It prints `http://127.0.0.1:<port>/?t=<token>` and opens it. After `npm i -g github:th-yong/agent-run-inspector` the short name `ari` works too.
 
-### Private repository access
-
-The repository is private. Accept the collaborator invitation first, then sign in with `gh auth login` or any git credential that can read the repository.
-
 ### Run from a local clone
 
 ```sh
-git clone git@github.com:th-yong/agent-run-inspector.git
+git clone https://github.com/th-yong/agent-run-inspector.git
 cd agent-run-inspector
 node bin/cli.js
 # or: npm link, then run ari

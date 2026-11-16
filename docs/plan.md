@@ -6,7 +6,7 @@
 ## 0. 확정된 결정 (2026-11-13)
 
 1. 이름 `agent-run-inspector`, 짧은 명령 `ari`.
-2. 공유: private 레포 + 팀원 collaborator 초대, `npx github:th-yong/agent-run-inspector` 로 실행. 공개·npm 배포는 나중.
+2. 공유: private 레포 + 팀원 collaborator 초대, `npx github:th-yong/agent-run-inspector` 로 실행. 공개·npm 배포는 나중. (2026-11-16: 레포를 공개로 전환, MIT. npm 배포는 아직.)
 3. 본문 미리보기 기본 표시, `--redact` / `--redact=strict` 로 가림.
 4. 단가표: 공개 가격표에서 날짜(`asOf`)와 함께 `prices.json`, 사용자 덮어쓰기. Claude Code 는 기록의 보고값 우선.
 5. 기록 폴더: `CLAUDE_CONFIG_DIR` · `~/.claude` · `CODEX_HOME` · `~/.codex` 기본, `--root` / `roots add` 로 추가. Orca 경로 하드코딩 금지.
