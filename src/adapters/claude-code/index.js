@@ -8,6 +8,22 @@ const DEFAULT_RUNNING_MS = 10 * 60 * 1000;
 /** stop_reason values of an answer that hands the turn back to the user. */
 export const ENDS_TURN = new Set(['end_turn', 'stop_sequence']);
 
+/**
+ * Agent-team shutdown seen from the teammate's own log: true when this record approves a shutdown
+ * (the teammate exits right after, so the call never gets a result) or is the lead's shutdown request
+ * left unanswered; false for any other user or assistant record; undefined (no change) for tool results.
+ */
+export function shutdownSignal(rec) {
+  const c = rec?.message?.content;
+  if (rec?.type === 'assistant') {
+    return Array.isArray(c) && c.some((b) => b?.type === 'tool_use' && b.name === 'SendMessage' && b.input?.approve === true
+      && (b.input.type === 'shutdown_response' || b.input.message?.type === 'shutdown_response'));
+  }
+  if (rec?.type !== 'user') return undefined;
+  if (typeof c === 'string') return c.includes('"type":"shutdown_request"');
+  return Array.isArray(c) && c.every((b) => b?.type === 'tool_result') ? undefined : false;
+}
+
 /** Id of the root agent span under the session span (Codex: `cx:<sid>:main`). */
 export const rootAgentId = (sessionId) => `${sessionId}:main`;
 
@@ -40,6 +56,7 @@ export class ClaudeCodeSession {
     // The last turn closed and nothing came after it: the model's final answer (stop_reason end_turn)
     // or system/turn_duration (not written for every turn).
     this.turnEnded = false;
+    this.shutDown = false; // see shutdownSignal
     this.cwd = undefined;
     this.branch = undefined;
     this.sessionSeq = 0;
@@ -88,6 +105,7 @@ export class ClaudeCodeSession {
     if (typeof rec.cwd === 'string' && rec.cwd) this.cwd = rec.cwd;
     if (typeof rec.gitBranch === 'string' && rec.gitBranch) this.branch = rec.gitBranch;
 
+    this.shutDown = shutdownSignal(rec) ?? this.shutDown;
     switch (rec.type) {
       case 'ai-title':
         if (typeof rec.aiTitle === 'string' && rec.aiTitle) {
