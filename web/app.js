@@ -8,6 +8,7 @@ import { createRunHeader } from './run-header.js';
 import { createTimeline } from './timeline.js';
 import { createGraph } from './graph.js';
 import { createAgentPanel } from './agent-panel.js';
+import { startMini } from './mini.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -15,7 +16,6 @@ const dark = window.matchMedia('(prefers-color-scheme: dark)');
 
 let state = parseState(location.search);
 let sessions = null; // null = not loaded yet
-let miniPicked = false; // view=mini picks a running run once, on the first list
 let listError = false;
 let rootsTried = false;
 let roots = null; // folders searched, fetched only when the list is empty
@@ -247,59 +247,48 @@ onAuthLost(() => {
 });
 mountRedactToggle($('redactBtn'));
 $('appName').textContent = S.appName;
-if (state.mini) {
-  document.body.classList.add('mini');
-  // Inside the Mac app the popover hands the run to the app window (native message handler "ari").
-  const bridge = window.webkit?.messageHandlers?.ari;
-  if (bridge) {
-    const open = el('button', 'mini-open', S.mini.open);
-    open.type = 'button';
-    open.addEventListener('click', () => bridge.postMessage({ open: state.s ?? '' }));
-    document.body.append(open);
-  }
-}
-// Version, and a newer one when the server's daily npm check found it (app users never see the terminal).
-const showMeta = () => fetchMeta().then((m) => {
-  $('ver').textContent = m.version ? `v${m.version}` : '';
-  const upd = $('upd');
-  upd.hidden = !m.latest;
-  if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = S.meta.how(m.latest); }
-}, () => {});
-showMeta();
-setInterval(showMeta, 60 * 60 * 1000);
-setLive('connecting');
-
-$('list').addEventListener('click', (e) => {
-  const row = e.target.closest('.sess');
-  if (row) select(row.dataset.id);
-});
-$('themeBtn').addEventListener('click', () => {
-  state = { ...state, theme: effectiveTheme() === 'dark' ? 'light' : 'dark' };
-  writeUrl(false);
-  applyTheme();
-});
 dark.addEventListener('change', applyTheme);
-window.addEventListener('popstate', () => {
-  state = parseState(location.search);
-  render();
-});
+// The menu bar panel (view=mini) is its own small screen; see mini.js.
+if (state.mini) {
+  applyTheme();
+  startMini(document.body);
+} else {
+  // Version, and a newer one when the server's daily npm check found it (app users never see the terminal).
+  const showMeta = () => fetchMeta().then((m) => {
+    $('ver').textContent = m.version ? `v${m.version}` : '';
+    const upd = $('upd');
+    upd.hidden = !m.latest;
+    if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = S.meta.how(m.latest); }
+  }, () => {});
+  showMeta();
+  setInterval(showMeta, 60 * 60 * 1000);
+  setLive('connecting');
 
-watchList({
-  onList: (all) => {
-    sessions = all;
-    listError = false;
-    // The popover opens on the newest running run; back goes to the list.
-    if (state.mini && !miniPicked) {
-      miniPicked = true;
-      const live = all.find((s) => s.status === 'running');
-      if (live && !state.s) return select(live.id);
-    }
-    renderList();
-    renderMain();
-  },
-  onSession: (summary) => { sessions = upsertSession(sessions ?? [], summary); listGate.request(); },
-  onStatus: (s) => {
-    if (s === 'list-error') { listError = true; renderList(); } else setConn('list', s);
-  },
-});
-render();
+  $('list').addEventListener('click', (e) => {
+    const row = e.target.closest('.sess');
+    if (row) select(row.dataset.id);
+  });
+  $('themeBtn').addEventListener('click', () => {
+    state = { ...state, theme: effectiveTheme() === 'dark' ? 'light' : 'dark' };
+    writeUrl(false);
+    applyTheme();
+  });
+  window.addEventListener('popstate', () => {
+    state = parseState(location.search);
+    render();
+  });
+
+  watchList({
+    onList: (all) => {
+      sessions = all;
+      listError = false;
+      renderList();
+      renderMain();
+    },
+    onSession: (summary) => { sessions = upsertSession(sessions ?? [], summary); listGate.request(); },
+    onStatus: (s) => {
+      if (s === 'list-error') { listError = true; renderList(); } else setConn('list', s);
+    },
+  });
+  render();
+}

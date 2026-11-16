@@ -17,6 +17,24 @@ const json = (res, status, body) => {
 const fail = (res, status, error) => json(res, status, { error });
 
 /**
+ * The menu bar's view of one opened session: per agent its name, status, tool-call count and the tool
+ * it is in now. Names only; no task, command or message text.
+ */
+export function briefAgents(spans) {
+  const agents = new Map();
+  for (const s of spans) {
+    if (s.kind === 'agent') agents.set(s.id, { id: s.id, name: s.name, role: s.role, depth: s.depth ?? 0, status: s.status, start: s.start, end: s.end, calls: 0, now: null, nowStart: 0 });
+  }
+  for (const s of spans) {
+    const a = s.kind === 'tool' ? agents.get(s.parentId) : null;
+    if (!a) continue;
+    a.calls += 1;
+    if (s.status === 'running' && s.start >= a.nowStart) { a.now = s.name; a.nowStart = s.start; }
+  }
+  return [...agents.values()].sort((x, y) => x.depth - y.depth || x.start - y.start);
+}
+
+/**
  * @param {{ index: { list(): object[], open(id: string): object },
  *   roots: { claude?: {path:string, origin?:string}[], codex?: {path:string, origin?:string}[] } }} opts
  * @returns {(req, res) => Promise<boolean>}
@@ -48,6 +66,13 @@ export function createApiHandler({ index, roots = {}, meta = { version: null, la
     const { pathname } = url;
     if (detail.matches(pathname)) return detail.handle(req, res, url);
     if (pathname === '/api/meta' && req.method === 'GET') return send(res, 200, 'meta', { version: meta.version, latest: meta.latest });
+    if (pathname === '/api/live' && req.method === 'GET') { // running sessions with their agents (menu bar)
+      const sessions = index.list().filter((x) => x.status === 'running')
+        .map((x) => { const o = openSession(x.id); return o && { ...o.summary, agents: briefAgents(o.spans) }; })
+        .filter(Boolean)
+        .sort((a, b) => b.lastWrite - a.lastWrite);
+      return send(res, 200, 'sessions', { sessions });
+    }
     if (pathname !== '/api/roots' && pathname !== '/api/sessions' && !pathname.startsWith('/api/sessions/')) return false;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD');

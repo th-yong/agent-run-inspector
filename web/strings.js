@@ -8,7 +8,16 @@ export const S = {
     turnOn: 'Hide message text, tool inputs and errors', turnOff: 'Show message text again',
     locked: 'The server was started with redaction on; it cannot be turned off here',
   },
-  mini: { open: 'Open in window ↗' },
+  mini: {
+    none: 'Nothing running right now.', offline: 'The inspector service is not answering.',
+    running: (n) => (n ? `Running · ${n}` : 'Running'),
+    thinking: 'Thinking…', waiting: 'Waiting for you',
+    justNow: 'now', ago: (t) => `${t} ago`,
+    tokens: (t) => `${t} tokens`,
+    errors: (n) => `▲ ${n} failed`,
+    progress: (d, n) => `${d}/${n} done`,
+    openApp: 'Open Agent Run Inspector',
+  },
   meta: { update: (v) => `Update ${v}`, how: (v) => `Version ${v} is out. Run "npm i -g agent-run-inspector", then "ari service install" if you use the app or the service.` },
   auth: { restarted: 'Signed out. Open the new address printed in the terminal, or run "ari open" if the inspector runs as a service.', detail: 'The server was restarted or this tab lost its sign-in, so the server no longer accepts it.' },
   list: {
@@ -31,6 +40,7 @@ export const S = {
     widen: 'Widen range',
     clear: 'Clear filters',
     agents: (n) => `${n} ${n === 1 ? 'agent' : 'agents'}`,
+    tokens: (t) => `${t} tokens`,
   },
   empty: {
     title: 'No run logs found',

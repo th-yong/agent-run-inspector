@@ -4,7 +4,7 @@ import http from 'node:http';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../src/server/http.js';
-import { createApiHandler } from '../src/server/api.js';
+import { briefAgents, createApiHandler } from '../src/server/api.js';
 import { createIndex } from '../src/index/index.js';
 
 const FIX = fileURLToPath(new URL('./fixtures/', import.meta.url));
@@ -38,7 +38,7 @@ function get(path, { cookie = true, method = 'GET' } = {}) {
 }
 
 test('every API route needs the cookie', async () => {
-  for (const p of ['/api/sessions', `/api/sessions/${A1}`, '/api/roots', '/api/meta']) assert.equal((await get(p, { cookie: false })).status, 401);
+  for (const p of ['/api/sessions', `/api/sessions/${A1}`, '/api/roots', '/api/meta', '/api/live']) assert.equal((await get(p, { cookie: false })).status, 401);
 });
 
 test('GET /api/sessions lists both tools', async () => {
@@ -103,4 +103,25 @@ test('/api/meta: version, and the newer version once the update check found one'
   assert.deepEqual(JSON.parse((await get('/api/meta')).body), { version: '9.8.7', latest: null });
   meta.latest = '9.9.0';
   assert.deepEqual(JSON.parse((await get('/api/meta')).body), { version: '9.8.7', latest: '9.9.0' });
+});
+
+test('GET /api/live lists only running sessions', async () => {
+  const r = await get('/api/live');
+  assert.equal(r.status, 200);
+  assert.ok(JSON.parse(r.body).sessions.every((s) => s.status === 'running' && Array.isArray(s.agents)));
+});
+
+test('briefAgents: tool count and the tool running now, per agent, orchestrator first', () => {
+  const spans = [
+    { kind: 'agent', id: 'w', name: 'tests', depth: 1, start: 5, status: 'running' },
+    { kind: 'agent', id: 'm', name: 'main', depth: 0, start: 1, status: 'running', task: 'secret' },
+    { kind: 'tool', id: 't1', parentId: 'w', name: 'Read', start: 6, status: 'ok' },
+    { kind: 'tool', id: 't2', parentId: 'w', name: 'Bash', start: 7, status: 'running', command: 'npm test' },
+    { kind: 'llm', id: 'l1', parentId: 'm', start: 2, status: 'ok' },
+  ];
+  const [m, w] = briefAgents(spans);
+  assert.equal(m.name, 'main');
+  assert.deepEqual([m.calls, m.now], [0, null]);
+  assert.deepEqual([w.calls, w.now], [2, 'Bash']);
+  assert.ok(!JSON.stringify([m, w]).includes('secret') && !JSON.stringify([m, w]).includes('npm test'));
 });

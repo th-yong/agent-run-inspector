@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Menu bar panel: instead of one run's graph, it lists every running session with its agents, what each is doing now (the tool it is in, or thinking), its call count, and the session's time, cost and tokens. The panel fits its height to the list. A click on a session opens it in the window. The right-click menu no longer lists recent runs. `GET /api/live` serves this view (agent names, states and tool names only).
+- Session list: the token count is left out when it is not known yet (it showed "0 tok" for runs that were never opened and had no cost record), and reads "tokens".
+
+### Fixed
+- Opening and closing the menu bar panel no longer brings the app's window in front of other apps. The panel no longer activates the app.
 - Opening an agent's details no longer rewraps the graph: the panel floats over its right side, and if it would cover the chosen card the whole graph slides left as one piece (and back on close), instead of the graph laying itself out 360 px narrower.
 - README demo: an animated WebP (30 fps, recorded from the app with `screencapture`) of a made-up but realistic run, "Add rate limiting to the login API": planner, then backend-dev and test-writer, then reviewer; a failed test run is opened to show its details. `scripts/demo-dev-project.js` writes that run.
 

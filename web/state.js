@@ -1,5 +1,5 @@
 // Screen state kept in the address bar: ?s ?tab ?sel ?open ?gsel ?gopen ?hide ?theme ?view=mini.
-// view=mini is the menu bar popover of the Mac app: run list and graph only.
+// view=mini is the menu bar panel of the Mac app: running sessions and their agents (mini.js).
 // Defaults are left out of the address so a plain reload of "/" stays "/".
 const THEMES = new Set(['dark', 'light']);
 const FIELDS = ['s', 'sel', 'open', 'gsel', 'gopen'];
@@ -9,7 +9,7 @@ export function parseState(search) {
   const state = { tab: q.get('tab') === 'timeline' ? 'timeline' : 'graph', theme: THEMES.has(q.get('theme')) ? q.get('theme') : null, hide: q.get('hide') === '1' };
   for (const k of FIELDS) state[k] = q.get(k) || null;
   const mini = q.get('view') === 'mini';
-  return { s: state.s, tab: mini ? 'graph' : state.tab, sel: state.sel, open: state.open, gsel: state.gsel, gopen: state.gopen, hide: state.hide, theme: state.theme, mini };
+  return { s: state.s, tab: state.tab, sel: state.sel, open: state.open, gsel: state.gsel, gopen: state.gopen, hide: state.hide, theme: state.theme, mini };
 }
 
 /** Returns "" or "?a=b&...". */
