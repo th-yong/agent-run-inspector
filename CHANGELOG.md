@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- README: a "The menu bar" section with a picture of the panel.
+- Menu bar panel: when no tool call is running, the line says which sub-agent is working instead of the orchestrator that waits on it.
+
 ## [0.6.0] - 2026-11-16
 
 Session groups, a menu bar panel of running sessions, and a fix for the app window jumping in front. Not on npm yet; install from GitHub.

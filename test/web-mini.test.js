@@ -15,6 +15,7 @@ test('nowOf: the newest running tool call; waiting when it asks the user; thinki
   assert.equal(nowOf([a('m', 'running', 'Read', 1), a('w', 'running', 'Bash', 5), a('x', 'ok', 'Edit', 9)]).tool, 'Bash');
   assert.equal(nowOf([a('m', 'running', 'AskUserQuestion', 3)]).waiting, true);
   assert.deepEqual(nowOf([a('m', 'running')]).tool, null);
+  assert.equal(nowOf([{ ...a('m', 'running'), depth: 0 }, a('w', 'running')]).agent.name, 'w'); // not the waiting orchestrator
   assert.equal(nowOf([a('m', 'ok')]), null);
 });
 
