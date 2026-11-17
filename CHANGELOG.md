@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- In a smaller window the agent detail panel dropped below the graph (run column under 980 px). It now floats beside the graph down to 640 px, and covers the graph's width below that instead of stacking.
+
+### Removed
+- The Redact toggle in the top bar and `POST /api/redact`. The inspector runs on your own machine for you; to hide message text for a screen share or recording, start it with `--redact` (or `--redact=strict`).
+
 ### Added
 - Prices from OpenAI's price page (2026-11-17): gpt-6-astra, gpt-6-sol, gpt-6.1-sol, gpt-6.1-terra, gpt-6-luna, gpt-5.6-sol (promotional until 2026-11-30), gpt-5.6-terra, gpt-5.6-luna, the -pro models, gpt-6-cyber, gpt-5.6-cyber and gpt-6-rosalind, with long-context rates above 272K prompt tokens where OpenAI lists them (also for gpt-5.5 and gpt-5.4) and 30-minute cache-write rates.
 

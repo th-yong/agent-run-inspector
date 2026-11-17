@@ -56,7 +56,7 @@ function stream(path, { onEvent, onOpen, onError }) {
   es.onerror = () => {
     onError?.();
     // An event stream does not say why it failed; ask a plain request whether the cookie is still good.
-    fetch('/api/redact', { headers: { accept: 'application/json' } }).then((r) => { if (r.status === 401) { es.close(); lost(); } }, () => {});
+    fetch('/api/meta', { headers: { accept: 'application/json' } }).then((r) => { if (r.status === 401) { es.close(); lost(); } }, () => {});
   };
   es.onmessage = (e) => {
     let data;

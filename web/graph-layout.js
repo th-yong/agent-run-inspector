@@ -10,9 +10,9 @@ export const WATCH_GAP = 56; // orchestrator -> watcher
 export const DENSE_OVER = 8; // more visible cards than this -> dense
 export const DETAIL_W = 360;
 export const NARROW_MAX = 760;
-// The detail column sits beside the cards only when the run column is at least this wide (it leaves 620px for cards);
-// below that it stacks under the graph. Keep in step with the @container query in app.css.
-export const PANEL_BESIDE_MIN = 980;
+// The detail panel floats over the right 360px of the graph when the run column is at least this wide (the graph
+// slides left to keep the chosen card in view); narrower, it covers the whole width. Keep in step with app.css.
+export const PANEL_BESIDE_MIN = 640;
 export const SCROLL_PAD = 48; // .g-scroll side padding, both sides
 /** True when the detail column fits beside a canvas of this width. */
 export const panelBeside = (canvasWidth) => canvasWidth + SCROLL_PAD >= PANEL_BESIDE_MIN;

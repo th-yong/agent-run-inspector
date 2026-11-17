@@ -1,6 +1,5 @@
 import { S } from './strings.js';
 import { parseState, toSearch } from './state.js';
-import { mountRedactToggle } from './redact-toggle.js';
 import { onAuthLost, fetchSession, fetchRoots, watchList, watchSession, mergeSpan, trimSpans, upsertSession, ApiError, fetchMeta } from './api.js';
 import { liveState, createFlushGate } from './live-follow.js';
 import { mount, emptyBlock } from './session-list.js';
@@ -252,7 +251,6 @@ onAuthLost(() => {
   document.body.classList.add('lost'); // hides the screen for good; later redraws cannot bring it back
   stopRun();
 });
-mountRedactToggle($('redactBtn'));
 $('appName').textContent = S.appName;
 dark.addEventListener('change', applyTheme);
 // The menu bar panel (view=mini) is its own small screen; see mini.js.

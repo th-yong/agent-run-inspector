@@ -3,11 +3,6 @@ export const S = {
   appName: 'Run Inspector',
   theme: { toggle: 'Switch light / dark', toDark: 'Switch to dark theme', toLight: 'Switch to light theme' },
   live: { connected: 'Live · 127.0.0.1', connecting: 'Connecting…', reconnecting: 'Disconnected · reconnecting…', retry: 'Reconnect' },
-  redact: {
-    off: 'Redact: off', on: 'Redact: on', strict: 'Redact: strict',
-    turnOn: 'Hide message text, tool inputs and errors', turnOff: 'Show message text again',
-    locked: 'The server was started with redaction on; it cannot be turned off here',
-  },
   mini: {
     none: 'Nothing running right now.', offline: 'The inspector service is not answering.',
     running: (n) => (n ? `Running · ${n}` : 'Running'),

@@ -2,11 +2,10 @@
 //   off    nothing hidden
 //   basic  message bodies, tool inputs (key names only), tasks, commands and error text hidden
 //   strict basic + session title, project, branch, cwd and the log folder paths
-// The screen can raise the level (POST /api/redact) but never go below the level the server started with.
+// The level is fixed when the server starts (--redact).
 import { MSG } from '../strings.js';
 
 export const MODES = ['off', 'basic', 'strict'];
-const rank = (m) => MODES.indexOf(m);
 
 const PATH_LIKE = /[\\/]|^~|^[A-Za-z]:|\.[A-Za-z0-9]{1,6}$/;
 /** True when an object key looks like a file path (keys can be sensitive too). */
@@ -41,18 +40,10 @@ function hideSummary(s) {
 
 export function createRedactor({ mode = 'off' } = {}) {
   if (!MODES.includes(mode)) throw new Error(`Unknown redact mode: ${mode}`);
-  const floor = mode;
-  let current = mode;
+  const current = mode;
 
   const isOn = () => current !== 'off';
   const isStrict = () => current === 'strict';
-
-  /** @returns {boolean} false when the request would go below the starting level. */
-  function set(next) {
-    if (!MODES.includes(next) || rank(next) < rank(floor)) return false;
-    current = next;
-    return true;
-  }
 
   const summary = (s) => (isStrict() ? hideSummary(s) : s);
   const span = (s) => (isOn() ? hideSpan(s, current) : s);
@@ -92,7 +83,7 @@ export function createRedactor({ mode = 'off' } = {}) {
     }
   }
 
-  return { mode: () => current, floor: () => floor, set, apply };
+  return { mode: () => current, apply };
 }
 
 // Markers are small timeline points; drop any free text they carry.

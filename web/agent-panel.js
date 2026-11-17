@@ -1,4 +1,4 @@
-// Right-hand detail column of the graph tab (360px; below the graph on narrow screens): the chosen agent's totals
+// Right-hand detail column of the graph tab (360px floating over the graph; the full width on narrow screens): the chosen agent's totals
 // and its full call list, newest first. A call opens its details right under its row (web/call-detail.js).
 import { S } from './strings.js';
 import { fmtDuration, fmtTokens, fmtUsd } from './format.js';
