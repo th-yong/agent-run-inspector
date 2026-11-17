@@ -175,3 +175,12 @@ test('Codex models with user-supplied rates are priced; a sibling (…-max) does
   assert.ok(Math.abs(p.cost('gpt-5.2-codex', t).usd - (1.75 + 14 + 0.175)) < 1e-9);
   assert.equal(p.cost('gpt-5.1-codex-max', t).basis, 'unknown');
 });
+
+test('gpt-6-astra: short rates up to 272K prompt tokens, long-context rates above', async () => {
+  const { loadPrices } = await import('../src/cost.js');
+  const p = loadPrices({});
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
+  near(p.cost('gpt-6-astra', { input: 100000, output: 10000, cacheRead: 100000 }).usd, 1 + 0.5 + 0.1);
+  near(p.cost('gpt-6-astra', { input: 100000, output: 10000, cacheRead: 200000 }).usd, 2 + 0.75 + 0.4);
+  assert.equal(p.cost('gpt-5.5-pro', { input: 1000, cacheRead: 1000 }).usd, null); // no cached-input price published
+});
