@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Update (Mac app) and the install commands get the newest release tag (`#semver:*`), not whatever is on main yet.
+
 ### Docs
 
 - SECURITY.md: how to report a vulnerability (privately, through GitHub).

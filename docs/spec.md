@@ -321,5 +321,5 @@ interface SessionSummary {
 ## 업데이트
 
 - 확인: 하루 한 번 `https://api.github.com/repos/th-yong/agent-run-inspector/releases/latest` 의 `tag_name`(v 제거). CLI 는 stderr 한 줄, 화면은 `/api/meta.latest` 배지, 서비스는 6시간마다 다시 확인(캐시는 하루).
-- Mac 앱: 6시간마다 같은 주소를 직접 확인. 우클릭 메뉴 "Check for Updates…"/"Update to X…", 패널 아래 "Update to X"(`postMessage({ update: true })`). 묻고 나서 로그인 셸(`zsh -lc`, PATH 앞에 Info.plist `ARINodeBin`)로 `npm i -g github:th-yong/agent-run-inspector && ari service install --no-open`, 성공하면 앱을 멈추고 다시 연다. 실패하면 명령과 로그(`~/Library/Logs/agent-run-inspector-update.log`)를 알림 창으로.
+- Mac 앱: 6시간마다 같은 주소를 직접 확인. 우클릭 메뉴 "Check for Updates…"/"Update to X…", 패널 아래 "Update to X"(`postMessage({ update: true })`). 묻고 나서 로그인 셸(`zsh -lc`, PATH 앞에 Info.plist `ARINodeBin`)로 `npm i -g 'github:th-yong/agent-run-inspector#semver:*' && ari service install --no-open`(`#semver:*`: 가장 높은 릴리스 태그, main 이 아님), 성공하면 앱을 멈추고 다시 연다. 실패하면 명령과 로그(`~/Library/Logs/agent-run-inspector-update.log`)를 알림 창으로.
 
