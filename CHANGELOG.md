@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-17
+
+The Mac app updates itself. Not on npm yet; install from GitHub. Apps from 0.7.0 or earlier need one manual update (`npm i -g github:th-yong/agent-run-inspector && ari service install`); after that, updates come from the menu bar.
+
 ### Added
 - The Mac app updates itself: "Check for Updates…" in the menu bar item's right-click menu ("Update to …" when a newer release is out) and an "Update to …" button at the bottom of the panel. It asks first, then runs `npm i -g github:th-yong/agent-run-inspector` and `ari service install` in a login shell and reopens; on failure it shows the commands and the log (`~/Library/Logs/agent-run-inspector-update.log`).
 
@@ -183,7 +187,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.2...v0.5.0
