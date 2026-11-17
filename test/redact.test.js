@@ -135,31 +135,6 @@ test('strict: title, project, branch, cwd and folder paths are gone', async () =
   } finally { await srv.close(); }
 });
 
-test('POST /api/redact: same origin only, can raise but not go below the start level', async () => {
-  const { srv, call } = await boot('basic');
-  try {
-    const own = `http://127.0.0.1:${srv.port}`;
-    assert.equal((await call('/api/redact', { method: 'POST', body: { mode: 'strict' } })).status, 403); // no Origin
-    assert.equal((await call('/api/redact', { method: 'POST', body: { mode: 'strict' }, origin: 'http://evil.example' })).status, 403);
-    assert.equal((await call('/api/redact', { method: 'POST', body: { mode: 'off' }, origin: own })).status, 403);
-    assert.equal((await call('/api/redact', { method: 'POST', body: { mode: 'bogus' }, origin: own })).status, 400);
-    assert.equal((await call('/api/redact', { method: 'POST', body: { mode: 'strict' }, origin: own })).json().mode, 'strict');
-    assert.equal((await call('/api/redact')).json().mode, 'strict');
-    assert.equal((await call('/api/redact', { method: 'POST', body: { mode: 'basic' }, origin: own })).json().mode, 'basic');
-    assert.equal((await call('/api/redact', { method: 'PUT', body: {}, origin: own })).status, 405);
-  } finally { await srv.close(); }
-});
-
-test('off start level can be raised by the screen and lowered back', async () => {
-  const { srv, call } = await boot('off');
-  try {
-    const own = `http://127.0.0.1:${srv.port}`;
-    await call('/api/redact', { method: 'POST', body: { mode: 'basic' }, origin: own });
-    assert.ok((await sweep(call)).every((t) => !t.includes('SECRET-MARKER')));
-    assert.equal((await call('/api/redact', { method: 'POST', body: { mode: 'off' }, origin: own })).json().mode, 'off');
-  } finally { await srv.close(); }
-});
-
 test('preview is cut at 2 KB on a character boundary', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'ari-detail-'));
   try {

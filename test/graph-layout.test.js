@@ -244,11 +244,12 @@ test('snapshots: fixed sizes for 1, 4, 12 children', () => {
   ]);
 });
 
-test('panelBeside: the detail column stacks under the graph in a narrow run column', async () => {
+test('panelBeside: the detail panel covers the whole width only in a very narrow run column', async () => {
   const { panelBeside } = await import('../web/graph-layout.js');
   assert.equal(panelBeside(580 - 48), false);
-  assert.equal(panelBeside(979 - 48), false);
-  assert.equal(panelBeside(980 - 48), true);
+  assert.equal(panelBeside(639 - 48), false);
+  assert.equal(panelBeside(640 - 48), true);
+  assert.equal(panelBeside(979 - 48), true);
   assert.equal(panelBeside(1072), true);
 });
 

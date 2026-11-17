@@ -118,7 +118,7 @@ Run logs can hold customer data and secrets, so nothing leaves your machine exce
 
 ### Redaction
 
-`--redact` (basic) hides message bodies, tool input values, tasks, commands and error text, and keeps only lengths and key names. `--redact=strict` also hides session titles, project names, branches and folder paths, for screen sharing. The server decides: the toggle in the top bar can raise the level but never go below the one the server started with.
+`--redact` (basic) hides message bodies, tool input values, tasks, commands and error text, and keeps only lengths and key names. `--redact=strict` also hides session titles, project names, branches and folder paths, for screen sharing. Use it when someone else sees your screen: a screen share, a recording or a screenshot.
 
 ## Cost
 
