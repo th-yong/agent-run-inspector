@@ -119,7 +119,7 @@ export class ServiceError extends Error {}
  */
 export async function installService({ env, port, node, cli, platform = process.platform, uid = process.getuid?.(), run, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   if (platform !== 'darwin') throw new ServiceError('service: only macOS is supported for now');
-  if (/[\\/]_npx[\\/]/.test(cli)) throw new ServiceError('service: install the package first (npm i -g agent-run-inspector); the npx cache is pruned');
+  if (/[\\/]_npx[\\/]/.test(cli)) throw new ServiceError('service: install the package first (npm i -g github:th-yong/agent-run-inspector); the npx cache is pruned');
   const s = saveService(env, port);
   mkdirSync(dirname(plistFile(env)), { recursive: true });
   mkdirSync(dirname(logFile(env)), { recursive: true });
@@ -147,11 +147,13 @@ export async function buildApp({ env, run, version }) {
   const plist = join(app, 'Contents', 'Info.plist');
   // a running copy keeps the old code and version until it is quit; "is running" does not launch it
   await run('osascript', ['-e', `if application id "${APP_ID}" is running then tell application id "${APP_ID}" to quit`]).catch(() => {});
+  await run('pkill', ['-f', `${app}/Contents/MacOS/applet`]).catch(() => {}); // a busy applet can ignore quit
   rmSync(app, { recursive: true, force: true });
   mkdirSync(dirname(app), { recursive: true });
   await run('osacompile', ['-l', 'JavaScript', '-s', '-x', '-o', app, APP_SRC]); // -s stay open, -x run-only
   await run('plutil', ['-replace', 'ARIServiceFile', '-string', serviceFile(env), plist]);
   await run('plutil', ['-replace', 'CFBundleIdentifier', '-string', APP_ID, plist]);
+  await run('plutil', ['-replace', 'ARINodeBin', '-string', dirname(stableNode(env)), plist]); // npm and ari for "Update"
   if (version) { // shown in Finder's Get Info and the app's About box
     await run('plutil', ['-replace', 'CFBundleShortVersionString', '-string', version, plist]);
     await run('plutil', ['-replace', 'CFBundleVersion', '-string', version, plist]);

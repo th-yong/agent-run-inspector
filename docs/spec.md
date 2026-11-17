@@ -317,3 +317,9 @@ interface SessionSummary {
 - 사용자가 세션에 붙이는 이름 묶음. `~/.config/agent-run-inspector/groups.json`(0600) `{ groups: [{ id, name, sessions: [id] }] }`, 세션은 한 그룹에만. 로그 파일은 건드리지 않는다.
 - `GET /api/groups`, `PUT /api/groups`(문서 전체, Origin 필수, 256KB 이하, 그룹 50개·이름 40자·그룹당 세션 1000개).
 - 화면: 목록 위 그룹 칩(All groups · 그룹들 · "+ New group"), 세션을 칩에 끌어다 놓기, 세션 우클릭 메뉴(그룹에 넣기·새 그룹·빼기), 그룹 칩 우클릭은 삭제, run 헤더의 그룹 선택. 메뉴 막대 패널은 그룹별로 묶어 보여 준다.
+
+## 업데이트
+
+- 확인: 하루 한 번 `https://api.github.com/repos/th-yong/agent-run-inspector/releases/latest` 의 `tag_name`(v 제거). CLI 는 stderr 한 줄, 화면은 `/api/meta.latest` 배지, 서비스는 6시간마다 다시 확인(캐시는 하루).
+- Mac 앱: 6시간마다 같은 주소를 직접 확인. 우클릭 메뉴 "Check for Updates…"/"Update to X…", 패널 아래 "Update to X"(`postMessage({ update: true })`). 묻고 나서 로그인 셸(`zsh -lc`, PATH 앞에 Info.plist `ARINodeBin`)로 `npm i -g github:th-yong/agent-run-inspector && ari service install --no-open`, 성공하면 앱을 멈추고 다시 연다. 실패하면 명령과 로그(`~/Library/Logs/agent-run-inspector-update.log`)를 알림 창으로.
+

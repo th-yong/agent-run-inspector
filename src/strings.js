@@ -38,7 +38,7 @@ export const MSG = {
   unknownOption: (m) => `Error: ${m}`,
   badValue: (flag, hint) => `Error: invalid value for ${flag} (${hint})`,
   conflictOpen: 'Error: --open and --no-open cannot be used together',
-  updateAvailable: (cur, next) => `Update available: ${cur} -> ${next}. Run "npm i -g agent-run-inspector" or use "npx agent-run-inspector@latest".`,
+  updateAvailable: (cur, next) => `Update available: ${cur} -> ${next}. Run "npm i -g github:th-yong/agent-run-inspector" (then "ari service install" if you use the Mac app), or "npx github:th-yong/agent-run-inspector".`,
   untitledSession: 'Untitled session',
   toolFailed: 'Tool call failed',
   agentFailed: 'Agent call failed',
