@@ -95,13 +95,15 @@ test('buildApp: osacompile, the service-file key, bundle id, icon and an ad-hoc 
   assert.equal(app, appDir(env));
   const plist = join(app, 'Contents', 'Info.plist');
   assert.equal(calls.shift()[0], 'osascript'); // quit a running copy first
-  assert.deepEqual(calls.map((c) => c[0]), ['osacompile', 'plutil', 'plutil', 'plutil', 'plutil', 'codesign']);
-  assert.deepEqual(calls[3].slice(1, 5), ['-replace', 'CFBundleShortVersionString', '-string', '1.2.3']);
+  assert.deepEqual(calls.shift(), ['pkill', '-f', `${app}/Contents/MacOS/applet`]); // ...or stop it
+  assert.deepEqual(calls.map((c) => c[0]), ['osacompile', 'plutil', 'plutil', 'plutil', 'plutil', 'plutil', 'codesign']);
+  assert.deepEqual(calls[3].slice(1, 3), ['-replace', 'ARINodeBin']);
+  assert.deepEqual(calls[4].slice(1, 5), ['-replace', 'CFBundleShortVersionString', '-string', '1.2.3']);
   assert.ok(calls[0].includes('-s') && calls[0].at(-1).endsWith('src/macos/app.js'));
   assert.deepEqual(calls[1], ['plutil', '-replace', 'ARIServiceFile', '-string', serviceFile(env), plist]);
   assert.deepEqual(calls[2], ['plutil', '-replace', 'CFBundleIdentifier', '-string', APP_ID, plist]);
   assert.ok(readFileSync(join(app, 'Contents', 'Resources', 'applet.icns')).subarray(0, 4).equals(Buffer.from('icns')));
-  assert.deepEqual(calls[5], ['codesign', '--force', '--sign', '-', app]);
+  assert.deepEqual(calls[6], ['codesign', '--force', '--sign', '-', app]);
   assert.equal(await uninstallService({ env, platform: 'darwin', uid: 501, run: async () => {} }), true);
   assert.ok(!existsSync(app));
 });

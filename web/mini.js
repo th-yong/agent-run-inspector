@@ -130,10 +130,15 @@ export function startMini(body) {
     if (target) openRun(target.dataset.id ?? '');
   });
   const fit = () => bridge?.postMessage({ height: Math.ceil(box.getBoundingClientRect().height) }); // the app fits the panel to it
+  let latest = null; // a newer release (GET /api/meta), offered in the app
   const footer = () => {
     const b = el('button', 'mini-openapp', S.mini.openApp);
     b.type = 'button';
-    return b;
+    if (!latest || !bridge) return b;
+    const u = el('button', 'mini-update', S.mini.update(latest));
+    u.type = 'button';
+    u.addEventListener('click', () => bridge.postMessage({ update: true }));
+    return [u, b];
   };
   async function tick() {
     try {
@@ -146,9 +151,10 @@ export function startMini(body) {
       const { sessions } = await res.json();
       const groups = await fetch('/api/groups').then((r) => (r.ok ? r.json() : { groups: [] }), () => ({ groups: [] }));
       const now = Date.now();
-      box.replaceChildren(header(sessions), ...(sessions.length ? sections(sessions, groups.groups ?? [], now) : [el('p', 'mini-empty', S.mini.none)]), footer());
+      latest = await fetch('/api/meta').then((r) => (r.ok ? r.json() : {}), () => ({})).then((m) => m.latest ?? null);
+      box.replaceChildren(header(sessions), ...(sessions.length ? sections(sessions, groups.groups ?? [], now) : [el('p', 'mini-empty', S.mini.none)]), ...[footer()].flat());
     } catch {
-      box.replaceChildren(el('p', 'mini-empty', S.mini.offline), footer());
+      box.replaceChildren(el('p', 'mini-empty', S.mini.offline), ...[footer()].flat());
     }
     fit();
     setTimeout(tick, POLL_MS);

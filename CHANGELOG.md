@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The Mac app updates itself: "Check for Updates…" in the menu bar item's right-click menu ("Update to …" when a newer release is out) and an "Update to …" button at the bottom of the panel. It asks first, then runs `npm i -g github:th-yong/agent-run-inspector` and `ari service install` in a login shell and reopens; on failure it shows the commands and the log (`~/Library/Logs/agent-run-inspector-update.log`).
+
+### Changed
+- The update check asks GitHub for the latest release instead of npm, so it works before the first npm release. The app checks every 6 hours.
+
+### Fixed
+- A right click on the menu bar item opened the panel instead of the menu.
+- `ari service install` stops a running app that ignores Quit before rebuilding it, so the new code runs.
+
 ## [0.7.0] - 2026-11-17
 
 Prices for OpenAI's newest models, the detail panel in smaller windows, and no more Redact toggle. Not on npm yet; install from GitHub.
