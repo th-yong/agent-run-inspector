@@ -113,7 +113,9 @@ Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca t
 - 서버는 `127.0.0.1` 에서만 듣습니다.
 - 실행마다 무작위 토큰을 만듭니다. 첫 주소에 한 번 담기고, 이후 HttpOnly·SameSite=Strict 쿠키로 바뀌며 주소창에서 사라집니다. 쿠키 없는 요청은 401 입니다. 예외는 웹 앱 manifest 와 아이콘뿐입니다(브라우저가 쿠키 없이 가져가며, 기록에 관한 내용은 없습니다). Host·Origin 헤더도 검사합니다.
 - 서비스(`ari service install`)는 대신 토큰 하나를 `~/.config/agent-run-inspector/service.json`(본인만 읽기 가능)에 두고, 쿠키는 1년 유지됩니다. 토큰은 LaunchAgent 파일·프로세스 인자·로그 어디에도 남지 않습니다. `ari service uninstall` 이 지우고, 다시 설치하면 그대로 씁니다.
-- 외부 요청은 많아야 하나: 하루에 한 번 npm 레지스트리에 이 패키지의 최신 버전 번호만 묻고, 더 새 버전이 있으면 터미널에 한 줄 알려 줍니다. 사용자나 기록에 관한 정보는 보내지 않습니다. `--no-update-check` 나 `ARI_NO_UPDATE_CHECK=1` 로 끌 수 있습니다(`CI`·`NO_UPDATE_NOTIFIER` 가 있으면 저절로 꺼짐). 스크립트·아이콘은 패키지 안에 있고 글꼴은 시스템 글꼴을 씁니다: CDN·웹 글꼴·텔레메트리 없음.
+- 외부 요청은 업데이트 확인뿐입니다. CLI 는 하루에 한 번 GitHub(`api.github.com`, 이 프로젝트의 최신 릴리스)에 묻고, 더 새 버전이 있으면 터미널에 한 줄 알려 줍니다. Mac 앱은 6시간마다 같은 것을 묻습니다. 사용자나 기록에 관한 정보는 보내지 않습니다. CLI 확인은 `--no-update-check` 나 `ARI_NO_UPDATE_CHECK=1` 로 끌 수 있습니다(`CI`·`NO_UPDATE_NOTIFIER` 가 있으면 저절로 꺼짐). 스크립트·아이콘은 패키지 안에 있고 글꼴은 시스템 글꼴을 씁니다: CDN·웹 글꼴·텔레메트리 없음.
+- 업데이트는 Mac 앱에서 Update 를 눌렀을 때만 설치됩니다: `npm i -g github:th-yong/agent-run-inspector` 와 `ari service install` 을 실행하고, 결과를 `~/Library/Logs/agent-run-inspector-update.log` 에 남깁니다.
+- 보안 문제를 찾았다면 [SECURITY.md](SECURITY.md) 를 봐 주세요.
 - 읽기 전용: 기록 파일을 쓰거나 지우지 않습니다. 화면은 파일 경로를 보내지 않고, 파일은 불투명 id 로만 찾으며 알려진 기록 폴더 안이어야 합니다.
 
 ### Redaction

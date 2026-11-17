@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs
+
+- SECURITY.md: how to report a vulnerability (privately, through GitHub).
+- README Security: the update checks now go to GitHub releases (CLI daily, Mac app every 6 hours), and updates install only when you press Update.
+- README demo shows the 0.8.0 screen.
+
 ## [0.8.0] - 2026-11-17
 
 The Mac app updates itself. Not on npm yet; install from GitHub. Apps from 0.7.0 or earlier need one manual update (`npm i -g github:th-yong/agent-run-inspector && ari service install`); after that, updates come from the menu bar.
