@@ -6,18 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- In a smaller window the agent detail panel dropped below the graph (run column under 980 px). It now floats beside the graph down to 640 px, and covers the graph's width below that instead of stacking.
+## [0.7.0] - 2026-11-17
 
-### Removed
-- The Redact toggle in the top bar and `POST /api/redact`. The inspector runs on your own machine for you; to hide message text for a screen share or recording, start it with `--redact` (or `--redact=strict`).
+Prices for OpenAI's newest models, the detail panel in smaller windows, and no more Redact toggle. Not on npm yet; install from GitHub.
 
 ### Added
 - Prices from OpenAI's price page (2026-11-17): gpt-6-astra, gpt-6-sol, gpt-6.1-sol, gpt-6.1-terra, gpt-6-luna, gpt-5.6-sol (promotional until 2026-11-30), gpt-5.6-terra, gpt-5.6-luna, the -pro models, gpt-6-cyber, gpt-5.6-cyber and gpt-6-rosalind, with long-context rates above 272K prompt tokens where OpenAI lists them (also for gpt-5.5 and gpt-5.4) and 30-minute cache-write rates.
 
 ### Changed
-- README: a "The menu bar" section with a picture of the panel.
 - Menu bar panel: when no tool call is running, the line says which sub-agent is working instead of the orchestrator that waits on it.
+- README: a "The menu bar" section with a picture of the panel showing a tool call, waiting for you, and thinking.
+
+### Fixed
+- In a smaller window the agent detail panel dropped below the graph (run column under 980 px). It now floats beside the graph down to 640 px, and covers the graph's width below that instead of stacking.
+
+### Removed
+- The Redact toggle in the top bar and `POST /api/redact`. The inspector runs on your own machine for you; to hide message text for a screen share or recording, start it with `--redact` (or `--redact=strict`).
 
 ## [0.6.0] - 2026-11-16
 
@@ -169,7 +173,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.4.1...v0.4.2

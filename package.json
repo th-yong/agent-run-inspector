@@ -1,6 +1,6 @@
 {
   "name": "agent-run-inspector",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Local, read-only inspector for Claude Code and Codex CLI agent runs.",
   "keywords": [
     "claude-code",
