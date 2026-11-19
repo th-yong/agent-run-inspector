@@ -257,8 +257,8 @@ interface SessionSummary {
 - npm 패키지 `agent-run-inspector`, 실행 파일 `agent-run-inspector`(별칭 `ari`). Node ≥ 22(Node 20 은 2026-04 지원 종료), **런타임 의존성 0**(Node 내장 `http`·`fs`·`readline` 만), 빌드 단계 없음 → GitHub 에서 바로 설치해도 그대로 동작.
 - 구성: `bin/cli.js`, `src/server/`(HTTP·보안·API), `src/index/`(색인), `src/live/`(감시·tail·SSE), `src/adapters/claude-code/`, `src/adapters/codex/`, `src/model/`(합계·가리기·상세), `src/cost.js`, `src/open.js`, `prices.json`, `brand-map.json`, `web/`(HTML·CSS·JS 그대로), `README.md`·`README.ko.md`. `package.json` 의 `files` 가 이것만 담는다(테스트·docs·scripts 제외).
 - 실행 방법
-  - 지금(공개 레포): `npx github:th-yong/agent-run-inspector` — 로그인 없이 누구나. npm 레지스트리 배포(`npx agent-run-inspector`)는 첫 배포 대기 중.
-  - 나중(공개 결정 후): `npx agent-run-inspector`.
+  - npm 레지스트리(0.8.1 부터): `npx agent-run-inspector`, 설치는 `npm i -g agent-run-inspector`. Mac 앱 Update 도 이걸 쓴다.
+  - GitHub 에서 바로(`npx 'github:th-yong/agent-run-inspector#semver:*'`)도 계속 동작한다.
 - 명령줄: `--port <n>`, `--no-open`, `--root <dir>`(반복), `--codex-root <dir>`, `--source claude|codex|all`, `--since 7d`, `--redact[=strict]`, `--prices <file>`, `--open[=auto|orca|browser|none]`, `--session <id>`, `--no-update-check`, `roots add|list|remove`, `service install|uninstall`, `open`.
 - 서비스 모드(macOS, `src/service.js`): `ari service install` 이 LaunchAgent(`~/Library/LaunchAgents/io.github.th-yong.agent-run-inspector.plist`, `KeepAlive: Crashed` 만)를 등록하고 `node bin/cli.js --service` 를 로그인 때 띄운다. 고정 포트(기본 7317)와 고정 토큰은 `service.json`(0600)에서 서버가 직접 읽는다 — plist·인자·로그에 토큰 없음, 주소도 출력 안 함. 쿠키는 Max-Age 1년. `ari open` 은 토큰 주소로 다시 연다. npx 캐시 경로에서는 설치 거부. 기본 `ari` 실행은 그대로(실행마다 새 토큰, 세션 쿠키).
 - macOS 앱(`src/macos/app.js`, `buildApp` in `src/service.js`): `ari service install` 이 `osacompile -l JavaScript -s -x` 로 stay-open applet 을 `~/Applications/Agent Run Inspector.app` 에 만든다(NSWindow + WKWebView, JXA). Info.plist `ARIServiceFile` 에 service.json 경로만 넣고, 실행마다 그 파일에서 포트·토큰을 읽어 `/?t=` 로 로그인 — 앱에 토큰 없음. 아이콘 `src/macos/AppIcon.icns`(스크립트가 그림), ad-hoc 재서명. 실패해도 서비스 설치는 성공(Chrome 설치 안내). uninstall 이 앱도 지움.
