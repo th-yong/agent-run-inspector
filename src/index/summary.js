@@ -11,6 +11,7 @@ import { createCodexParser } from '../adapters/codex/index.js';
 import { linkCodexAgents } from '../adapters/codex/agents.js';
 import { AgentCollector, buildSessionTree } from '../adapters/claude-code/agents.js';
 import { ENDS_TURN, shutdownSignal } from '../adapters/claude-code/index.js';
+import { BackgroundTasks } from '../adapters/claude-code/tools.js';
 import { mapUsage } from '../adapters/codex/llm.js';
 import { MSG } from '../strings.js';
 
@@ -107,7 +108,10 @@ function quickClaude(entry, store, now) {
   // ...but a sub-agent or teammate still writing keeps the run going (same rule as the full parse).
   const stopped = entry.subs.some((s) => s.mate) ? stoppedMates(tail) : new Map();
   const childRunning = entry.subs.some((s) => recent(s.mtimeMs) && (s.mate ? !mateDone(store, s, stopped) : !subFinished(store, s)));
-  const running = (!turnEnded && recent(last)) || childRunning;
+  // background tasks launched inside the tail window (an older launch is missed: shown as before)
+  const bg = new BackgroundTasks();
+  for (const r of tail) if (r.type === 'assistant') bg.onAssistant(r); else if (r.type === 'user') bg.onUser(r);
+  const running = (recent(last) && (!turnEnded || bg.open.size > 0)) || childRunning;
   return base(entry, {
     ...(title ? { title } : {}),
     project: lastSeg(cwd) || entry.project || '',
@@ -116,6 +120,7 @@ function quickClaude(entry, store, now) {
     start: first ?? entry.main.mtimeMs,
     end: running ? null : last,
     status: running ? 'running' : 'ok',
+    ...(running && turnEnded ? { background: true } : {}),
     agentCount: 1 + entry.subs.length,
     totals, models,
   });
@@ -259,6 +264,7 @@ export function fullSummary(entry, spans, meta) {
     start: session?.start ?? 0,
     end: session?.end ?? null,
     status: session?.status ?? 'unknown',
+    ...(session?.background ? { background: true } : {}),
     agentCount: agents, callCount: calls, errorCount: errors,
     totals, models, inferredLinks: inferred, detail: true,
   });

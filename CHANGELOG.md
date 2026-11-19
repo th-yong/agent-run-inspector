@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Claude Code runs whose turn ended while a background task is still open (a `run_in_background` Bash command, a Monitor, a background agent) stay running and are labelled **Background** in the list, the run header and the menu bar panel. They used to show as done until the agent resumed. The menu bar count includes them.
+
 ## [0.8.2] - 2026-11-19
 
 ### Changed

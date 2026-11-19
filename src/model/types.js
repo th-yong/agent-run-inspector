@@ -27,6 +27,7 @@
  * @property {SpanKind} kind
  * @property {string} name
  * @property {SpanStatus} status
+ * @property {boolean} [background] session / root agent: running only because background work is open (its turn ended).
  * @property {number} start Epoch ms.
  * @property {number | null} end Null while running.
  * @property {boolean} [startApprox]

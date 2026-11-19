@@ -6,7 +6,7 @@ export const S = {
   mini: {
     none: 'Nothing running right now.', offline: 'The inspector service is not answering.',
     running: (n) => (n ? `Running · ${n}` : 'Running'),
-    thinking: 'Thinking…', waiting: 'Waiting for you',
+    thinking: 'Thinking…', waiting: 'Waiting for you', background: 'Waiting on a background task',
     justNow: 'now', ago: (t) => `${t} ago`,
     tokens: (t) => `${t} tokens`,
     errors: (n) => `▲ ${n} failed`,
@@ -186,5 +186,5 @@ export const S = {
   source: { 'claude-code': 'Claude Code', codex: 'Codex CLI' },
   sourceBadge: { 'claude-code': 'CC', codex: 'CX' },
   sourceTip: (name) => `Tool: ${name}`,
-  status: { running: 'Running', ok: 'Done', error: 'Failed', cancelled: 'Cancelled', unknown: 'Unknown' },
+  status: { running: 'Running', background: 'Background', ok: 'Done', error: 'Failed', cancelled: 'Cancelled', unknown: 'Unknown' },
 };

@@ -5,6 +5,45 @@ import { MSG } from '../../strings.js';
 // Sub-agent launches become agent spans (T11), not tool spans.
 export const AGENT_TOOLS = new Set(['agent', 'task']);
 
+const FINAL_TASK = /<task-id>([^<]+)<\/task-id>[\s\S]*?<status>(?:completed|failed|stopped|killed)<\/status>/g;
+
+/**
+ * Background tasks the session still waits on: run_in_background Bash (result `backgroundTaskId`) and
+ * Monitor (result `taskId`), open until a task-notification with a final status or a TaskStop/KillShell.
+ * Background agents are not here: their own files say whether they still work. Reads ids and status only.
+ */
+export class BackgroundTasks {
+  constructor() {
+    this.open = new Set();
+    this.monitors = new Set(); // Monitor tool_use ids
+  }
+
+  onAssistant(rec) {
+    const content = rec.message?.content;
+    if (!Array.isArray(content)) return;
+    for (const b of content) {
+      if (b?.type !== 'tool_use') continue;
+      if (b.name === 'Monitor') this.monitors.add(b.id);
+      const stop = b.name === 'TaskStop' ? b.input?.task_id : b.name === 'KillShell' ? b.input?.shell_id : undefined;
+      if (typeof stop === 'string') this.open.delete(stop);
+    }
+  }
+
+  onUser(rec) {
+    const c = rec.message?.content;
+    if (rec.origin?.kind === 'task-notification') {
+      const text = typeof c === 'string' ? c : Array.isArray(c) ? c.map((x) => (typeof x?.text === 'string' ? x.text : '')).join('\n') : '';
+      for (const m of text.matchAll(FINAL_TASK)) this.open.delete(m[1]);
+      return;
+    }
+    const tur = rec.toolUseResult;
+    if (!Array.isArray(c) || !tur || typeof tur !== 'object') return;
+    const monitor = c.some((b) => b?.type === 'tool_result' && this.monitors.has(b.tool_use_id));
+    const id = typeof tur.backgroundTaskId === 'string' ? tur.backgroundTaskId : monitor && typeof tur.taskId === 'string' ? tur.taskId : undefined;
+    if (id) this.open.add(id);
+  }
+}
+
 /**
  * Pairs tool_use / server_tool_use blocks with their results (tool_use_id) into tool spans.
  * Result bodies are never read: only the ids, flags and timestamps.

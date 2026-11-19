@@ -56,6 +56,7 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; flex: none; }
 .dot.pulse { background: var(--run); animation: pulse 1.8s ease-in-out infinite; }
 .dot.off { background: var(--faint); }
+.dot.pulse.bg { background: transparent; box-shadow: inset 0 0 0 1.5px var(--run); } /* running, but only background work is open */
 @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
 .icon-btn { border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; color: var(--muted); }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
