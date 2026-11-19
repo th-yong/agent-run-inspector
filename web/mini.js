@@ -47,6 +47,11 @@ const dot = (status) => el('span', status === 'running' ? 'dot pulse' : status =
 function nowLine(s, now) {
   const n = nowOf(s.agents ?? []);
   const line = el('div', `mini-now${n?.waiting ? ' waiting' : ''}`);
+  // the main thread's turn ended and nothing deeper is working: it waits on a background task
+  if (s.background && (!n || (n.agent.depth === 0 && !n.tool))) {
+    line.append(el('span', 'dot pulse bg'), el('span', 'mini-tool', S.mini.background));
+    return line;
+  }
   if (!n) return line;
   const who = (s.agents?.length ?? 0) > 1 ? `${agentName(n.agent)} · ` : '';
   line.append(n.waiting ? el('span', 'mini-ico', '⏸') : dot('running'), el('span', 'mini-tool', `${who}${n.waiting ? S.mini.waiting : n.tool ?? S.mini.thinking}`));

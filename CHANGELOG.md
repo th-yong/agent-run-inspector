@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-19
+
+### Added
+
+- Claude Code runs whose turn ended while a background task is still open (a `run_in_background` Bash command, a Monitor, a background agent) stay running and are labelled **Background** (purple, next to orange Running) in the list, the run header and the menu bar panel. They used to show as done until the agent resumed. The menu bar count includes them.
+
+### Fixed
+
+- Opening an agent's panel in the graph no longer makes the page scroll: the panel fits the space under the run header.
+
 ## [0.8.2] - 2026-11-19
 
 ### Changed
@@ -207,7 +217,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.7.0...v0.8.0

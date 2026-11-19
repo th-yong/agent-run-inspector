@@ -1,5 +1,5 @@
 import { LlmCollector } from './llm.js';
-import { ToolCollector } from './tools.js';
+import { ToolCollector, BackgroundTasks } from './tools.js';
 import { AgentCollector } from './agents.js';
 import { providerOf } from '../../model/provider.js';
 import { MSG } from '../../strings.js';
@@ -69,6 +69,7 @@ export class ClaudeCodeSession {
     });
     this.tools = new ToolCollector(this.llm.ctx);
     this.agents = new AgentCollector(this.llm.ctx);
+    this.bg = new BackgroundTasks();
     this.markers = [];
     this.turns = [];
     this.parentIdOverride = parentId;
@@ -121,9 +122,11 @@ export class ClaudeCodeSession {
         this.llm.onAssistant(rec, ts, line, this.prevTs);
         this.tools.onAssistant(rec, ts, line);
         this.agents.onAssistant(rec, ts, line);
+        this.bg.onAssistant(rec);
         break;
       case 'user':
         this.turnEnded = false;
+        this.bg.onUser(rec);
         this.tools.onUser(rec, ts);
         this.agents.onUser(rec, ts);
         break;
@@ -163,9 +166,14 @@ export class ClaudeCodeSession {
     const start = this.firstTs ?? 0;
     const end = this.lastTs ?? start;
     const now = this.now ?? Date.now();
-    // Recent writes mean running, unless the last turn has ended (waiting for the user).
-    const running = !this.turnEnded && now - end < DEFAULT_RUNNING_MS && now >= end;
+    // Recent writes mean running, unless the last turn has ended (waiting for the user) with no
+    // background task left open.
+    // ponytail: a background task is trusted only 10 min past the last write; a longer wait shows as done.
+    const recent = now - end < DEFAULT_RUNNING_MS && now >= end;
+    const running = recent && (!this.turnEnded || this.bg.open.size > 0);
     const status = children.some((s) => s.status === 'running') || running ? 'running' : 'ok';
+    // running only because of background work: the main thread itself waits for it
+    const background = status === 'running' && this.turnEnded;
     return {
       id: this.sessionId ?? '',
       parentId: null,
@@ -174,6 +182,7 @@ export class ClaudeCodeSession {
       kind: 'session',
       name: this.title ?? (project || MSG.untitledSession),
       status,
+      ...(background ? { background } : {}),
       start,
       end: status === 'running' ? null : end,
       ref: { fileId: this.fileId, line: 1 },
@@ -193,6 +202,7 @@ export class ClaudeCodeSession {
       kind: 'agent',
       name: model ?? MSG.mainAgent,
       status: session.status,
+      ...(session.background ? { background: true } : {}),
       start: session.start,
       end: session.end,
       ref: session.ref,

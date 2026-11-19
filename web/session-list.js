@@ -123,8 +123,8 @@ export function sessionRow(s, { selected = false, now = Date.now(), group = null
   t.append(badge, el('span', 'name', s.title || S.list.untitled));
   if (group) t.append(el('span', 'grp-tag', group));
   if (s.status === 'running') {
-    const dot = el('span', 'dot pulse');
-    dot.title = S.status.running;
+    const dot = el('span', s.background ? 'dot pulse bg' : 'dot pulse');
+    dot.title = s.background ? S.status.background : S.status.running;
     t.append(dot);
   }
   const m = el('div', 'm');
@@ -144,7 +144,7 @@ export function sessionRow(s, { selected = false, now = Date.now(), group = null
   const tokens = (s.totals?.input ?? 0) + (s.totals?.output ?? 0) + (s.totals?.cacheRead ?? 0);
   if (tokens) m.append(el('span', 'num', S.list.tokens(fmtTokens(tokens))));
   if (s.status === 'running' || s.status === 'error') {
-    m.append(el('span', s.status === 'error' ? 'st-err' : 'st-run', s.status === 'error' ? `▲ ${S.status.error}` : S.status.running));
+    m.append(el('span', s.status === 'error' ? 'st-err' : s.background ? 'st-run bg' : 'st-run', s.status === 'error' ? `▲ ${S.status.error}` : s.background ? S.status.background : S.status.running));
   }
   if (s.origin && s.origin !== 'default') {
     const o = el('span', 'origin', s.origin);

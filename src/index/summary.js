@@ -6,11 +6,12 @@
 //  no markers and no `role` on the root; CC `turns` are duration points, Codex's are bands;
 //  Codex sub-agent links may be inferred (linkApprox / startApprox).
 import { basename } from 'node:path';
-import { HEAD_BYTES, TAIL_BYTES, findLastTitle, readEnds, readHead } from './scan.js';
+import { HEAD_BYTES, TAIL_BYTES, TITLE_SCAN_BYTES, findLastTitle, readEnds, readHead, readTail } from './scan.js';
 import { createCodexParser } from '../adapters/codex/index.js';
 import { linkCodexAgents } from '../adapters/codex/agents.js';
 import { AgentCollector, buildSessionTree } from '../adapters/claude-code/agents.js';
 import { ENDS_TURN, shutdownSignal } from '../adapters/claude-code/index.js';
+import { BackgroundTasks } from '../adapters/claude-code/tools.js';
 import { mapUsage } from '../adapters/codex/llm.js';
 import { MSG } from '../strings.js';
 
@@ -107,7 +108,14 @@ function quickClaude(entry, store, now) {
   // ...but a sub-agent or teammate still writing keeps the run going (same rule as the full parse).
   const stopped = entry.subs.some((s) => s.mate) ? stoppedMates(tail) : new Map();
   const childRunning = entry.subs.some((s) => recent(s.mtimeMs) && (s.mate ? !mateDone(store, s, stopped) : !subFinished(store, s)));
-  const running = (!turnEnded && recent(last)) || childRunning;
+  // A recently ended turn may still wait on a background task: look further back than the tail for its launch
+  // (only then, so the list stays cheap).
+  // ponytail: a launch more than 256 KB before the end is missed and the run shows as done, as before.
+  const bg = new BackgroundTasks();
+  if (turnEnded && recent(last) && !childRunning) {
+    for (const r of readTail(store, entry.main.fileId, entry.main.size, TITLE_SCAN_BYTES)) if (r.type === 'assistant') bg.onAssistant(r); else if (r.type === 'user') bg.onUser(r);
+  }
+  const running = (recent(last) && (!turnEnded || bg.open.size > 0)) || childRunning;
   return base(entry, {
     ...(title ? { title } : {}),
     project: lastSeg(cwd) || entry.project || '',
@@ -116,6 +124,7 @@ function quickClaude(entry, store, now) {
     start: first ?? entry.main.mtimeMs,
     end: running ? null : last,
     status: running ? 'running' : 'ok',
+    ...(running && turnEnded ? { background: true } : {}),
     agentCount: 1 + entry.subs.length,
     totals, models,
   });
@@ -259,6 +268,7 @@ export function fullSummary(entry, spans, meta) {
     start: session?.start ?? 0,
     end: session?.end ?? null,
     status: session?.status ?? 'unknown',
+    ...(session?.background ? { background: true } : {}),
     agentCount: agents, callCount: calls, errorCount: errors,
     totals, models, inferredLinks: inferred, detail: true,
   });

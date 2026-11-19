@@ -176,6 +176,8 @@ export function createRunHeader({ onBack, onTab, onShowAll, onHide }) {
     name.textContent = s ? s.title || S.list.untitled : '';
     const running = s?.status === 'running';
     dot.hidden = !running;
+    dot.classList.toggle('bg', Boolean(s?.background));
+    dot.title = s?.background ? S.status.background : S.status.running;
 
     const total = p.totals?.total ?? null;
     const haveTotals = Boolean(total);

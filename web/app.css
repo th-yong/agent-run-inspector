@@ -56,6 +56,7 @@ button:focus-visible, .sess:focus-visible { outline: 2px solid var(--accent); ou
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; flex: none; }
 .dot.pulse { background: var(--run); animation: pulse 1.8s ease-in-out infinite; }
 .dot.off { background: var(--faint); }
+.dot.pulse.bg { background: transparent; box-shadow: inset 0 0 0 1.5px var(--flow); } /* running, but only background work is open */
 @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
 .icon-btn { border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; color: var(--muted); }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -73,7 +74,8 @@ body.lost .app, body.lost .live { display: none; }
 .list-resizer:focus-visible { outline: none; }
 body.resizing { cursor: col-resize; user-select: none; }
 .list { border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
-.main { overflow: auto; min-width: 0; container: main / inline-size; }
+.main { overflow: auto; min-width: 0; container: main / inline-size; display: flex; flex-direction: column; }
+.main > .view { flex: 1 0 auto; } /* the view fills what the header leaves, so the agent panel can too */
 
 /* Session list */
 .list-head { padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 0; z-index: 1; background: var(--panel); border-bottom: 1px solid var(--line-2); }
@@ -122,7 +124,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .02em; flex: none; }
 .badge.cc { background: var(--badge-cc-bg); color: var(--badge-cc); }
 .badge.cx { background: var(--badge-cx-bg); color: var(--badge-cx); }
-.st-err { color: var(--err); } .st-run { color: var(--run); }
+.st-err { color: var(--err); } .st-run { color: var(--run); } .st-run.bg { color: var(--flow); }
 .note { padding: 16px 14px; color: var(--muted); }
 
 /* Run screen head, totals strip, tabs */
@@ -335,7 +337,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 /* Graph detail column (web/agent-panel.js) and the call detail block (web/call-detail.js). */
 .view.with-panel { display: grid; }
 .view.with-panel > * { grid-area: 1 / 1; min-width: 0; }
-.g-panel { justify-self: end; align-self: start; z-index: 3; width: 360px; box-shadow: -8px 0 24px rgba(0,0,0,.18); max-height: calc(100vh - 48px); overflow: auto; position: sticky; top: 0; border-left: 1px solid var(--line); background: var(--panel); }
+.g-panel { justify-self: end; align-self: start; z-index: 3; width: 360px; box-shadow: -8px 0 24px rgba(0,0,0,.18); contain: strict; height: 100%; max-height: calc(100vh - 48px); overflow: auto; position: sticky; top: 0; border-left: 1px solid var(--line); background: var(--panel); }
 .g-panel[hidden] { display: none; }
 .gp-h { display: flex; gap: 10px; align-items: center; padding: 14px 16px 6px; }
 .gp-who { min-width: 0; flex: 1; }
