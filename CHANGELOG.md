@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Mac app: Update is offered only once npm serves the new version (a release reaches GitHub a minute or two earlier; updating in that gap failed with a 404 or reinstalled the old version). A failed install is tried twice more, 30 seconds apart. "Check for Updates…" in that gap says the version is almost ready.
+
 ## [0.9.2] - 2026-11-19
 
 ### Fixed
