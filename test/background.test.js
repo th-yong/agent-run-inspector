@@ -69,3 +69,8 @@ test('monitor task id comes from its result', () => {
 test('an open background task stops counting after 10 quiet minutes', () => {
   assert.deepEqual(both(launch, T0 + 11 * 60e3), { status: 'ok', background: false });
 });
+
+test('list: a launch further back than the 16 KB tail window is still found', () => {
+  const filler = Array.from({ length: 6 }, (_, i) => asst(2.5 + i / 10, [{ type: 'text', text: 'x'.repeat(8000) }], 'tool_use'));
+  assert.deepEqual(both([...launch.slice(0, 3), ...filler, ...launch.slice(3)]), { status: 'running', background: true });
+});
