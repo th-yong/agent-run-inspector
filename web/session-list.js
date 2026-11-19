@@ -144,7 +144,7 @@ export function sessionRow(s, { selected = false, now = Date.now(), group = null
   const tokens = (s.totals?.input ?? 0) + (s.totals?.output ?? 0) + (s.totals?.cacheRead ?? 0);
   if (tokens) m.append(el('span', 'num', S.list.tokens(fmtTokens(tokens))));
   if (s.status === 'running' || s.status === 'error') {
-    m.append(el('span', s.status === 'error' ? 'st-err' : 'st-run', s.status === 'error' ? `▲ ${S.status.error}` : s.background ? S.status.background : S.status.running));
+    m.append(el('span', s.status === 'error' ? 'st-err' : s.background ? 'st-run bg' : 'st-run', s.status === 'error' ? `▲ ${S.status.error}` : s.background ? S.status.background : S.status.running));
   }
   if (s.origin && s.origin !== 'default') {
     const o = el('span', 'origin', s.origin);
