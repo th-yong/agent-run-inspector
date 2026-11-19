@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- On npm now: install with `npm i -g agent-run-inspector` or try `npx agent-run-inspector`. The Mac app's Update, the update notices and the README use the npm package instead of `github:th-yong/agent-run-inspector`.
+
 ## [0.8.1] - 2026-11-18
 
 Not on npm yet; install from GitHub.

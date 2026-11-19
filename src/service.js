@@ -119,7 +119,7 @@ export class ServiceError extends Error {}
  */
 export async function installService({ env, port, node, cli, platform = process.platform, uid = process.getuid?.(), run, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   if (platform !== 'darwin') throw new ServiceError('service: only macOS is supported for now');
-  if (/[\\/]_npx[\\/]/.test(cli)) throw new ServiceError("service: install the package first (npm i -g 'github:th-yong/agent-run-inspector#semver:*'); the npx cache is pruned");
+  if (/[\\/]_npx[\\/]/.test(cli)) throw new ServiceError("service: install the package first (npm i -g agent-run-inspector); the npx cache is pruned");
   const s = saveService(env, port);
   mkdirSync(dirname(plistFile(env)), { recursive: true });
   mkdirSync(dirname(logFile(env)), { recursive: true });
