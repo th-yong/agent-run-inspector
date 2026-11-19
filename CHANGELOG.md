@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-11-19
+
 ### Fixed
 
 - Mac app: Update is offered only once npm serves the new version (a release reaches GitHub a minute or two earlier; updating in that gap failed with a 404 or reinstalled the old version). A failed install is tried twice more, 30 seconds apart. "Check for Updates…" in that gap says the version is almost ready.
@@ -233,7 +235,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.3...HEAD
+[0.9.3]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.2...v0.9.0
