@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A session that only ran a local slash command (`/clear`, `/usage`, `/model`, ...) no longer shows as Running ("Thinking…") for 10 minutes. A `/clear` starts a new file holding just the command records.
+
 ## [0.9.1] - 2026-11-19
 
 ### Added

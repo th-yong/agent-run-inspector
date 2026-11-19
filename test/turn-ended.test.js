@@ -57,3 +57,20 @@ test('codex: a completed last turn is done even while the file is recent', () =>
   assert.equal(session([meta, started]), 'running');
   assert.equal(session([meta, started, done]), 'ok');
 });
+
+test('claude code: a local command (/clear, /usage) does not start a turn, in the full parse and the list', () => {
+  const caveat = { ...base, type: 'user', isMeta: true, timestamp: at(0), message: { role: 'user', content: '<local-command-caveat>Caveat: ...</local-command-caveat>' } };
+  const cmd = { ...base, type: 'user', timestamp: at(0), message: { role: 'user', content: '<command-name>/clear</command-name>\n<command-message>clear</command-message>\n<command-args></command-args>' } };
+  const local = { ...base, type: 'system', subtype: 'local_command', timestamp: at(0), content: '<local-command-stdout></local-command-stdout>' };
+  const out = { ...base, type: 'user', timestamp: at(4), message: { role: 'user', content: '<local-command-stdout>ok</local-command-stdout>' } };
+  const now = T0 + 20e3;
+  for (const rows of [[caveat, cmd, local], [...turn, caveat, cmd, local, out]]) {
+    assert.equal(statusOf(parseSessionText(jl(rows), { fileId: '0', now })), 'ok');
+    const root = mkdtempSync(join(tmpdir(), 'ari-local-'));
+    mkdirSync(join(root, '-synthetic-turns'));
+    writeFileSync(join(root, '-synthetic-turns', `${SID}.jsonl`), jl(rows));
+    assert.equal(createIndex({ roots: { claude: [{ path: root }] }, source: 'claude', now: () => now }).list()[0].status, 'ok');
+  }
+  // a real prompt after it still starts a turn
+  assert.equal(statusOf(parseSessionText(jl([caveat, cmd, local, nextPrompt]), { fileId: '0', now })), 'running');
+});
