@@ -13,6 +13,7 @@ export const URL_ALLOWLIST = [
   'http://www.w3.org/2000/svg',
   'https://github.com/th-yong/agent-run-inspector',
   'https://api.github.com/repos/th-yong/agent-run-inspector/releases/latest', // update check (src/update-check.js, src/macos/app.js)
+  'https://registry.npmjs.org/agent-run-inspector/-/agent-run-inspector-', // Mac app: is the new version on npm yet
 ];
 
 const HANGUL = /[ᄀ-ᇿ㄰-㆏가-힯]/;

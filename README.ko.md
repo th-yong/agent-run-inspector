@@ -91,7 +91,7 @@ Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca t
 - **Agent Run Inspector.app**: `~/Applications` 에 만들고 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고 실행할 때마다 자동으로 로그인합니다. 메뉴 막대에도 항목을 띄웁니다([The menu bar](#the-menu-bar) 참고). 로그인할 때는 메뉴 막대 항목만 띄우고, 창은 메뉴나 Dock 에서 엽니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받을 것도, 개발자 서명도 없습니다. 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요.
 - **1년 유지되는 로그인**: 그 주소를 북마크해도 됩니다. 브라우저 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요.
 
-**업데이트**: 앱이 6시간마다 GitHub 의 최신 릴리스를 확인합니다. 새 버전이 있으면 메뉴 막대 패널에 "Update to …" 버튼이, 우클릭 메뉴에 "Update to …" 항목이 나옵니다(평소에는 "Check for Updates…"). 화면 머리에도 배지가 뜹니다. 누르면 앱이 새 버전을 설치하고 다시 열립니다(1분 정도). 실패하면 직접 칠 명령을 보여 줍니다: 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘·로그인 항목을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+**업데이트**: 앱이 6시간마다 GitHub 의 최신 릴리스를 확인합니다. 새 버전이 있고 npm 에서도 받을 수 있으면 메뉴 막대 패널에 "Update to …" 버튼이, 우클릭 메뉴에 "Update to …" 항목이 나옵니다(평소에는 "Check for Updates…"). 화면 머리에도 배지가 뜹니다. 누르면 앱이 새 버전을 설치하고 다시 열립니다(1분 정도. 설치가 실패하면 30초 간격으로 두 번 더 시도). 그래도 실패하면 직접 칠 명령을 보여 줍니다: 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘·로그인 항목을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
 
 ### The menu bar
 
@@ -114,7 +114,7 @@ Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca t
 - 서버는 `127.0.0.1` 에서만 듣습니다.
 - 실행마다 무작위 토큰을 만듭니다. 첫 주소에 한 번 담기고, 이후 HttpOnly·SameSite=Strict 쿠키로 바뀌며 주소창에서 사라집니다. 쿠키 없는 요청은 401 입니다. 예외는 웹 앱 manifest 와 아이콘뿐입니다(브라우저가 쿠키 없이 가져가며, 기록에 관한 내용은 없습니다). Host·Origin 헤더도 검사합니다.
 - 서비스(`ari service install`)는 대신 토큰 하나를 `~/.config/agent-run-inspector/service.json`(본인만 읽기 가능)에 두고, 쿠키는 1년 유지됩니다. 토큰은 LaunchAgent 파일·프로세스 인자·로그 어디에도 남지 않습니다. `ari service uninstall` 이 지우고, 다시 설치하면 그대로 씁니다.
-- 외부 요청은 업데이트 확인뿐입니다. CLI 는 하루에 한 번 GitHub(`api.github.com`, 이 프로젝트의 최신 릴리스)에 묻고, 더 새 버전이 있으면 터미널에 한 줄 알려 줍니다. Mac 앱은 6시간마다 같은 것을 묻습니다. 사용자나 기록에 관한 정보는 보내지 않습니다. CLI 확인은 `--no-update-check` 나 `ARI_NO_UPDATE_CHECK=1` 로 끌 수 있습니다(`CI`·`NO_UPDATE_NOTIFIER` 가 있으면 저절로 꺼짐). 스크립트·아이콘은 패키지 안에 있고 글꼴은 시스템 글꼴을 씁니다: CDN·웹 글꼴·텔레메트리 없음.
+- 외부 요청은 업데이트 확인뿐입니다. CLI 는 하루에 한 번 GitHub(`api.github.com`, 이 프로젝트의 최신 릴리스)에 묻고, 더 새 버전이 있으면 터미널에 한 줄 알려 줍니다. Mac 앱은 6시간마다 같은 것을 묻고, 새 버전을 제안하기 전에 npm(`registry.npmjs.org`)에 그 버전 패키지가 있는지 확인합니다. 사용자나 기록에 관한 정보는 보내지 않습니다. CLI 확인은 `--no-update-check` 나 `ARI_NO_UPDATE_CHECK=1` 로 끌 수 있습니다(`CI`·`NO_UPDATE_NOTIFIER` 가 있으면 저절로 꺼짐). 스크립트·아이콘은 패키지 안에 있고 글꼴은 시스템 글꼴을 씁니다: CDN·웹 글꼴·텔레메트리 없음.
 - 업데이트는 Mac 앱에서 Update 를 눌렀을 때만 설치됩니다: `npm i -g agent-run-inspector`(최신 릴리스, 아직 릴리스 안 된 작업은 아님) 와 `ari service install` 을 실행하고, 결과를 `~/Library/Logs/agent-run-inspector-update.log` 에 남깁니다.
 - 보안 문제를 찾았다면 [SECURITY.md](SECURITY.md) 를 봐 주세요.
 - 읽기 전용: 기록 파일을 쓰거나 지우지 않습니다. 화면은 파일 경로를 보내지 않고, 파일은 불투명 id 로만 찾으며 알려진 기록 폴더 안이어야 합니다.

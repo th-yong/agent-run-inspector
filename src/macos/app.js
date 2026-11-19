@@ -145,6 +145,23 @@ function fetchLatest() {
   }
 }
 
+const shell = Application.currentApplication();
+shell.includeStandardAdditions = true;
+
+/**
+ * True when npm already serves this version's package. A GitHub release comes a minute or two before npm has it:
+ * updating then fails (404) or reinstalls the old version. (curl: NSURLConnection's response ref crashes JXA.)
+ */
+function onNpm(v) {
+  if (!/^\d+\.\d+\.\d+$/.test(v || '')) return false;
+  try {
+    shell.doShellScript(`/usr/bin/curl -sfI -m 4 -o /dev/null https://registry.npmjs.org/agent-run-inspector/-/agent-run-inspector-${v}.tgz`);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function alert(title, text, buttons) {
   if (panel) hidePanel();
   $.NSApplication.sharedApplication.activateIgnoringOtherApps(true);
@@ -164,7 +181,10 @@ function startUpdate() {
     `export PATH=${sh(plistValue('ARINodeBin'))}:"$PATH"`,
     `LOG=${UPDATE_LOG.replace('~', '"$HOME"')}`,
     `APP=${sh(app)}`,
-    `if { npm i -g ${INSTALL} && ari service install --no-open; } > "$LOG" 2>&1; then`,
+    ': > "$LOG"; ok=',
+    // up to 3 tries, 30 s apart: npm can lag a moment behind the release, or the network blips
+    `for n in 1 2 3; do if { npm i -g ${INSTALL} && ari service install --no-open; } >> "$LOG" 2>&1; then ok=1; break; fi; [ $n = 3 ] || sleep 30; done`,
+    'if [ -n "$ok" ]; then',
     '  pkill -f "$APP/Contents/MacOS/applet"; sleep 1; open "$APP"', // the new app, with its window
     `else /usr/bin/osascript -e ${sh(failed)}; fi`,
   ].join('\n');
@@ -182,9 +202,11 @@ function offerUpdate(v) {
 
 function checkForUpdates(manual) {
   const v = fetchLatest();
-  if (v) latest = v;
+  const ready = !isNewer(v, current()) || onNpm(v); // offer a newer version only once npm has it
+  if (v && ready) latest = v;
   if (!manual) return;
   if (!v) return alert('Could not check for updates', 'GitHub did not answer. Check the connection and try again.', ['OK']);
+  if (!ready) return alert(`Agent Run Inspector ${v} is almost ready`, 'It was just released and npm is still publishing it. Try again in a few minutes.', ['OK']);
   if (isNewer(v, current())) return offerUpdate(v);
   return alert('Agent Run Inspector is up to date', `Version ${current()} is the latest.`, ['OK']);
 }
