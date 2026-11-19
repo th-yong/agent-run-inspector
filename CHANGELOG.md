@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-19
+
+### Fixed
+
+- A session that only ran a local slash command (`/clear`, `/usage`, `/model`, ...) no longer shows as Running ("Thinking…") for 10 minutes. A `/clear` starts a new file holding just the command records.
+
 ## [0.9.1] - 2026-11-19
 
 ### Added
@@ -223,7 +229,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.1...v0.8.2

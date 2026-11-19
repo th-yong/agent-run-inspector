@@ -10,7 +10,7 @@ import { HEAD_BYTES, TAIL_BYTES, TITLE_SCAN_BYTES, findLastTitle, readEnds, read
 import { createCodexParser } from '../adapters/codex/index.js';
 import { linkCodexAgents } from '../adapters/codex/agents.js';
 import { AgentCollector, buildSessionTree } from '../adapters/claude-code/agents.js';
-import { ENDS_TURN, shutdownSignal } from '../adapters/claude-code/index.js';
+import { ENDS_TURN, isLocalCommand, shutdownSignal } from '../adapters/claude-code/index.js';
 import { BackgroundTasks } from '../adapters/claude-code/tools.js';
 import { mapUsage } from '../adapters/codex/llm.js';
 import { MSG } from '../strings.js';
@@ -45,7 +45,7 @@ function subFinished(store, sub) {
 }
 
 // The record that says whether a Claude Code thread is mid-turn, and whether that turn ended.
-const turnRec = (tail) => lastOf(tail, (r) => r.type === 'user' || r.type === 'assistant' || (r.type === 'system' && r.subtype === 'turn_duration'));
+const turnRec = (tail) => lastOf(tail, (r) => (r.type === 'user' && !isLocalCommand(r)) || r.type === 'assistant' || (r.type === 'system' && r.subtype === 'turn_duration'));
 const ended = (r) => r?.type === 'system' || (r?.type === 'assistant' && ENDS_TURN.has(r.message?.stop_reason));
 
 // Teammates the lead stopped (TaskStop) or heard shut down, from the lead's tail: name -> time.
@@ -104,7 +104,10 @@ function quickClaude(entry, store, now) {
   }
   const recent = (t) => now - t < RUNNING_MS && now >= t;
   // The main thread's last turn ended (a final answer or system/turn_duration last): it waits for the user.
-  const turnEnded = ended(turnRec(tail));
+  // No turn record at all: done when the tail holds only command records (a file /clear started); otherwise
+  // the tail may just sit inside one huge record, so keep the old reading (not ended).
+  const lastTurn = turnRec(tail);
+  const turnEnded = lastTurn ? ended(lastTurn) : tail.some(isLocalCommand);
   // ...but a sub-agent or teammate still writing keeps the run going (same rule as the full parse).
   const stopped = entry.subs.some((s) => s.mate) ? stoppedMates(tail) : new Map();
   const childRunning = entry.subs.some((s) => recent(s.mtimeMs) && (s.mate ? !mateDone(store, s, stopped) : !subFinished(store, s)));

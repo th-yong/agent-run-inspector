@@ -24,6 +24,15 @@ export function shutdownSignal(rec) {
   return Array.isArray(c) && c.every((b) => b?.type === 'tool_result') ? undefined : false;
 }
 
+/**
+ * A slash command Claude Code ran itself (/clear, /usage, /model ...): its records say nothing about a turn.
+ * A command that prompts the model is followed by a real prompt record, which starts the turn.
+ */
+export const isLocalCommand = (rec) => {
+  const c = rec?.message?.content;
+  return typeof c === 'string' && /^\s*<(command-name|local-command-stdout|local-command-stderr|local-command-caveat)>/.test(c);
+};
+
 /** Id of the root agent span under the session span (Codex: `cx:<sid>:main`). */
 export const rootAgentId = (sessionId) => `${sessionId}:main`;
 
@@ -55,7 +64,7 @@ export class ClaudeCodeSession {
     this.title = undefined;
     // The last turn closed and nothing came after it: the model's final answer (stop_reason end_turn)
     // or system/turn_duration (not written for every turn).
-    this.turnEnded = false;
+    this.turnEnded = true; // no turn yet (a file /clear started holds only command records)
     this.shutDown = false; // see shutdownSignal
     this.cwd = undefined;
     this.branch = undefined;
@@ -125,7 +134,7 @@ export class ClaudeCodeSession {
         this.bg.onAssistant(rec);
         break;
       case 'user':
-        this.turnEnded = false;
+        if (!isLocalCommand(rec)) this.turnEnded = false;
         this.bg.onUser(rec);
         this.tools.onUser(rec, ts);
         this.agents.onUser(rec, ts);
