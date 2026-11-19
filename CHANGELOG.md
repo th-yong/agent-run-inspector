@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-19
+
 ### Changed
 
 - On npm now: install with `npm i -g agent-run-inspector` or try `npx agent-run-inspector`. The Mac app's Update, the update notices and the README use the npm package instead of `github:th-yong/agent-run-inspector`.
@@ -205,7 +207,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.6.0...v0.7.0
