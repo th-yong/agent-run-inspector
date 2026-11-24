@@ -264,7 +264,32 @@ if (state.mini) {
     const upd = $('upd');
     upd.hidden = !m.latest;
     if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = bridge ? S.meta.click(m.latest) : S.meta.how(m.latest); }
+    if (m.latest) showUpdatePop(m.latest);
   }, () => {});
+  // A newer version: a card once per version (Later remembers it); the header badge stays either way.
+  const showUpdatePop = (v) => {
+    let seen = null;
+    try { seen = localStorage.getItem('ari.updSeen'); } catch { /* storage blocked */ }
+    if (seen === v || document.querySelector('.upd-pop')) return;
+    const pop = document.createElement('div');
+    pop.className = 'upd-pop';
+    pop.setAttribute('role', 'dialog');
+    const close = () => { pop.remove(); try { localStorage.setItem('ari.updSeen', v); } catch { /* storage blocked */ } };
+    const h = document.createElement('b'); h.textContent = S.meta.popTitle(v);
+    const p = document.createElement('p'); p.textContent = bridge ? S.meta.popApp : S.meta.popCli;
+    pop.append(h, p);
+    if (!bridge) { const c = document.createElement('code'); c.textContent = 'npm i -g agent-run-inspector'; pop.append(c); }
+    const row = document.createElement('div');
+    const later = document.createElement('button'); later.textContent = S.meta.popLater; later.addEventListener('click', close);
+    row.append(later);
+    if (bridge) {
+      const now = document.createElement('button'); now.className = 'primary'; now.textContent = S.meta.popNow;
+      now.addEventListener('click', () => { close(); bridge.postMessage({ update: true }); });
+      row.append(now);
+    }
+    pop.append(row);
+    document.body.append(pop);
+  };
   const bridge = window.webkit?.messageHandlers?.ari; // inside the Mac app: the badge starts the update
   if (bridge) {
     $('upd').classList.add('act');
