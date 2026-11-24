@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/agent-run-inspector)](https://www.npmjs.com/package/agent-run-inspector)
 [![Node](https://img.shields.io/node/v/agent-run-inspector)](package.json)
 
-Claude Code 와 Codex CLI 의 에이전트 실행을 로컬 브라우저에서 실시간으로 보는 읽기 전용 도구입니다. 누가 누구를 불렀는지, 호출마다 비용이 얼마인지, 어디서 실패했는지 한눈에 봅니다.
+Claude Code 와 Codex CLI 의 에이전트 실행(Orca 봇 포함)을 로컬 브라우저에서 실시간으로 보는 읽기 전용 도구입니다. 누가 누구를 불렀는지, 호출마다 비용이 얼마인지, 어디서 실패했는지 한눈에 봅니다.
 
 ![데모: "Add rate limiting to the login API" 실행이 나타나고, orchestrator 가 planner, 이어서 backend-dev 와 test-writer, 마지막으로 reviewer 를 띄우며 호출이 실시간으로 쌓이고, 실패한 테스트 호출의 상세를 열어 본 뒤 PR 로 끝나는 모습](docs/demo.webp)
 
@@ -34,11 +34,23 @@ npx agent-run-inspector
 
 ## What you see
 
-- **세션 목록**: 실행 중인 세션이 위, 최근 세션이 아래에 나옵니다(최근 목록은 눌러서 접기). 도구(Claude Code, Codex CLI)·기간(기본 Today)으로 거르거나 제목·프로젝트로 찾습니다. **그룹**: "+ New group" 으로 만들고 세션을 끌어다 놓거나 세션을 우클릭해 넣습니다. 그룹을 고르면 그 그룹의 세션만 보입니다. 그룹은 `~/.config/agent-run-inspector/groups.json` 에 저장됩니다. 에이전트 팀의 팀원(teammate)은 따로 나오지 않고, 자신을 띄운 실행 안에 묶여 보입니다. Orca 작업자(`orca orchestration worker-start` 로 띄운 것)도 마찬가지입니다. Orca 봇의 세션에는 **Bot** 배지가 붙고, 그래프 맨 위 카드는 Orchestrator 대신 "Bot · <이름>" 으로 나옵니다.
+- **세션 목록**: 실행 중인 세션이 위, 최근 세션이 아래에 나옵니다(최근 목록은 눌러서 접기). 도구(Claude Code, Codex CLI)·기간(기본 Today)으로 거르거나 제목·프로젝트로 찾습니다. **그룹**: "+ New group" 으로 만들고 세션을 끌어다 놓거나 세션을 우클릭해 넣습니다. 그룹을 고르면 그 그룹의 세션만 보입니다. 그룹은 `~/.config/agent-run-inspector/groups.json` 에 저장됩니다. 에이전트 팀의 팀원(teammate)과 [Orca 작업자](#orca-bots)는 따로 나오지 않고, 자신을 띄운 실행 안에 묶여 보입니다.
 - **그래프**: orchestrator 부터 에이전트마다 카드 하나. 카드에는 최근 호출, 상태, 비용, 시간, 호출 수가 보입니다. 카드를 누르면 그 에이전트만의 합계가 나오고, "Hide finished agents" 로 아직 일하는 에이전트만 남길 수 있습니다.
 - **타임라인**: 모든 에이전트와 호출을 한 시간 축에 놓고 턴·컨텍스트 압축 시점도 표시합니다. 호출을 열면 자세한 내용이 보입니다.
 - **합계**: 실행 전체나 고른 에이전트의 시간, 비용, 토큰, 모델 호출, 도구 호출, 오류.
 - **실시간**: 기록에 새 줄이 생기면 새로 고침 없이 1초 안팎에 화면에 반영됩니다.
+
+## Orca bots
+
+Orca 봇은 오래 살아 있는 Claude Code 세션으로, 자기 워크트리에 작업자를 띄우고 다른 봇에게 일을 넘깁니다. 인스펙터는 봇과 그 작업자를 실행 하나로 보여 줍니다.
+
+- **Bot 배지**: 봇 세션(`~/.orca/bots/<이름>` 에서 도는 세션)은 세션 목록에 **Bot** 으로 표시되고 봇 이름으로 나옵니다. 그래프 맨 위 카드는 Orchestrator 대신 "Bot · <이름>" 입니다.
+- **봇 아래 작업자**: `orca orchestration worker-start` 로 띄운 작업자마다 봇 아래 카드가 하나씩 생깁니다. 이름은 `--name`(없으면 워크스페이스 폴더 이름), 작업 내용은 `--task-title` 이고, 작업자 자신의 호출·비용·상태가 보입니다. 작업자 세션은 목록에 따로 나오지 않습니다.
+- **합계 하나**: 실행의 시간·비용·토큰에 작업자 몫이 들어갑니다. 작업자가 일하는 동안 봇도 실행 중으로 나옵니다.
+
+![shop-api 라는 Orca 봇과 작업자 셋: rate-limit 과 api-docs 는 끝났고 login-tests 는 테스트를 돌리는 중. 세션 목록에는 두 번째 봇 pull-request-review 도 보인다](docs/orca-bots.png)
+
+작업자는 `worker-start` 결과에 찍힌 task id 로 봇에 묶이므로, id 를 인용만 한 세션은 아무것도 묶지 않습니다. 봇이 아니어도 이 방법으로 작업자를 띄운 세션이면 작업자가 그 안에 묶입니다. 아직 그리지 않는 것: Codex 작업자, 봇끼리 주고받는 메시지, 봇이 깨어날 때마다 실행을 나눠 보기.
 
 ## Options
 
@@ -136,7 +148,6 @@ Claude Code(메인 세션, 하위 에이전트, 에이전트 팀의 팀원, Orca
 - Codex 하위 에이전트는 시간으로 부모와 잇기 때문에, 여러 개가 동시에 시작하면 연결이 추정입니다.
 - 하위 에이전트의 하위 에이전트(손자)는 본 기록에서 드물고, 다음 줄의 일반 카드로 그립니다.
 - Claude Code 팀원은 기록 폴더가 리더와 같거나 그 아래일 때만(예: 리더 프로젝트의 `.claude/worktrees/...` 워크트리) 리더에 묶입니다. 그 밖이면 별도 세션으로 나옵니다. 팀원이 띄운 하위 에이전트는 아직 그리지 않습니다.
-- Orca 작업자는 `worker-start` 결과에 찍힌 task id 로 자신을 띄운 세션에 묶입니다. Codex 작업자, 봇끼리 주고받는 메시지, 작업자가 띄운 하위 에이전트는 아직 그리지 않고, 봇의 긴 세션은 깨어날 때마다 나누지 않고 실행 하나로 보입니다.
 - 작업 폴더가 다른 실행(예: Orca 워크트리마다 하나씩)은 각각 별도 세션으로 나옵니다.
 - 비용은 아는 모델이어야 계산되고, 모르는 모델은 토큰만 보입니다.
 
