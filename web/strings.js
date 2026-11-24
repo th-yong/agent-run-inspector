@@ -130,7 +130,6 @@ export const S = {
     modelShort: 'Model',
     orchestrator: 'Orchestrator',
     bot: (name) => `Bot · ${name}`,
-    orcaWorker: 'Orca worker',
     earlier: (n) => `+${n} earlier ${n === 1 ? 'call' : 'calls'}`,
     calls: (n) => `${n} ${n === 1 ? 'call' : 'calls'}`,
     external: 'Another session',

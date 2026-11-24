@@ -4,7 +4,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createFileStore } from '../files.js';
-import { OrcaDispatches, workerTaskOf, DISPATCH_MARKS, WORKER_MARK } from '../adapters/claude-code/orca.js';
+import { OrcaDispatches, workerTaskOf, DISPATCH_MARKS, WORKER_MARK, WORKER_HEAD_MARKS } from '../adapters/claude-code/orca.js';
 
 export const HEAD_BYTES = 16 * 1024;
 export const TAIL_BYTES = 16 * 1024;
@@ -202,35 +202,46 @@ function linkTeammates(list, store, cache) {
   return out;
 }
 
-// An Orca worker's task id (and start time), from its file's first user record (Orca's dispatch prompt, often ~60 KB in,
-// after attachment records). Only the first user record counts: a later quote of the prompt is not a worker.
+// An Orca worker's task id (and start time), from its file's first user record: Orca's dispatch prompt,
+// often ~60 KB in, after attachment records. Only the first user record counts: a later quote of the prompt
+// is not a worker. Most files settle within the first 16 KB; a file is read again only when it grew.
 const WORKER_SCAN = 256 * 1024;
+const ORCA_HEAD = 8 * 1024;
 const USER_MARK = Buffer.from('"type":"user"');
+function firstUser(buf) {
+  for (let at = 0; at < buf.length;) {
+    const nl = buf.indexOf(10, at);
+    if (nl === -1) break; // the line may still be being written
+    const line = buf.subarray(at, nl);
+    at = nl + 1;
+    if (!line.includes(USER_MARK)) continue;
+    let r = null;
+    try { r = JSON.parse(line.toString('utf8')); } catch { /* not a record */ }
+    if (r?.type !== 'user') continue;
+    const task = line.includes(WORKER_MARK) ? workerTaskOf(r) : undefined;
+    const t = Date.parse(r.timestamp);
+    return { found: true, key: task ? { task, ts: Number.isFinite(t) ? t : 0 } : null };
+  }
+  return { found: false, key: null };
+}
 function workerKey(store, file, cache) {
   const k = `ow:${file.fileId}`;
-  if (cache.has(k)) return cache.get(k);
-  const n = Math.min(file.size, WORKER_SCAN);
-  const buf = store.readRange(file.fileId, 0, n);
-  let key = null; let settled = n === WORKER_SCAN;
-  if (buf.includes(WORKER_MARK)) {
-    for (let at = 0; at < buf.length;) {
-      const nl = buf.indexOf(10, at);
-      if (nl === -1) { settled = n === WORKER_SCAN; break; } // the first user record is still being written
-      const line = buf.subarray(at, nl);
-      at = nl + 1;
-      if (!line.includes(USER_MARK)) continue;
-      let r = null;
-      try { r = JSON.parse(line.toString('utf8')); } catch { /* not a record */ }
-      if (r?.type !== 'user') continue;
-      const task = workerTaskOf(r);
-      const t = Date.parse(r.timestamp);
-      key = task ? { task, ts: Number.isFinite(t) ? t : 0 } : null;
-      settled = true;
-      break;
-    }
+  const hit = cache.get(k);
+  if (hit && (hit.settled || hit.size === file.size)) return hit.key;
+  // Orca starts its workers itself (not the claude CLI), and the first records say so: any other file is
+  // settled from a small head with a byte search, no line walk
+  const head = store.readRange(file.fileId, 0, Math.min(file.size, ORCA_HEAD));
+  let res = { found: false, key: null };
+  let n = head.length;
+  if (WORKER_HEAD_MARKS.some((m) => head.includes(m))) {
+    n = Math.min(file.size, WORKER_SCAN);
+    const buf = n > head.length ? store.readRange(file.fileId, 0, n) : head;
+    res = buf.includes(WORKER_MARK) ? firstUser(buf) : { found: n >= WORKER_SCAN, key: null };
   }
-  if (key || settled) cache.set(k, key);
-  return key;
+  const orca = WORKER_HEAD_MARKS.some((m) => head.includes(m));
+  const settled = res.found || n >= WORKER_SCAN || (!orca && n < file.size);
+  cache.set(k, { size: file.size, key: res.key, settled });
+  return res.key;
 }
 
 // Orca task ids a file started (worker-start results), with when; reads only bytes appended since the last call.
@@ -288,7 +299,8 @@ function linkOrcaWorkers(list, store, cache) {
   for (const { e, key: { task: key } } of workers) {
     const o = owner.get(key);
     if (!o) { rest.push(e); continue; }
-    o.lead.subs.push({ ...e.main, agentId: key, metaFileId: null, mate: true });
+    // the worker's own sub-agents come along (linked to its Agent calls by tool_use id)
+    o.lead.subs.push({ ...e.main, agentId: key, metaFileId: null, mate: true }, ...e.subs);
     o.lead.lastWrite = Math.max(o.lead.lastWrite, e.lastWrite);
   }
   return rest;

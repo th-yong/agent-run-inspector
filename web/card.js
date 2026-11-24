@@ -46,7 +46,6 @@ export function cardInfo(agent, calls, now) {
     external: Boolean(agent.external),
     watcher: agent.role === 'watcher',
     bot: agent.role === 'bot',
-    orca: Boolean(agent.orca),
   };
 }
 
@@ -277,9 +276,8 @@ export function updateCard(c, d) {
     c.badge.replaceChildren(...(mark ? [mark, el('span', 'bw', word)] : [word]));
   }
 
-  const role = info.watcher ? S.graph.watcher : info.orca ? S.graph.orcaWorker : '';
-  c.task.textContent = info.task || role;
-  c.task.hidden = !showTask || !c.task.textContent;
+  c.task.textContent = info.watcher && !info.task ? S.graph.watcher : info.task;
+  c.task.hidden = !showTask || (!info.task && !info.watcher);
 
   if (!folded) syncRows(c, rows, moreCalls, animate); // a folded card keeps its rows hidden under the fold
   c.calls.hidden = info.external;
