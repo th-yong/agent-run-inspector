@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Orca bots and workers. A worker started with `orca orchestration worker-start` is folded into the session that started it (an agent node with the worker's own calls, sub-agents and cost; the `--task-title` shows on the card), joined by the task id in that call's result; a session that only quotes the ids links nothing. An Orca bot's session (run from `~/.orca/bots/<name>`) shows a Bot badge in the session list (its name stands in for a missing title), and its top graph card reads "Bot · <name>" instead of Orchestrator. The README has a new Orca bots section with a screenshot.
+- Orca bots and workers. A worker started with `orca orchestration worker-start` is folded into the session that started it (an agent node with the worker's own calls, sub-agents and cost; the `--task-title` shows on the card), joined by the task id in that call's result; a session that only quotes the ids links nothing. An Orca bot's session (run from `~/.orca/bots/<name>`) is drawn in gold: it shows a gold Bot badge in the session list (its name stands in for a missing title), and its top graph card, framed and tinted gold, reads "Bot · <name>" instead of Orchestrator. The README has a new Orca bots section with a screenshot.
 
 ## [0.9.4] - 2026-11-24
 

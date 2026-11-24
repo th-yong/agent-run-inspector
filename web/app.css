@@ -6,6 +6,7 @@
   --llm: #4c6ef5; --llm-soft: #dbe3ff; --tool: #0c8599; --tool-soft: #d3f0f3;
   --err: #d6336c; --err-soft: #fde5ee; --ok: #2b8a3e; --run: #e8590c; --run-soft: #fff0e6;
   --sel: #eef2ff; --flow: #8b5cf6; --edge: #4c6ef5;
+  --bot: #b08400; --bot-soft: #fff3c4; /* Orca bots: gold, a hue no status uses */
   --brand-anthropic: #D97757; --brand-anthropic-bg: #fbeee8; --brand-google: #8E75B2;
   --badge-cc-bg: #f3e8dd; --badge-cc: #9a4f16; --badge-cx-bg: #e3eefc; --badge-cx: #1f5fa8;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -19,6 +20,7 @@
   --llm: #7c93ff; --llm-soft: #26305a; --tool: #3bc9db; --tool-soft: #143a40;
   --err: #ff6b9a; --err-soft: #3d1a27; --ok: #69db7c; --run: #ff922b; --run-soft: #3a2614;
   --sel: #1f2540; --flow: #b197fc; --edge: #7c93ff;
+  --bot: #ffd43b; --bot-soft: #3a3214;
   --brand-anthropic: #E08A6C; --brand-anthropic-bg: #3a2620; --brand-google: #a993cf;
   --badge-cc-bg: #3a2a1c; --badge-cc: #f0b27a; --badge-cx-bg: #1a2b40; --badge-cx: #8cc0ff;
   color-scheme: dark;
@@ -31,6 +33,7 @@
     --llm: #7c93ff; --llm-soft: #26305a; --tool: #3bc9db; --tool-soft: #143a40;
     --err: #ff6b9a; --err-soft: #3d1a27; --ok: #69db7c; --run: #ff922b; --run-soft: #3a2614;
     --sel: #1f2540; --flow: #b197fc; --edge: #7c93ff;
+    --bot: #ffd43b; --bot-soft: #3a3214;
     --brand-anthropic: #E08A6C; --brand-anthropic-bg: #3a2620; --brand-google: #a993cf;
     --badge-cc-bg: #3a2a1c; --badge-cc: #f0b27a; --badge-cx-bg: #1a2b40; --badge-cx: #8cc0ff;
     color-scheme: dark;
@@ -126,7 +129,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .02em; flex: none; }
 .badge.cc { background: var(--badge-cc-bg); color: var(--badge-cc); }
 .badge.cx { background: var(--badge-cx-bg); color: var(--badge-cx); }
-.badge.bot { background: var(--llm-soft); color: var(--llm); }
+.badge.bot { background: var(--bot-soft); color: var(--bot); }
 .st-err { color: var(--err); } .st-run { color: var(--run); } .st-run.bg { color: var(--flow); }
 .note { padding: 16px 14px; color: var(--muted); }
 
@@ -286,7 +289,11 @@ body.resizing { cursor: col-resize; user-select: none; }
 .g-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .g-card[data-status="failed"] { border-color: color-mix(in srgb, var(--err) 55%, var(--line)); }
 .g-card.watch { border-style: dashed; }
-.g-card.bot { border-color: var(--llm); }
+/* an Orca bot: gold frame and wash, so it never reads as an ordinary orchestrator (or the selection) */
+.g-card.bot { border-color: var(--bot); box-shadow: 0 0 0 1.5px var(--bot), 0 8px 24px -10px var(--bot);
+  background: linear-gradient(180deg, var(--bot-soft), var(--panel) 72px); }
+.g-card.bot.sel { box-shadow: 0 0 0 1.5px var(--bot), 0 0 0 5px var(--bot-soft); }
+.g-card.bot .g-name { color: var(--bot); }
 .g-card.external { cursor: default; }
 .g-h { display: flex; align-items: center; gap: 7px; min-width: 0; height: 24px; }
 .g-name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

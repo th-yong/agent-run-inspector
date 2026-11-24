@@ -44,7 +44,7 @@ It opens the inspector in your browser and runs until you press Ctrl+C.
 
 Orca bots are long-lived Claude Code sessions that start workers in their own worktrees and hand work to other bots. The inspector shows a bot and its workers as one run:
 
-- **Bot badge**: a bot's session (run from `~/.orca/bots/<name>`) is marked **Bot** in the session list and named after the bot, and its top card in the graph reads "Bot · <name>" instead of Orchestrator.
+- **Bot badge**: a bot's session (run from `~/.orca/bots/<name>`) is marked with a gold **Bot** badge in the session list and named after the bot, and its top card in the graph is framed in gold and reads "Bot · <name>" instead of Orchestrator.
 - **Workers under their bot**: each worker started with `orca orchestration worker-start` is a card under the bot, named by `--name` (or its workspace folder) with its `--task-title` as the task, and shows its own calls, cost and status. Its session is not listed on its own.
 - **One total**: the run's time, cost and tokens include the workers. The bot keeps running while a worker does.
 
