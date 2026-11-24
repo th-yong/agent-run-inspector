@@ -113,6 +113,10 @@ test('a busy worker keeps its bot running, in the list and the full parse', () =
   const v = idx.open(BOT);
   assert.equal(l.status, 'running');
   assert.equal(v.summary.status, 'running');
+  // its own turn ended: still Running, not Background
+  assert.equal(l.background, undefined);
+  assert.equal(v.summary.background, undefined);
+  assert.equal(v.spans.find((s) => s.depth === 0).background, undefined);
   assert.equal(v.spans.find((s) => s.id === 'ext:task_0a1').status, 'running');
 });
 
