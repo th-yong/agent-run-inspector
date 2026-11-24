@@ -33,7 +33,7 @@ export function cardInfo(agent, calls, now) {
   const priced = llms.filter((c) => known(c.cost?.usd));
   const end = known(agent.end) ? agent.end : agent.status === 'running' ? now : null;
   // The root agent's own name can be a model id; the card says what it is and keeps the model beside it.
-  const name = agent.role === 'orchestrator' && !agent.external ? S.graph.orchestrator : agent.name;
+  const name = agent.role === 'bot' ? S.graph.bot(agent.bot) : agent.role === 'orchestrator' && !agent.external ? S.graph.orchestrator : agent.name;
   return {
     name,
     model: model && model !== name ? model : null,
@@ -45,6 +45,8 @@ export function cardInfo(agent, calls, now) {
     callCount: calls.length,
     external: Boolean(agent.external),
     watcher: agent.role === 'watcher',
+    bot: agent.role === 'bot',
+    orca: Boolean(agent.orca),
   };
 }
 
@@ -250,6 +252,7 @@ export function updateCard(c, d) {
   root.dataset.status = info.status;
   root.classList.toggle('watch', info.watcher);
   root.classList.toggle('external', info.external);
+  root.classList.toggle('bot', info.bot);
   root.classList.toggle('folded', folded);
   root.classList.toggle('sel', selected);
   root.setAttribute('aria-pressed', String(selected));
@@ -274,8 +277,9 @@ export function updateCard(c, d) {
     c.badge.replaceChildren(...(mark ? [mark, el('span', 'bw', word)] : [word]));
   }
 
-  c.task.textContent = info.watcher && !info.task ? S.graph.watcher : info.task;
-  c.task.hidden = !showTask || (!info.task && !info.watcher);
+  const role = info.watcher ? S.graph.watcher : info.orca ? S.graph.orcaWorker : '';
+  c.task.textContent = info.task || role;
+  c.task.hidden = !showTask || !c.task.textContent;
 
   if (!folded) syncRows(c, rows, moreCalls, animate); // a folded card keeps its rows hidden under the fold
   c.calls.hidden = info.external;

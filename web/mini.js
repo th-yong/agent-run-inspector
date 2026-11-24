@@ -41,7 +41,7 @@ export function fmtAgo(ms) {
   return S.mini.ago(`${Math.round(s / 3600)}h`);
 }
 
-const agentName = (a) => (a.depth === 0 ? S.graph.orchestrator : a.name);
+const agentName = (a) => (a.depth === 0 ? (a.role === 'bot' ? S.list.bot : S.graph.orchestrator) : a.name);
 const dot = (status) => el('span', status === 'running' ? 'dot pulse' : status === 'error' ? 'dot err' : 'dot off');
 
 function nowLine(s, now) {
@@ -71,7 +71,7 @@ export function miniCard(s, now = Date.now()) {
   const head = el('div', 'mini-head');
   const slug = providerSlugs(s.models)[0];
   head.append(slug ? iconEl(slug) : el('span', `badge ${s.source === 'codex' ? 'cx' : 'cc'}`, S.sourceBadge[s.source] ?? '?'));
-  head.append(el('span', 'mini-title', s.title || S.list.untitled), el('span', 'mini-ago num', fmtAgo(now - s.lastWrite)));
+  head.append(el('span', 'mini-title', s.title || s.bot || S.list.untitled), el('span', 'mini-ago num', fmtAgo(now - s.lastWrite)));
   const t = s.totals ?? {};
   const tokens = (t.input ?? 0) + (t.output ?? 0) + (t.cacheRead ?? 0);
   const meta = el('div', 'mini-meta');

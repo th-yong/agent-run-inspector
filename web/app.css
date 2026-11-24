@@ -126,6 +126,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .02em; flex: none; }
 .badge.cc { background: var(--badge-cc-bg); color: var(--badge-cc); }
 .badge.cx { background: var(--badge-cx-bg); color: var(--badge-cx); }
+.badge.bot { background: var(--llm-soft); color: var(--llm); }
 .st-err { color: var(--err); } .st-run { color: var(--run); } .st-run.bg { color: var(--flow); }
 .note { padding: 16px 14px; color: var(--muted); }
 
@@ -285,6 +286,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .g-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .g-card[data-status="failed"] { border-color: color-mix(in srgb, var(--err) 55%, var(--line)); }
 .g-card.watch { border-style: dashed; }
+.g-card.bot { border-color: var(--llm); }
 .g-card.external { cursor: default; }
 .g-h { display: flex; align-items: center; gap: 7px; min-width: 0; height: 24px; }
 .g-name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

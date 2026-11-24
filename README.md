@@ -34,7 +34,7 @@ It opens the inspector in your browser and runs until you press Ctrl+C.
 
 ## What you see
 
-- **Session list**: running sessions on top, then recent ones (fold them with a click). Filter by tool (Claude Code, Codex CLI) and period (Today by default), or search by title or project. **Groups**: make one with "+ New group", then drag sessions onto it or right-click a session; pick a group to see only its sessions. Groups are kept in `~/.config/agent-run-inspector/groups.json`. Agent-team teammates are folded into the run that started them instead of being listed on their own.
+- **Session list**: running sessions on top, then recent ones (fold them with a click). Filter by tool (Claude Code, Codex CLI) and period (Today by default), or search by title or project. **Groups**: make one with "+ New group", then drag sessions onto it or right-click a session; pick a group to see only its sessions. Groups are kept in `~/.config/agent-run-inspector/groups.json`. Agent-team teammates are folded into the run that started them instead of being listed on their own, and so are Orca workers (started with `orca orchestration worker-start`). An Orca bot's session gets a **Bot** badge, and its top card in the graph reads "Bot · <name>" instead of Orchestrator.
 - **Graph**: one card per agent, from the orchestrator down. Each card shows its latest calls, status, cost, time and call count. Click a card to total that agent; "Hide finished agents" keeps only the ones still working.
 - **Timeline**: every agent and call on one time axis, with turns and context compactions. Open a call to see its details.
 - **Totals**: time, cost, tokens, model calls, tool calls and errors for the whole run or the selected agent.
@@ -125,17 +125,18 @@ Run logs can hold customer data and secrets, so nothing leaves your machine exce
 
 ## Cost
 
-Costs are estimates, not bills. Each model call is priced from the built-in `prices.json` (USD per 1M tokens, with an `asOf` date of 2026-11-13 and a source URL per model: the Anthropic and OpenAI public pricing pages); a call on an unknown model shows tokens only and the total is marked partial. For a Claude Code run, the session total that Claude Code itself recorded ("Reported") replaces the sum when it is there, except when teammate sessions are part of the run, since that total leaves them out. Override or add models with `--prices <file>`, which is merged field by field over the built-in table.
+Costs are estimates, not bills. Each model call is priced from the built-in `prices.json` (USD per 1M tokens, with an `asOf` date of 2026-11-13 and a source URL per model: the Anthropic and OpenAI public pricing pages); a call on an unknown model shows tokens only and the total is marked partial. For a Claude Code run, the session total that Claude Code itself recorded ("Reported") replaces the sum when it is there, except when teammate or Orca worker sessions are part of the run, since that total leaves them out. Override or add models with `--prices <file>`, which is merged field by field over the built-in table.
 
 ## Supported scope
 
-Claude Code (main sessions, sub-agents, agent-team teammates) and Codex CLI (rollout files from 0.40 to 0.166). Not included: controlling agents, hooks or proxies, remote access or accounts, other tools such as Cursor or Gemini CLI, full-text search, exporting, and alerts.
+Claude Code (main sessions, sub-agents, agent-team teammates, Orca bots and their workers) and Codex CLI (rollout files from 0.40 to 0.166). Not included: controlling agents, hooks or proxies, remote access or accounts, other tools such as Cursor or Gemini CLI, full-text search, exporting, and alerts.
 
 ### Known limits
 
 - Codex sub-agents are linked to their parent by timing, so the link is an estimate when several start at once.
 - Sub-agents of sub-agents are rare in the logs we have seen and are drawn as plain cards on the next row.
 - A Claude Code teammate is joined to its lead only when its log folder is the lead's own or one below it (for example a `.claude/worktrees/...` worktree of the lead's project). Otherwise it is listed as a session of its own. Sub-agents started by a teammate are not drawn yet.
+- An Orca worker is joined to the session that started it by the task id in `worker-start`'s result. Codex workers, messages between bots, and a worker's own sub-agents are not drawn yet; a bot's long session is one run, not split per wake-up.
 - Every run in its own working folder (for example one Orca worktree each) is listed as its own session.
 - Cost needs a known model; unknown models show tokens only.
 

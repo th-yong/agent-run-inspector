@@ -120,7 +120,9 @@ export function sessionRow(s, { selected = false, now = Date.now(), group = null
   const t = el('div', 't');
   const badge = el('span', `badge ${s.source === 'codex' ? 'cx' : 'cc'}`, S.sourceBadge[s.source] ?? '?');
   badge.title = S.sourceTip(S.source[s.source] ?? s.source);
-  t.append(badge, el('span', 'name', s.title || S.list.untitled));
+  t.append(badge);
+  if (s.bot) { const b = el('span', 'badge bot', S.list.bot); b.title = S.list.botTip(s.bot); t.append(b); }
+  t.append(el('span', 'name', s.title || s.bot || S.list.untitled));
   if (group) t.append(el('span', 'grp-tag', group));
   if (s.status === 'running') {
     const dot = el('span', s.background ? 'dot pulse bg' : 'dot pulse');

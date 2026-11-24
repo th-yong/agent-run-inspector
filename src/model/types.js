@@ -39,7 +39,7 @@
  * @property {{ message: string, code?: string | number }} [error]
  * @property {{ fileId: string, line: number }} ref
  * @property {number} [depth]
- * @property {'orchestrator' | 'worker' | 'watcher'} [role]
+ * @property {'orchestrator' | 'bot' | 'worker' | 'watcher'} [role]
  * @property {string} [task]
  * @property {Provider} [provider]
  * @property {ToolCategory} [toolCategory]
@@ -47,6 +47,8 @@
  * @property {string} [command]
  * @property {string} [spawnsAgentId]
  * @property {boolean} [external] agent: another session (teammate), shown as a bare node.
+ * @property {boolean} [orca] agent: an Orca worker this run started (its own session, linked by task id).
+ * @property {string} [bot] root agent: the Orca bot (folder name) whose session this is.
  * @property {number} lastActivity
  * @property {number} seq
  */
@@ -68,6 +70,7 @@
  * @property {number} errorCount
  * @property {Tokens & { usd: number | null }} totals
  * @property {string[]} models
+ * @property {string} [bot] An Orca bot's session: the bot's folder name.
  */
 
 export {};
