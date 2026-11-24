@@ -189,7 +189,7 @@ export class AgentCollector {
       const end = live ? null : (mate.lastTs ?? c.start);
       const model = c.model ?? mate.model;
       return {
-        ...base, id: externalSpanId(key), name: c.name ?? key.split('@')[0], status: live ? 'running' : 'ok',
+        ...base, id: externalSpanId(key), name: c.name ?? str(mate.meta?.name) ?? key.split('@')[0], status: live ? 'running' : 'ok',
         start: c.start, end, ref: { fileId: mate.fileId, line: 1 }, depth: this.ctx.depth + 1, role: 'worker',
         ...extra, ...(c.task ? { task: c.task } : {}),
         ...(model ? { model, provider: providerOf(model) } : {}),

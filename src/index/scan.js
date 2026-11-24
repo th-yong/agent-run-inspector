@@ -4,7 +4,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createFileStore } from '../files.js';
-import { OrcaDispatches, workerTaskOf, DISPATCH_MARKS, WORKER_MARK, WORKER_HEAD_MARKS } from '../adapters/claude-code/orca.js';
+import { OrcaDispatches, workerOf, DISPATCH_MARKS, WORKER_MARK, WORKER_HEAD_MARKS } from '../adapters/claude-code/orca.js';
 
 export const HEAD_BYTES = 16 * 1024;
 export const TAIL_BYTES = 16 * 1024;
@@ -218,9 +218,11 @@ function firstUser(buf) {
     let r = null;
     try { r = JSON.parse(line.toString('utf8')); } catch { /* not a record */ }
     if (r?.type !== 'user') continue;
-    const task = line.includes(WORKER_MARK) ? workerTaskOf(r) : undefined;
+    const w = line.includes(WORKER_MARK) ? workerOf(r) : undefined;
     const t = Date.parse(r.timestamp);
-    return { found: true, key: task ? { task, ts: Number.isFinite(t) ? t : 0 } : null };
+    // the worker's folder names it when its coordinator's result did not
+    const folder = typeof r.cwd === 'string' ? r.cwd.split(/[\\/]/).filter(Boolean).at(-1) : undefined;
+    return { found: true, key: w ? { ...w, folder, ts: Number.isFinite(t) ? t : 0 } : null };
   }
   return { found: false, key: null };
 }
@@ -286,7 +288,7 @@ function linkOrcaWorkers(list, store, cache) {
     else rest.push(e);
   }
   if (!workers.length) return list;
-  const owner = new Map(); // task id -> { lead, start }
+  const owner = new Map(); // task or dispatch id -> { lead, start }
   // a coordinator writes after its workers start: older sessions are not read
   const since = Math.min(...workers.map((w) => w.key.ts));
   for (const l of rest) {
@@ -296,11 +298,12 @@ function linkOrcaWorkers(list, store, cache) {
       if (!o || call.start < o.start) owner.set(task, { lead: l, start: call.start });
     }
   }
-  for (const { e, key: { task: key } } of workers) {
+  for (const { e, key: { task, dispatch, folder } } of workers) {
+    const key = owner.has(task) ? task : dispatch;
     const o = owner.get(key);
     if (!o) { rest.push(e); continue; }
     // the worker's own sub-agents come along (linked to its Agent calls by tool_use id)
-    o.lead.subs.push({ ...e.main, agentId: key, metaFileId: null, mate: true }, ...e.subs);
+    o.lead.subs.push({ ...e.main, agentId: key, metaFileId: null, mate: true, name: folder }, ...e.subs);
     o.lead.lastWrite = Math.max(o.lead.lastWrite, e.lastWrite);
   }
   return rest;

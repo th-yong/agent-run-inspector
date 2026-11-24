@@ -206,7 +206,7 @@ export function openEntry(entry, store, now) {
   if (entry.source === 'claude-code') {
     const subagents = entry.subs.map((s) => ({
       fileId: String(s.fileId), agentId: s.agentId, text: readText(store, s.fileId, s.size),
-      meta: readMeta(store, s), mtime: s.mtimeMs, ...(s.mate ? { mate: true } : {}),
+      meta: s.name ? { name: s.name } : readMeta(store, s), mtime: s.mtimeMs, ...(s.mate ? { mate: true } : {}),
     }));
     const snap = buildSessionTree({
       main: { fileId: String(entry.main.fileId), text: readText(store, entry.main.fileId, entry.main.size) },
