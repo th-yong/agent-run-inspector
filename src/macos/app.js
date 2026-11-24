@@ -275,7 +275,7 @@ ObjC.registerSubclass({
   },
 });
 
-// The panel page asks for the window (postMessage({ open: sessionId })) or reports its height ({ height }).
+// The panel page (and the window's Update badge) asks for the window (postMessage({ open: sessionId })) or reports its height ({ height }).
 ObjC.registerSubclass({
   name: 'ARIBridge',
   protocols: ['WKScriptMessageHandler'],
@@ -328,7 +328,9 @@ function run() {
   win = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(frame, 15, $.NSBackingStoreBuffered, false); // titled, closable, miniaturizable, resizable
   win.releasedWhenClosed = false; // the menu and the Dock bring it back
   win.title = 'Agent Run Inspector';
-  web = $.WKWebView.alloc.initWithFrameConfiguration(frame, $.WKWebViewConfiguration.alloc.init);
+  const winConfig = $.WKWebViewConfiguration.alloc.init;
+  winConfig.userContentController.addScriptMessageHandlerName($.ARIBridge.alloc.init, 'ari'); // the header's Update badge
+  web = $.WKWebView.alloc.initWithFrameConfiguration(frame, winConfig);
   win.contentView = web;
   win.center;
   win.setFrameAutosaveName('main');

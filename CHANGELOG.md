@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-11-24
+
+### Added
+
+- Mac app: the "Update …" badge in the window's header now starts the update, the same as the menu bar's "Update to …" (in a browser it still only says how).
+- `ari service install` ends with a line asking for a GitHub star when you run it yourself (not on the app's own updates). The README ends with one too.
+
 ## [0.9.3] - 2026-11-19
 
 ### Fixed
@@ -235,7 +242,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.4...HEAD
+[0.9.4]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.0...v0.9.1

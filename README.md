@@ -91,7 +91,7 @@ Inside Orca the address opens as a new Orca browser tab (`orca tab create`). If 
 - **Agent Run Inspector.app** in `~/Applications`, added to the Dock (`--no-dock` to skip): its own window and Launchpad entry, signed in at every launch. It also puts an item in the menu bar (see [The menu bar](#the-menu-bar)). At login the app starts with only the menu bar item, and the window opens from the menu or the Dock. It is built on your Mac with the built-in `osacompile`, so there is nothing to download and no developer signing. If that fails, open the address in Chrome or Edge and choose Install instead.
 - **A sign-in that lasts a year** for that address, so a bookmark works too. If a browser tab says "Signed out", run `ari open`.
 
-**Updates**: the app checks the latest GitHub release every 6 hours. When there is a newer one and npm already serves it, the menu bar panel shows an "Update to …" button and the right-click menu an "Update to …" item (otherwise "Check for Updates…"); the page header shows a badge too. Click it and the app installs the new version and reopens (about a minute; a failed install is tried twice more, 30 seconds apart). If that fails, it shows the commands to run: install the package again and run `ari service install` again, which restarts the service and the app on the new code. `ari service uninstall` removes the service, the app, its Dock icon and its login item. The log is `~/Library/Logs/agent-run-inspector.log`.
+**Updates**: the app checks the latest GitHub release every 6 hours. When there is a newer one and npm already serves it, the menu bar panel shows an "Update to …" button and the right-click menu an "Update to …" item (otherwise "Check for Updates…"); the page header shows an "Update …" badge too, which works the same in the app window. Click one and the app installs the new version and reopens (about a minute; a failed install is tried twice more, 30 seconds apart). If that fails, it shows the commands to run: install the package again and run `ari service install` again, which restarts the service and the app on the new code. `ari service uninstall` removes the service, the app, its Dock icon and its login item. The log is `~/Library/Logs/agent-run-inspector.log`.
 
 ### The menu bar
 
@@ -157,3 +157,7 @@ Brand icons come from simple-icons 15.22.0 (CC0-1.0), inlined without a dependen
 ## License
 
 The code is under the [MIT License](LICENSE). The license does not cover the third-party brand names and logos.
+
+---
+
+If this saved you some digging, a ⭐ on [GitHub](https://github.com/th-yong/agent-run-inspector) is the whole fee.

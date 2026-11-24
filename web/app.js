@@ -263,8 +263,13 @@ if (state.mini) {
     $('ver').textContent = m.version ? `v${m.version}` : '';
     const upd = $('upd');
     upd.hidden = !m.latest;
-    if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = S.meta.how(m.latest); }
+    if (m.latest) { upd.textContent = S.meta.update(m.latest); upd.title = bridge ? S.meta.click(m.latest) : S.meta.how(m.latest); }
   }, () => {});
+  const bridge = window.webkit?.messageHandlers?.ari; // inside the Mac app: the badge starts the update
+  if (bridge) {
+    $('upd').classList.add('act');
+    $('upd').addEventListener('click', () => bridge.postMessage({ update: true }));
+  }
   showMeta();
   mountListResize(document.querySelector('.app'), S.list.resize);
   onGroups(() => list.repaint());
