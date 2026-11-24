@@ -1,6 +1,7 @@
 import { providerOf } from '../../model/provider.js';
 import { ClaudeCodeSession } from './index.js';
 import { AGENT_TOOLS } from './tools.js';
+import { OrcaDispatches } from './orca.js';
 import { MSG } from '../../strings.js';
 
 const RECENT_MS = 10 * 60 * 1000;
@@ -26,6 +27,7 @@ export class AgentCollector {
     this.notes = []; // task-notification lines: { ts, text } (matched against ids only)
     this.stopCalls = new Map(); // TaskStop tool_use id -> task_id
     this.stopped = new Map(); // teammate name -> when the lead stopped it or learned it shut down
+    this.orca = new OrcaDispatches(); // Orca workers this file started (keyed by task id, like teammates)
   }
 
   #stop(name, ts) {
@@ -35,6 +37,7 @@ export class AgentCollector {
   onAssistant(rec, ts, line) {
     const content = rec.message?.content;
     if (!Array.isArray(content)) return;
+    this.orca.onAssistant(rec, ts, line);
     for (const b of content) {
       if (!b || b.type !== 'tool_use' || typeof b.id !== 'string' || typeof b.name !== 'string') continue;
       if (b.name === 'TaskStop') { const t = str(b.input?.task_id); if (t) this.stopCalls.set(b.id, t); continue; }
@@ -69,6 +72,9 @@ export class AgentCollector {
       return;
     }
     const content = rec.message?.content;
+    const known = this.orca.tasks.size;
+    this.orca.onUser(rec);
+    for (const c of [...this.orca.tasks.values()].slice(known)) c.seq ??= this.ctx.nextSeq();
     // teammate messages relayed to the lead: "<name> has shut down." / the teammate approving its shutdown
     if (typeof content === 'string' && content.includes('teammate-message')) {
       for (const m of content.matchAll(/"type":"teammate_terminated","message":"([^"]+?) has shut down\./g)) this.#stop(m[1], ts);
@@ -127,30 +133,7 @@ export class AgentCollector {
       const ref = { fileId: this.ctx.fileId, line: c.line };
       if (c.status === 'teammate_spawned') {
         const key = c.teammateId ?? c.id;
-        const mate = lookup?.find(undefined, key);
-        if (mate?.mate) {
-          mate.claimed = true;
-          const last = mate.mtime ?? mate.lastTs;
-          // a teammate is done once its turn ended, it shut down, or the lead stopped it after this spawn
-          const stoppedAt = this.stopped.get(key.split('@')[0]);
-          const live = isLive(last, now) && !mate.turnEnded && !mate.shutDown && !(stoppedAt >= c.start);
-          const end = live ? null : (mate.lastTs ?? c.start);
-          const model = c.model ?? mate.model;
-          out.push({
-            ...base, id: externalSpanId(key), name: c.name ?? key.split('@')[0], status: live ? 'running' : 'ok',
-            start: c.start, end, ref: { fileId: mate.fileId, line: 1 }, depth: this.ctx.depth + 1, role: 'worker',
-            ...(c.agentType ? { agentType: c.agentType } : {}), ...(c.task ? { task: c.task } : {}),
-            ...(model ? { model, provider: providerOf(model) } : {}),
-            lastActivity: end ?? last ?? c.start, seq: c.seq,
-          });
-          continue;
-        }
-        const name = c.name ?? c.teammateId?.split('@')[0] ?? c.agentType ?? 'teammate';
-        out.push({
-          ...base, id: externalSpanId(key), name, status: 'unknown', start: c.start, end: null, ref,
-          depth: this.ctx.depth + 1, role: 'worker', external: true,
-          ...(c.agentType ? { agentType: c.agentType } : {}), lastActivity: c.start, seq: c.seq,
-        });
+        out.push(this.#mateSpan(key, c, c.name ?? c.teammateId?.split('@')[0] ?? c.agentType ?? 'teammate', { lookup, now, base, ref }));
         continue;
       }
       const entry = lookup?.find(c.id, c.agentId);
@@ -186,7 +169,37 @@ export class AgentCollector {
         lastActivity, seq: c.seq,
       });
     }
+    for (const [task, c] of this.orca.tasks) {
+      out.push(this.#mateSpan(task, c, c.name ?? task, { lookup, now, base, ref: { fileId: this.ctx.fileId, line: c.line }, orca: true }));
+    }
     return out;
+  }
+
+  // A teammate or Orca worker: another session file, linked by `key` (name@team / task id). Found: a full
+  // agent node over that file; not found: a bare external node.
+  #mateSpan(key, c, fallbackName, { lookup, now, base, ref, orca }) {
+    const mate = lookup?.find(undefined, key);
+    const extra = { ...(c.agentType ? { agentType: c.agentType } : {}), ...(orca ? { orca: true } : {}) };
+    if (mate?.mate) {
+      mate.claimed = true;
+      const last = mate.mtime ?? mate.lastTs;
+      // done once its turn ended, it shut down, or the lead stopped it after this spawn
+      const stoppedAt = this.stopped.get(key.split('@')[0]);
+      const live = isLive(last, now) && !mate.turnEnded && !mate.shutDown && !(stoppedAt >= c.start);
+      const end = live ? null : (mate.lastTs ?? c.start);
+      const model = c.model ?? mate.model;
+      return {
+        ...base, id: externalSpanId(key), name: c.name ?? key.split('@')[0], status: live ? 'running' : 'ok',
+        start: c.start, end, ref: { fileId: mate.fileId, line: 1 }, depth: this.ctx.depth + 1, role: 'worker',
+        ...extra, ...(c.task ? { task: c.task } : {}),
+        ...(model ? { model, provider: providerOf(model) } : {}),
+        lastActivity: end ?? last ?? c.start, seq: c.seq,
+      };
+    }
+    return {
+      ...base, id: externalSpanId(key), name: fallbackName, status: 'unknown', start: c.start, end: null, ref,
+      depth: this.ctx.depth + 1, role: 'worker', external: true, ...extra, lastActivity: c.start, seq: c.seq,
+    };
   }
 }
 

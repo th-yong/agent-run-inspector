@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-24
+
+### Added
+
+- Orca bots and workers. A worker started with `orca orchestration worker-start` is folded into the session that started it (an agent node with the worker's own calls, sub-agents and cost; the `--task-title` shows on the card), joined by the task id in that call's result; a session that only quotes the ids links nothing. An Orca bot's session (run from `~/.orca/bots/<name>`) is drawn in gold: it shows a gold Bot badge in the session list (its name stands in for a missing title), and its top graph card, framed and tinted gold, reads "Bot · <name>" instead of Orchestrator. The README has a new Orca bots section with a screenshot.
+
 ## [0.9.4] - 2026-11-24
 
 ### Added
@@ -242,7 +248,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.4...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.4...v0.10.0
 [0.9.4]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.1...v0.9.2

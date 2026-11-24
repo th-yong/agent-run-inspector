@@ -33,7 +33,7 @@ export function cardInfo(agent, calls, now) {
   const priced = llms.filter((c) => known(c.cost?.usd));
   const end = known(agent.end) ? agent.end : agent.status === 'running' ? now : null;
   // The root agent's own name can be a model id; the card says what it is and keeps the model beside it.
-  const name = agent.role === 'orchestrator' && !agent.external ? S.graph.orchestrator : agent.name;
+  const name = agent.role === 'bot' ? S.graph.bot(agent.bot) : agent.role === 'orchestrator' && !agent.external ? S.graph.orchestrator : agent.name;
   return {
     name,
     model: model && model !== name ? model : null,
@@ -45,6 +45,7 @@ export function cardInfo(agent, calls, now) {
     callCount: calls.length,
     external: Boolean(agent.external),
     watcher: agent.role === 'watcher',
+    bot: agent.role === 'bot',
   };
 }
 
@@ -250,6 +251,7 @@ export function updateCard(c, d) {
   root.dataset.status = info.status;
   root.classList.toggle('watch', info.watcher);
   root.classList.toggle('external', info.external);
+  root.classList.toggle('bot', info.bot);
   root.classList.toggle('folded', folded);
   root.classList.toggle('sel', selected);
   root.setAttribute('aria-pressed', String(selected));

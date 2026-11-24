@@ -4,6 +4,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createFileStore } from '../files.js';
+import { OrcaDispatches, workerTaskOf, DISPATCH_MARKS, WORKER_MARK, WORKER_HEAD_MARKS } from '../adapters/claude-code/orca.js';
 
 export const HEAD_BYTES = 16 * 1024;
 export const TAIL_BYTES = 16 * 1024;
@@ -201,6 +202,110 @@ function linkTeammates(list, store, cache) {
   return out;
 }
 
+// An Orca worker's task id (and start time), from its file's first user record: Orca's dispatch prompt,
+// often ~60 KB in, after attachment records. Only the first user record counts: a later quote of the prompt
+// is not a worker. Most files settle within the first 16 KB; a file is read again only when it grew.
+const WORKER_SCAN = 256 * 1024;
+const ORCA_HEAD = 8 * 1024;
+const USER_MARK = Buffer.from('"type":"user"');
+function firstUser(buf) {
+  for (let at = 0; at < buf.length;) {
+    const nl = buf.indexOf(10, at);
+    if (nl === -1) break; // the line may still be being written
+    const line = buf.subarray(at, nl);
+    at = nl + 1;
+    if (!line.includes(USER_MARK)) continue;
+    let r = null;
+    try { r = JSON.parse(line.toString('utf8')); } catch { /* not a record */ }
+    if (r?.type !== 'user') continue;
+    const task = line.includes(WORKER_MARK) ? workerTaskOf(r) : undefined;
+    const t = Date.parse(r.timestamp);
+    return { found: true, key: task ? { task, ts: Number.isFinite(t) ? t : 0 } : null };
+  }
+  return { found: false, key: null };
+}
+function workerKey(store, file, cache) {
+  const k = `ow:${file.fileId}`;
+  const hit = cache.get(k);
+  if (hit && (hit.settled || hit.size === file.size)) return hit.key;
+  // Orca starts its workers itself (not the claude CLI), and the first records say so: any other file is
+  // settled from a small head with a byte search, no line walk
+  const head = store.readRange(file.fileId, 0, Math.min(file.size, ORCA_HEAD));
+  let res = { found: false, key: null };
+  let n = head.length;
+  if (WORKER_HEAD_MARKS.some((m) => head.includes(m))) {
+    n = Math.min(file.size, WORKER_SCAN);
+    const buf = n > head.length ? store.readRange(file.fileId, 0, n) : head;
+    res = buf.includes(WORKER_MARK) ? firstUser(buf) : { found: n >= WORKER_SCAN, key: null };
+  }
+  const orca = WORKER_HEAD_MARKS.some((m) => head.includes(m));
+  const settled = res.found || n >= WORKER_SCAN || (!orca && n < file.size);
+  cache.set(k, { size: file.size, key: res.key, settled });
+  return res.key;
+}
+
+// Orca task ids a file started (worker-start results), with when; reads only bytes appended since the last call.
+export function dispatchedTasks(store, file, cache) {
+  const k = `od:${file.fileId}`;
+  let c = cache.get(k);
+  if (!c || file.size < c.offset) c = { offset: 0, d: new OrcaDispatches() };
+  let size = SCAN_CHUNK;
+  while (file.size > c.offset) {
+    const buf = store.readRange(file.fileId, c.offset, Math.min(size, file.size - c.offset));
+    const end = buf.lastIndexOf(0x0a) + 1;
+    if (end === 0) {
+      if (c.offset + buf.length >= file.size) break;
+      size *= 2;
+      continue;
+    }
+    size = SCAN_CHUNK;
+    // only lines holding a mark are parsed: a worker-start call, or a result naming a task
+    const hits = new Set();
+    for (const m of DISPATCH_MARKS) for (let i = buf.indexOf(m); i !== -1 && i < end; i = buf.indexOf(m, i + 1)) hits.add(buf.lastIndexOf(10, i) + 1);
+    for (const from of [...hits].sort((a, b) => a - b)) {
+      let r = null;
+      try { r = JSON.parse(buf.toString('utf8', from, buf.indexOf(10, from))); } catch { /* cut line */ }
+      const t = typeof r?.timestamp === 'string' ? Date.parse(r.timestamp) : NaN;
+      if (r?.type === 'assistant') c.d.onAssistant(r, Number.isFinite(t) ? t : null, 0);
+      else if (r?.type === 'user') c.d.onUser(r);
+    }
+    c.offset += end;
+  }
+  cache.set(k, c);
+  return c.d.tasks;
+}
+
+// Moves Orca worker entries under the session that started them (as subs, like teammates). A task named
+// by two sessions goes to the earlier worker-start.
+function linkOrcaWorkers(list, store, cache) {
+  const workers = [];
+  const rest = [];
+  for (const e of list) {
+    const key = workerKey(store, e.main, cache);
+    if (key) workers.push({ e, key });
+    else rest.push(e);
+  }
+  if (!workers.length) return list;
+  const owner = new Map(); // task id -> { lead, start }
+  // a coordinator writes after its workers start: older sessions are not read
+  const since = Math.min(...workers.map((w) => w.key.ts));
+  for (const l of rest) {
+    if (l.lastWrite < since) continue;
+    for (const [task, call] of dispatchedTasks(store, l.main, cache)) {
+      const o = owner.get(task);
+      if (!o || call.start < o.start) owner.set(task, { lead: l, start: call.start });
+    }
+  }
+  for (const { e, key: { task: key } } of workers) {
+    const o = owner.get(key);
+    if (!o) { rest.push(e); continue; }
+    // the worker's own sub-agents come along (linked to its Agent calls by tool_use id)
+    o.lead.subs.push({ ...e.main, agentId: key, metaFileId: null, mate: true }, ...e.subs);
+    o.lead.lastWrite = Math.max(o.lead.lastWrite, e.lastWrite);
+  }
+  return rest;
+}
+
 function scanClaude(roots, store, accept, cache = new Map()) {
   const found = [];
   const labels = roots.length > 1 ? rootLabels(roots.map((r) => r.path)) : [];
@@ -255,7 +360,7 @@ function scanClaude(roots, store, accept, cache = new Map()) {
       }
     }
   });
-  return linkTeammates(found, store, cache).filter((e) => accept(e.lastWrite));
+  return linkOrcaWorkers(linkTeammates(found, store, cache), store, cache).filter((e) => accept(e.lastWrite));
 }
 
 function codexHead(store, file, cache) {

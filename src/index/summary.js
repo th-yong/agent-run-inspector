@@ -12,6 +12,7 @@ import { linkCodexAgents } from '../adapters/codex/agents.js';
 import { AgentCollector, buildSessionTree } from '../adapters/claude-code/agents.js';
 import { ENDS_TURN, isLocalCommand, shutdownSignal } from '../adapters/claude-code/index.js';
 import { BackgroundTasks } from '../adapters/claude-code/tools.js';
+import { botOf } from '../adapters/claude-code/orca.js';
 import { mapUsage } from '../adapters/codex/llm.js';
 import { MSG } from '../strings.js';
 
@@ -119,8 +120,10 @@ function quickClaude(entry, store, now) {
     for (const r of readTail(store, entry.main.fileId, entry.main.size, TITLE_SCAN_BYTES)) if (r.type === 'assistant') bg.onAssistant(r); else if (r.type === 'user') bg.onUser(r);
   }
   const running = (recent(last) && (!turnEnded || bg.open.size > 0)) || childRunning;
+  const bot = botOf(cwd);
   return base(entry, {
     ...(title ? { title } : {}),
+    ...(bot ? { bot } : {}),
     project: lastSeg(cwd) || entry.project || '',
     ...(cwd ? { cwd } : {}),
     ...(branch ? { branch } : {}),
@@ -211,6 +214,9 @@ export function openEntry(entry, store, now) {
     });
     spans = snap.spans; markers = snap.markers; turns = normTurns(entry.source, snap.turns);
     meta = snap.session;
+    // an Orca bot's own session: its root agent is the bot, not an orchestrator (see roles.js)
+    const bot = botOf(meta.cwd);
+    if (bot) for (const s of spans) if (s.kind === 'agent' && (s.depth ?? 0) === 0 && !s.external) s.bot = bot;
   } else {
     const mk = (f) => {
       const p = createCodexParser({ fileId: String(f.fileId), now: () => now });
@@ -263,8 +269,10 @@ export function fullSummary(entry, spans, meta) {
   }
   totals.usd = llmCount > 0 && usdKnown ? usd : null;
   const title = meta.title;
+  const bot = entry.source === 'claude-code' ? botOf(meta.cwd) : undefined;
   return base(entry, {
     ...(title ? { title } : {}),
+    ...(bot ? { bot } : {}),
     project: meta.project ?? '',
     ...(meta.cwd ? { cwd: meta.cwd } : {}),
     ...(meta.branch ? { branch: meta.branch } : {}),

@@ -1,5 +1,6 @@
 // Agent roles. `watcher` is never in the records, so it only comes from the config's name patterns
-// (watcherNamePatterns, default empty = off). Root agent -> orchestrator, everything else -> worker.
+// (watcherNamePatterns, default empty = off). Root agent -> orchestrator (bot when it is an Orca bot's
+// session, `bot` set by the parse), everything else -> worker.
 
 const escapeRe = (s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
 
@@ -17,7 +18,7 @@ export function applyRoles(spans, watcherNamePatterns = []) {
     if (s.kind !== 'agent') continue;
     const names = [s.name, s.agentType].filter((n) => typeof n === 'string' && n);
     if (res.some((re) => names.some((n) => re.test(n)))) s.role = 'watcher';
-    else s.role = (s.depth ?? 0) === 0 && !s.external ? 'orchestrator' : 'worker';
+    else s.role = (s.depth ?? 0) === 0 && !s.external ? (s.bot ? 'bot' : 'orchestrator') : 'worker';
   }
   return spans;
 }

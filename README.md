@@ -7,7 +7,7 @@ English | [한국어](README.ko.md)
 [![npm](https://img.shields.io/npm/v/agent-run-inspector)](https://www.npmjs.com/package/agent-run-inspector)
 [![Node](https://img.shields.io/node/v/agent-run-inspector)](package.json)
 
-A local, read-only inspector for Claude Code and Codex CLI agent runs: see who called whom, what each call cost and where it failed, live, in your browser.
+A local, read-only inspector for Claude Code and Codex CLI agent runs, Orca bots included: see who called whom, what each call cost and where it failed, live, in your browser.
 
 ![Demo: the run "Add rate limiting to the login API" appears; the orchestrator starts a planner, then a backend developer and a test writer, then a reviewer; their calls stream in, a failed test run is opened to show its details, and the run ends with a pull request](docs/demo.webp)
 
@@ -34,11 +34,23 @@ It opens the inspector in your browser and runs until you press Ctrl+C.
 
 ## What you see
 
-- **Session list**: running sessions on top, then recent ones (fold them with a click). Filter by tool (Claude Code, Codex CLI) and period (Today by default), or search by title or project. **Groups**: make one with "+ New group", then drag sessions onto it or right-click a session; pick a group to see only its sessions. Groups are kept in `~/.config/agent-run-inspector/groups.json`. Agent-team teammates are folded into the run that started them instead of being listed on their own.
+- **Session list**: running sessions on top, then recent ones (fold them with a click). Filter by tool (Claude Code, Codex CLI) and period (Today by default), or search by title or project. **Groups**: make one with "+ New group", then drag sessions onto it or right-click a session; pick a group to see only its sessions. Groups are kept in `~/.config/agent-run-inspector/groups.json`. Agent-team teammates and [Orca workers](#orca-bots) are folded into the run that started them instead of being listed on their own.
 - **Graph**: one card per agent, from the orchestrator down. Each card shows its latest calls, status, cost, time and call count. Click a card to total that agent; "Hide finished agents" keeps only the ones still working.
 - **Timeline**: every agent and call on one time axis, with turns and context compactions. Open a call to see its details.
 - **Totals**: time, cost, tokens, model calls, tool calls and errors for the whole run or the selected agent.
 - **Live**: new lines in the logs show up within about a second, with no reload.
+
+## Orca bots
+
+Orca bots are long-lived Claude Code sessions that start workers in their own worktrees and hand work to other bots. The inspector shows a bot and its workers as one run:
+
+- **Bot badge**: a bot's session (run from `~/.orca/bots/<name>`) is marked with a gold **Bot** badge in the session list and named after the bot, and its top card in the graph is framed in gold and reads "Bot · <name>" instead of Orchestrator.
+- **Workers under their bot**: each worker started with `orca orchestration worker-start` is a card under the bot, named by `--name` (or its workspace folder) with its `--task-title` as the task, and shows its own calls, cost and status. Its session is not listed on its own.
+- **One total**: the run's time, cost and tokens include the workers. The bot keeps running while a worker does.
+
+![An Orca bot named shop-api with three workers: rate-limit and api-docs are done, login-tests is running a test; a second bot, pull-request-review, is in the session list](docs/orca-bots.png)
+
+A worker is joined to its bot by the task id in `worker-start`'s result, so a session that only quotes the ids links nothing. Any session that starts workers this way, not only a bot, gets them folded in. Not drawn yet: Codex workers, messages between bots, and a bot's wake-ups as separate runs.
 
 ## Options
 
@@ -125,11 +137,11 @@ Run logs can hold customer data and secrets, so nothing leaves your machine exce
 
 ## Cost
 
-Costs are estimates, not bills. Each model call is priced from the built-in `prices.json` (USD per 1M tokens, with an `asOf` date of 2026-11-13 and a source URL per model: the Anthropic and OpenAI public pricing pages); a call on an unknown model shows tokens only and the total is marked partial. For a Claude Code run, the session total that Claude Code itself recorded ("Reported") replaces the sum when it is there, except when teammate sessions are part of the run, since that total leaves them out. Override or add models with `--prices <file>`, which is merged field by field over the built-in table.
+Costs are estimates, not bills. Each model call is priced from the built-in `prices.json` (USD per 1M tokens, with an `asOf` date of 2026-11-13 and a source URL per model: the Anthropic and OpenAI public pricing pages); a call on an unknown model shows tokens only and the total is marked partial. For a Claude Code run, the session total that Claude Code itself recorded ("Reported") replaces the sum when it is there, except when teammate or Orca worker sessions are part of the run, since that total leaves them out. Override or add models with `--prices <file>`, which is merged field by field over the built-in table.
 
 ## Supported scope
 
-Claude Code (main sessions, sub-agents, agent-team teammates) and Codex CLI (rollout files from 0.40 to 0.166). Not included: controlling agents, hooks or proxies, remote access or accounts, other tools such as Cursor or Gemini CLI, full-text search, exporting, and alerts.
+Claude Code (main sessions, sub-agents, agent-team teammates, Orca bots and their workers) and Codex CLI (rollout files from 0.40 to 0.166). Not included: controlling agents, hooks or proxies, remote access or accounts, other tools such as Cursor or Gemini CLI, full-text search, exporting, and alerts.
 
 ### Known limits
 

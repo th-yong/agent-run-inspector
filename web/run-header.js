@@ -173,7 +173,7 @@ export function createRunHeader({ onBack, onTab, onShowAll, onHide }) {
     badge.textContent = S.sourceBadge[source] ?? '';
     badge.hidden = !source;
     badge.title = source ? S.sourceTip(S.source[source] ?? source) : '';
-    name.textContent = s ? s.title || S.list.untitled : '';
+    name.textContent = s ? s.title || s.bot || S.list.untitled : '';
     const running = s?.status === 'running';
     dot.hidden = !running;
     dot.classList.toggle('bg', Boolean(s?.background));
