@@ -53,6 +53,7 @@ export const MSG = {
   serviceNone: 'No service is installed. Run "ari service install" first.',
   serviceRemoved: 'Service stopped and removed.',
   serviceFailed: (m) => `Error: launchctl failed: ${m}`,
+  star: 'If it helps, a GitHub star helps it back: https://github.com/th-yong/agent-run-inspector',
   serviceInstalled: (url, log) => `Service running at ${url} (starts at login). Log: ${log}\nOpen it any time with "ari open".`,
   serviceStarted: (url) => `Service listening on ${url}`,
   rootsUsage: 'Usage: ari roots <list|add|remove> [--codex] [dir]',

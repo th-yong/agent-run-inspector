@@ -137,6 +137,7 @@ async function serviceCommand(positionals, values, env) {
     if (app) await installLoginItem({ env, app, run }); // at login: menu bar item only, window on demand
     if (app && !values['no-dock'] && (await pinToDock(app, run).catch(() => false))) console.log(MSG.dockAdded);
     if (!values['no-open']) {
+      console.log(MSG.star); // a person ran it; the app's own updates pass --no-open
       if (app) await run('open', [app]).catch(() => {});
       else await openAddress(serviceUrl(s), { mode: values.open ?? 'browser', env }).catch(() => {});
     }

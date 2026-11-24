@@ -91,7 +91,7 @@ Orca 안에서는 주소가 Orca 브라우저 새 탭으로 열립니다(`orca t
 - **Agent Run Inspector.app**: `~/Applications` 에 만들고 Dock 에 넣습니다(`--no-dock` 으로 건너뜀). 자체 창·Launchpad 항목이 있고 실행할 때마다 자동으로 로그인합니다. 메뉴 막대에도 항목을 띄웁니다([The menu bar](#the-menu-bar) 참고). 로그인할 때는 메뉴 막대 항목만 띄우고, 창은 메뉴나 Dock 에서 엽니다. macOS 에 들어 있는 `osacompile` 로 이 Mac 에서 직접 만들므로 내려받을 것도, 개발자 서명도 없습니다. 실패하면 Chrome 이나 Edge 에서 주소를 열고 설치를 고르세요.
 - **1년 유지되는 로그인**: 그 주소를 북마크해도 됩니다. 브라우저 탭에 "Signed out" 이 보이면 `ari open` 을 실행하세요.
 
-**업데이트**: 앱이 6시간마다 GitHub 의 최신 릴리스를 확인합니다. 새 버전이 있고 npm 에서도 받을 수 있으면 메뉴 막대 패널에 "Update to …" 버튼이, 우클릭 메뉴에 "Update to …" 항목이 나옵니다(평소에는 "Check for Updates…"). 화면 머리에도 배지가 뜹니다. 누르면 앱이 새 버전을 설치하고 다시 열립니다(1분 정도. 설치가 실패하면 30초 간격으로 두 번 더 시도). 그래도 실패하면 직접 칠 명령을 보여 줍니다: 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘·로그인 항목을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
+**업데이트**: 앱이 6시간마다 GitHub 의 최신 릴리스를 확인합니다. 새 버전이 있고 npm 에서도 받을 수 있으면 메뉴 막대 패널에 "Update to …" 버튼이, 우클릭 메뉴에 "Update to …" 항목이 나옵니다(평소에는 "Check for Updates…"). 화면 머리에도 "Update …" 배지가 뜨고, 앱 창에서는 이 배지로도 업데이트할 수 있습니다. 누르면 앱이 새 버전을 설치하고 다시 열립니다(1분 정도. 설치가 실패하면 30초 간격으로 두 번 더 시도). 그래도 실패하면 직접 칠 명령을 보여 줍니다: 패키지를 다시 설치하고 `ari service install` 을 다시 실행하면 서비스와 앱이 새 코드로 재시작됩니다. `ari service uninstall` 이 서비스·앱·Dock 아이콘·로그인 항목을 지웁니다. 로그는 `~/Library/Logs/agent-run-inspector.log` 입니다.
 
 ### The menu bar
 
@@ -157,3 +157,7 @@ npm test && npm run lint
 ## License
 
 코드는 [MIT License](LICENSE) 를 따릅니다. 이 라이선스는 다른 회사의 브랜드 이름과 로고에는 적용되지 않습니다.
+
+---
+
+도움이 됐다면 [GitHub](https://github.com/th-yong/agent-run-inspector) 에 ⭐ 하나면 충분합니다.
