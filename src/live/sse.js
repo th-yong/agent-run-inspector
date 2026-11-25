@@ -125,7 +125,10 @@ export function createLiveHub({ index, redactor, pingMs = PING_MS, sweepMs = SWE
       listSeen.set(summary.id, json);
       if (!first) emit(listFeed, { type: 'session', summary });
     }
-    for (const id of listSeen.keys()) if (!now.has(id)) listSeen.delete(id);
+    // a session left the list (folded under its Orca bot or lead, or out of the window): clients reload it
+    let gone = false;
+    for (const id of listSeen.keys()) if (!now.has(id)) { listSeen.delete(id); gone = true; }
+    if (gone && !first) emit(listFeed, { type: 'resync' });
     return summaries;
   }
 
