@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, realpathSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { startServer } from '../src/server/http.js';
@@ -209,6 +209,21 @@ test('list stream announces changed sessions', async () => {
     const c = await t.stream('/api/sessions/stream').ready;
     t.append(toolLine(2));
     await until(() => c.events().some((e) => e.data.type === 'session' && e.data.summary.id === SID));
+  } finally { await t.stop(); }
+});
+
+test('list stream: a session that leaves the list (folded under its lead) makes clients reload', async () => {
+  const t = await setup({ watch: false });
+  try {
+    const c = await t.stream('/api/sessions/stream').ready;
+    t.handler.live.onBatch(); // the first diff only records what is there
+    const other = join(t.proj, '00000000-0000-4000-8000-0000000000c2.jsonl');
+    writeFileSync(other, userLine() + toolLine(1));
+    t.handler.live.onBatch();
+    assert.ok(!c.events().some((e) => e.data.type === 'resync'));
+    rmSync(other);
+    t.handler.live.onBatch();
+    await until(() => c.events().some((e) => e.data.type === 'resync'));
   } finally { await t.stop(); }
 });
 
