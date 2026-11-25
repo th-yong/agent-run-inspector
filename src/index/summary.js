@@ -130,7 +130,8 @@ function quickClaude(entry, store, now) {
     start: first ?? entry.main.mtimeMs,
     end: running ? null : last,
     status: running ? 'running' : 'ok',
-    ...(running && turnEnded ? { background: true } : {}),
+    // a bot waiting on its workers is the bot at work: Running, not Background
+    ...(running && turnEnded && !bot ? { background: true } : {}),
     agentCount: 1 + entry.subs.length,
     totals, models,
   });
@@ -206,7 +207,7 @@ export function openEntry(entry, store, now) {
   if (entry.source === 'claude-code') {
     const subagents = entry.subs.map((s) => ({
       fileId: String(s.fileId), agentId: s.agentId, text: readText(store, s.fileId, s.size),
-      meta: readMeta(store, s), mtime: s.mtimeMs, ...(s.mate ? { mate: true } : {}),
+      meta: s.name ? { name: s.name } : readMeta(store, s), mtime: s.mtimeMs, ...(s.mate ? { mate: true } : {}),
     }));
     const snap = buildSessionTree({
       main: { fileId: String(entry.main.fileId), text: readText(store, entry.main.fileId, entry.main.size) },
@@ -216,7 +217,13 @@ export function openEntry(entry, store, now) {
     meta = snap.session;
     // an Orca bot's own session: its root agent is the bot, not an orchestrator (see roles.js)
     const bot = botOf(meta.cwd);
-    if (bot) for (const s of spans) if (s.kind === 'agent' && (s.depth ?? 0) === 0 && !s.external) s.bot = bot;
+    if (bot) {
+      // waiting on its workers is the bot at work: Running, not Background (as in the list)
+      for (const s of spans) {
+        if (s.kind === 'session') delete s.background;
+        if (s.kind === 'agent' && (s.depth ?? 0) === 0 && !s.external) { s.bot = bot; delete s.background; }
+      }
+    }
   } else {
     const mk = (f) => {
       const p = createCodexParser({ fileId: String(f.fileId), now: () => now });

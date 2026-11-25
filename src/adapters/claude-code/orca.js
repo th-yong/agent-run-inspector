@@ -2,18 +2,20 @@
 // rules live here so a format change is one edit. Only ids and names are taken from prompts and results.
 //  - A bot is a long-lived session whose cwd is `~/.orca/bots/<slug>`.
 //  - A coordinator (a bot or any session) starts workers with `orca orchestration worker-start`; that
-//    Bash call's result prints `dispatchId=ctx_… taskId=task_…` per worker.
-//  - A worker's own file opens with Orca's dispatch prompt, which names its task id.
+//    Bash call's result prints `dispatchId=ctx_… taskId=task_…` per worker (bots often grep it down to
+//    the dispatch id alone).
+//  - A worker's own file opens with Orca's dispatch prompt, which names its task and dispatch ids.
 // A session that only quotes these strings (a tool output, a pasted log) claims nothing: the ids count
 // only from a worker-start call's own result, or from a file's first user message.
 
 const BOT_CWD = /[\\/]\.orca[\\/]bots[\\/]([^\\/]+)(?:[\\/]|$)/; // its folder or one below
 const WORKER_START = /\borchestration\s+worker-start\b/;
-// one line per worker: `dispatchId=ctx_… taskId=task_… … workspace=<id>::<path>`
-const DISPATCHED = /\bdispatchId=(ctx_[0-9a-z]+)\s+taskId=(task_[0-9a-z]+)(?:[^\n]*?\sworkspace=\S*::(\S+))?/g;
+// one line per worker: `dispatchId=ctx_… taskId=task_… … workspace=<id>::<path>`, or only `dispatchId=ctx_…`
+const DISPATCHED = /\bdispatchId=(ctx_[0-9a-z]+)(?:\s+taskId=(task_[0-9a-z]+))?(?:[^\n]*?\sworkspace=\S*::(\S+))?/g;
 const WORKER_PROMPT = 'You are a dispatched worker';
 const PROMPT_START = 'You are working inside Orca'; // the prompt opens the message; helpers that quote it do not
 const TASK_LINE = /Your task ID is:\s*(task_[0-9a-z]+)/;
+const DISPATCH_FLAG = /--dispatch-id\s+(ctx_[0-9a-z]+)/;
 const flag = (name) => new RegExp(`--${name}\\s+(?:"([^"]+)"|'([^']+)'|(\\S+))`);
 const NAME_FLAG = flag('name');
 const TITLE_FLAG = flag('task-title');
@@ -24,14 +26,16 @@ const textOf = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? c.map((b) 
 /** The bot's slug when `cwd` is an Orca bot's home folder, else undefined. */
 export const botOf = (cwd) => (typeof cwd === 'string' ? BOT_CWD.exec(cwd)?.[1] : undefined);
 
-/** The task id when this user record is Orca's dispatch prompt (call it on a file's first user record only). */
-export function workerTaskOf(rec) {
+/** { task, dispatch } when this user record is Orca's dispatch prompt (call it on a file's first user record only). */
+export function workerOf(rec) {
   if (rec?.type !== 'user') return undefined;
   const t = textOf(rec.message?.content).trimStart();
-  return t.startsWith(PROMPT_START) && t.includes(WORKER_PROMPT) ? TASK_LINE.exec(t)?.[1] : undefined;
+  const task = t.startsWith(PROMPT_START) && t.includes(WORKER_PROMPT) ? TASK_LINE.exec(t)?.[1] : undefined;
+  return task ? { task, dispatch: DISPATCH_FLAG.exec(t)?.[1] } : undefined;
 }
 
-/** Workers a file started: feed records in order; `tasks` maps task id -> { name, task, start, line }. */
+/** Workers a file started: feed records in order; `tasks` maps task id (dispatch id when the result shows
+ *  only that) -> { name, task, start, line }. */
 export class OrcaDispatches {
   constructor() {
     this.calls = new Map(); // worker-start tool_use id -> { name, start, line }
@@ -58,14 +62,15 @@ export class OrcaDispatches {
       for (const m of textOf(b.content).matchAll(DISPATCHED)) {
         // no --name: the worker's workspace folder names it
         const folder = m[3]?.split(/[\\/]/).filter(Boolean).at(-1);
-        if (!this.tasks.has(m[2])) this.tasks.set(m[2], { ...call, name: call.name ?? folder });
+        const key = m[2] ?? m[1];
+        if (!this.tasks.has(key)) this.tasks.set(key, { ...call, name: call.name ?? folder });
       }
     }
   }
 }
 
 /** Raw-byte prefilter for lines worth parsing with OrcaDispatches. */
-export const DISPATCH_MARKS = [Buffer.from('worker-start'), Buffer.from('taskId=task_')];
+export const DISPATCH_MARKS = [Buffer.from('worker-start'), Buffer.from('dispatchId=ctx_')];
 export const WORKER_MARK = Buffer.from(WORKER_PROMPT);
 /** Worker files are started by Orca, not the claude CLI: their head says so (prefilter for a wider read). */
 export const WORKER_HEAD_MARKS = ['"entrypoint":"orca"', '"entrypoint":"sdk-cli"'].map((s) => Buffer.from(s));

@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-25
+
+### Added
+
+- A card in the corner when a newer version is out, once per version. In the Mac app it has an "Update now" button; in a browser it shows the npm command. "Later" hides it until the next version; the header badge stays.
+
+### Fixed
+
+- Orca workers are linked again when the bot cuts the `worker-start` output down to `dispatchId=…` (no task id): the worker's own prompt names its dispatch id too. Such a worker is named by its workspace folder.
+- An Orca bot waiting on its workers shows Running, not Background, in the list and the graph.
+
 ## [0.10.0] - 2026-11-24
 
 ### Added
@@ -248,7 +259,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.4...v0.10.0
 [0.9.4]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.2...v0.9.3

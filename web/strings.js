@@ -20,7 +20,11 @@ export const S = {
     add: '+ New group', addTo: 'Add to group', remove: 'Remove from group', del: 'Delete group',
     dropHint: 'Drop a session here to add it to this group',
   },
-  meta: { update: (v) => `Update ${v}`, click: (v) => `Click to update to ${v}. The app reopens when it is done.`, how: (v) => `Version ${v} is out. In the Mac app: right-click the menu bar item, then "Update to ${v}". Or run "npm i -g agent-run-inspector", then "ari service install" if you use the app or the service.` },
+  meta: {
+    popTitle: (v) => `Version ${v} is out`, popApp: 'Update now and the app reopens on the new version.',
+    popCli: 'Run this, then "ari service install" if you use the app or the service:', popNow: 'Update now', popLater: 'Later',
+    update: (v) => `Update ${v}`, click: (v) => `Click to update to ${v}. The app reopens when it is done.`, how: (v) => `Version ${v} is out. In the Mac app: right-click the menu bar item, then "Update to ${v}". Or run "npm i -g agent-run-inspector", then "ari service install" if you use the app or the service.`,
+  },
   auth: { restarted: 'Signed out. Open the new address printed in the terminal, or run "ari open" if the inspector runs as a service.', detail: 'The server was restarted or this tab lost its sign-in, so the server no longer accepts it.' },
   list: {
     heading: 'Sessions',

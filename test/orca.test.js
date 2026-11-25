@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createIndex } from '../src/index/index.js';
-import { botOf, workerTaskOf } from '../src/adapters/claude-code/orca.js';
+import { botOf, workerOf } from '../src/adapters/claude-code/orca.js';
 
 const T0 = Date.now() - 120e3;
 const at = (s) => new Date(T0 + s * 1000).toISOString();
@@ -17,7 +17,7 @@ const WORKER = '00000000-0000-4000-8000-0000000000b2';
 const QUOTER = '00000000-0000-4000-8000-0000000000b3';
 const LATE = '00000000-0000-4000-8000-0000000000b4';
 const RIVAL = '00000000-0000-4000-8000-0000000000b5';
-const PROMPT = 'You are working inside Orca. You are a dispatched worker. Your task ID is: task_0a1 Do the thing.';
+const PROMPT = 'You are working inside Orca. You are a dispatched worker. Your task ID is: task_0a1 When blocked: orca orchestration send --task-id task_0a1 --dispatch-id ctx_0f1 Do the thing.';
 const RESULT = 'dispatchId=ctx_0f1 taskId=task_0a1 runId=run_1 state=ready agent=claude workspace=w1::/Users/dev/orca/workspaces/shop/api-tests keptOpen=true';
 
 const rec = (sid, cwd) => ({
@@ -29,14 +29,16 @@ const rec = (sid, cwd) => ({
 
 // rivalFirst: another session with a genuine worker-start result naming the same task, before or after the bot.
 // busy: the worker is mid-turn (a tool call without its result).
-function setup({ quoterFirst = false, rivalFirst = null, busy = false } = {}) {
+// grepped: the bot cut the result down to the dispatch id (no task id, no name, no workspace).
+function setup({ quoterFirst = false, rivalFirst = null, busy = false, grepped = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'ari-orca-'));
   const put = (dir, sid, rows) => { mkdirSync(join(root, dir), { recursive: true }); writeFileSync(join(root, dir, `${sid}.jsonl`), jl(rows)); };
   const b = rec(BOT, '/Users/dev/.orca/bots/shop-bot');
   put('-Users-dev--orca-bots-shop-bot', BOT, [
     b.user(10, '[Orca: your live work now]'),
-    b.bash(11, 'tw', 'O=orca; $O orchestration worker-start --name api-tests --task-title "Write API tests" --agent claude --spec-file /tmp/x.md'),
-    b.result(12, 'tw', `Linked to item 1\n${RESULT}\nNext: Orca wakes you`),
+    grepped ? b.bash(11, 'tw', 'O=orca; $O orchestration worker-start --item 3 --agent claude --spec-file /tmp/x.md | grep -oE "dispatchId=\\S+"')
+      : b.bash(11, 'tw', 'O=orca; $O orchestration worker-start --name api-tests --task-title "Write API tests" --agent claude --spec-file /tmp/x.md'),
+    b.result(12, 'tw', grepped ? 'dispatchId=ctx_0f1 N=3' : `Linked to item 1\n${RESULT}\nNext: Orca wakes you`),
     b.done(13),
   ]);
   const w = rec(WORKER, '/Users/dev/orca/workspaces/shop/api-tests');
@@ -96,12 +98,25 @@ test('a task named by two worker-start results goes to the earlier one; no --nam
   assert.equal(rival.open(RIVAL).spans.find((s) => s.id === 'ext:task_0a1').name, 'api-tests');
 });
 
+test('a result cut down to the dispatch id still links; the worker folder names it', () => {
+  const idx = setup({ grepped: true });
+  const list = idx.list();
+  assert.ok(!list.some((s) => s.id === WORKER));
+  assert.equal(list.find((s) => s.id === BOT).agentCount, 2);
+  const w = idx.open(BOT).spans.find((s) => s.id === 'ext:ctx_0f1');
+  assert.deepEqual([w.name, w.orca, w.external, w.status], ['api-tests', true, undefined, 'ok']);
+});
+
 test('a busy worker keeps its bot running, in the list and the full parse', () => {
   const idx = setup({ busy: true });
   const l = idx.list().find((s) => s.id === BOT);
   const v = idx.open(BOT);
   assert.equal(l.status, 'running');
   assert.equal(v.summary.status, 'running');
+  // its own turn ended: still Running, not Background
+  assert.equal(l.background, undefined);
+  assert.equal(v.summary.background, undefined);
+  assert.equal(v.spans.find((s) => s.depth === 0).background, undefined);
   assert.equal(v.spans.find((s) => s.id === 'ext:task_0a1').status, 'running');
 });
 
@@ -109,8 +124,8 @@ test('bot folders and dispatch prompts', () => {
   assert.equal(botOf('/Users/dev/.orca/bots/pr-review'), 'pr-review');
   assert.equal(botOf('/Users/dev/.orca/bots/pr-review/sub'), 'pr-review');
   assert.equal(botOf('/Users/dev/orca/workspaces/x'), undefined);
-  assert.equal(workerTaskOf({ type: 'user', message: { content: [{ type: 'text', text: PROMPT }] } }), 'task_0a1');
-  assert.equal(workerTaskOf({ type: 'user', message: { content: 'Your task ID is: task_0a1' } }), undefined);
+  assert.deepEqual(workerOf({ type: 'user', message: { content: [{ type: 'text', text: PROMPT }] } }), { task: 'task_0a1', dispatch: 'ctx_0f1' });
+  assert.equal(workerOf({ type: 'user', message: { content: 'Your task ID is: task_0a1' } }), undefined);
   // Orca's branch-name helper quotes the whole prompt inside its own task: not a worker
-  assert.equal(workerTaskOf({ type: 'user', message: { content: `Generate a short git branch name for the task below.\n${PROMPT}` } }), undefined);
+  assert.equal(workerOf({ type: 'user', message: { content: `Generate a short git branch name for the task below.\n${PROMPT}` } }), undefined);
 });
