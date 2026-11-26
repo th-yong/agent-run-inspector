@@ -42,6 +42,7 @@ export const MSG = {
   untitledSession: 'Untitled session',
   toolFailed: 'Tool call failed',
   agentFailed: 'Agent call failed',
+  orcaBranchHelper: 'Branch name',
   mainAgent: 'Main agent',
   badPrices: (m) => `Error: ${m}`,
   unknownCommand: (c) => `Error: unknown command "${c}"`,

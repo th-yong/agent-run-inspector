@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareGraph, hiddenAgents, foldedAgents } from '../web/graph.js';
+import { prepareGraph, hiddenAgents, foldedAgents, ownTotals } from '../web/graph.js';
 import { cardInfo, callRows, barPct, toolLabel, statusKey } from '../web/card.js';
 
 // Synthetic spans only.
@@ -107,4 +107,16 @@ test('callRows: a compact card gets the short model-call label', () => {
   const rows = callRows([llm('x', 'a')], 3, true);
   assert.equal(rows[0].label, 'Model');
   assert.equal(callRows([llm('x', 'a')], 3)[0].label, 'Model response');
+});
+
+test("a card's count and cost come from the server's totals, minus its child agents' (old calls may be gone here)", () => {
+  const agents = [agent('a', 's'), agent('b', 'a'), agent('c', 'b')];
+  const t = (modelCalls, toolCalls, usd, priced) => ({ modelCalls, toolCalls, usd, priced });
+  const own = ownTotals(agents, { a: t(10, 5, 3, 10), b: t(4, 2, 1, 4), c: t(1, 0, 0, 0) });
+  assert.deepEqual([own.get('a').modelCalls, own.get('a').toolCalls, own.get('a').usd], [6, 3, 2]);
+  assert.deepEqual([own.get('b').modelCalls, own.get('c').modelCalls], [3, 1]);
+  const info = cardInfo(agent('b', 'a'), [], 100, own.get('b')); // its calls were trimmed in the browser
+  assert.deepEqual([info.callCount, info.usd], [5, 1]);
+  assert.equal(cardInfo(agent('c', 'b'), [], 100, own.get('c')).usd, null, 'nothing priced: no cost');
+  assert.equal(ownTotals(agents, undefined).size, 0);
 });

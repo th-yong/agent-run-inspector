@@ -170,7 +170,7 @@ export class AgentCollector {
       });
     }
     for (const [task, c] of this.orca.tasks) {
-      out.push(this.#mateSpan(task, c, c.name ?? task, { lookup, now, base, ref: { fileId: this.ctx.fileId, line: c.line }, orca: true }));
+      out.push(this.#mateSpan(task, c, c.name ?? c.folder ?? task, { lookup, now, base, ref: { fileId: this.ctx.fileId, line: c.line }, orca: true }));
     }
     return out;
   }
@@ -189,7 +189,7 @@ export class AgentCollector {
       const end = live ? null : (mate.lastTs ?? c.start);
       const model = c.model ?? mate.model;
       return {
-        ...base, id: externalSpanId(key), name: c.name ?? str(mate.meta?.name) ?? key.split('@')[0], status: live ? 'running' : 'ok',
+        ...base, id: externalSpanId(key), name: c.name ?? (orca ? mate.title ?? c.folder ?? str(mate.meta?.name) : undefined) ?? key.split('@')[0], status: live ? 'running' : 'ok',
         start: c.start, end, ref: { fileId: mate.fileId, line: 1 }, depth: this.ctx.depth + 1, role: 'worker',
         ...extra, ...(c.task ? { task: c.task } : {}),
         ...(model ? { model, provider: providerOf(model) } : {}),
@@ -251,7 +251,7 @@ export function buildSessionTree({ main, subagents = [], now }) {
     const s = new ClaudeCodeSession({ fileId: f.fileId, sessionId: sid, parentId: spanId, depth, now: clock });
     s.push(f.text);
     const lastLlm = s.llm.lastModel();
-    const entry = { agentId: f.agentId, meta, lastTs: s.lastTs, firstTs: s.firstTs, mtime: f.mtime, model: lastLlm, fileId: f.fileId, ...(f.mate ? { mate: true, turnEnded: s.turnEnded, shutDown: s.shutDown } : {}) };
+    const entry = { agentId: f.agentId, meta, title: s.title, lastTs: s.lastTs, firstTs: s.firstTs, mtime: f.mtime, model: lastLlm, fileId: f.fileId, ...(f.mate ? { mate: true, turnEnded: s.turnEnded, shutDown: s.shutDown } : {}) };
     lookup.add(entry);
     parsed.push({ f, s, entry, spanId, depth });
   }
@@ -272,7 +272,7 @@ export function buildSessionTree({ main, subagents = [], now }) {
     else status = isLive(last, clock) ? 'running' : 'unknown';
     const model = m.model ?? p.entry.model;
     children.push({
-      id: p.spanId, parentId: rootId, sessionId: sid, source: 'claude-code', kind: 'agent',
+      id: p.spanId, parentId: p.f.parent ? externalSpanId(p.f.parent) : rootId, sessionId: sid, source: 'claude-code', kind: 'agent',
       name: str(m.name) ?? str(m.agentType) ?? (p.f.mate ? p.f.agentId.split('@')[0] : 'Agent'), status,
       start: p.entry.firstTs ?? 0, end, ref: { fileId: p.f.fileId, line: 1 }, depth: p.depth, role: 'worker',
       ...(str(m.agentType) ? { agentType: m.agentType } : {}),

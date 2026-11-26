@@ -14,6 +14,7 @@ const WORKER_START = /\borchestration\s+worker-start\b/;
 const DISPATCHED = /\bdispatchId=(ctx_[0-9a-z]+)(?:\s+taskId=(task_[0-9a-z]+))?(?:[^\n]*?\sworkspace=\S*::(\S+))?/g;
 const WORKER_PROMPT = 'You are a dispatched worker';
 const PROMPT_START = 'You are working inside Orca'; // the prompt opens the message; helpers that quote it do not
+const HELPER_START = 'Generate a short git branch name'; // Orca's one-shot helper that names a worker's branch
 const TASK_LINE = /Your task ID is:\s*(task_[0-9a-z]+)/;
 const DISPATCH_FLAG = /--dispatch-id\s+(ctx_[0-9a-z]+)/;
 const flag = (name) => new RegExp(`--${name}\\s+(?:"([^"]+)"|'([^']+)'|(\\S+))`);
@@ -26,12 +27,15 @@ const textOf = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? c.map((b) 
 /** The bot's slug when `cwd` is an Orca bot's home folder, else undefined. */
 export const botOf = (cwd) => (typeof cwd === 'string' ? BOT_CWD.exec(cwd)?.[1] : undefined);
 
-/** { task, dispatch } when this user record is Orca's dispatch prompt (call it on a file's first user record only). */
+/** { task, dispatch } when this user record is Orca's dispatch prompt (call it on a file's first user record
+ *  only); with `helper: true` when it is Orca's branch-name helper quoting that prompt. */
 export function workerOf(rec) {
   if (rec?.type !== 'user') return undefined;
   const t = textOf(rec.message?.content).trimStart();
-  const task = t.startsWith(PROMPT_START) && t.includes(WORKER_PROMPT) ? TASK_LINE.exec(t)?.[1] : undefined;
-  return task ? { task, dispatch: DISPATCH_FLAG.exec(t)?.[1] } : undefined;
+  // the helper quotes a shortened prompt: the task id, not always the worker line or the dispatch id
+  const helper = t.startsWith(HELPER_START) && t.includes(PROMPT_START);
+  const task = helper || (t.startsWith(PROMPT_START) && t.includes(WORKER_PROMPT)) ? TASK_LINE.exec(t)?.[1] : undefined;
+  return task ? { task, dispatch: DISPATCH_FLAG.exec(t)?.[1], ...(helper ? { helper } : {}) } : undefined;
 }
 
 /** Workers a file started: feed records in order; `tasks` maps task id (dispatch id when the result shows
@@ -60,10 +64,10 @@ export class OrcaDispatches {
       if (!call) continue;
       // one call can start several workers (a shell loop): each result line names one
       for (const m of textOf(b.content).matchAll(DISPATCHED)) {
-        // no --name: the worker's workspace folder names it
+        // no --name: the worker's own title names it, else its workspace folder (see agents.js)
         const folder = m[3]?.split(/[\\/]/).filter(Boolean).at(-1);
         const key = m[2] ?? m[1];
-        if (!this.tasks.has(key)) this.tasks.set(key, { ...call, name: call.name ?? folder });
+        if (!this.tasks.has(key)) this.tasks.set(key, { ...call, ...(folder ? { folder } : {}) });
       }
     }
   }
@@ -71,6 +75,6 @@ export class OrcaDispatches {
 
 /** Raw-byte prefilter for lines worth parsing with OrcaDispatches. */
 export const DISPATCH_MARKS = [Buffer.from('worker-start'), Buffer.from('dispatchId=ctx_')];
-export const WORKER_MARK = Buffer.from(WORKER_PROMPT);
+export const WORKER_MARKS = [Buffer.from(WORKER_PROMPT), Buffer.from(HELPER_START)];
 /** Worker files are started by Orca, not the claude CLI: their head says so (prefilter for a wider read). */
 export const WORKER_HEAD_MARKS = ['"entrypoint":"orca"', '"entrypoint":"sdk-cli"'].map((s) => Buffer.from(s));

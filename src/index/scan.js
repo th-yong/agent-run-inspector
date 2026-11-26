@@ -4,7 +4,8 @@
 import { readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createFileStore } from '../files.js';
-import { OrcaDispatches, workerOf, DISPATCH_MARKS, WORKER_MARK, WORKER_HEAD_MARKS } from '../adapters/claude-code/orca.js';
+import { MSG } from '../strings.js';
+import { OrcaDispatches, workerOf, DISPATCH_MARKS, WORKER_MARKS, WORKER_HEAD_MARKS } from '../adapters/claude-code/orca.js';
 
 export const HEAD_BYTES = 16 * 1024;
 export const TAIL_BYTES = 16 * 1024;
@@ -218,7 +219,7 @@ function firstUser(buf) {
     let r = null;
     try { r = JSON.parse(line.toString('utf8')); } catch { /* not a record */ }
     if (r?.type !== 'user') continue;
-    const w = line.includes(WORKER_MARK) ? workerOf(r) : undefined;
+    const w = WORKER_MARKS.some((m) => line.includes(m)) ? workerOf(r) : undefined; // a worker, or Orca's helper for one
     const t = Date.parse(r.timestamp);
     // the worker's folder names it when its coordinator's result did not
     const folder = typeof r.cwd === 'string' ? r.cwd.split(/[\\/]/).filter(Boolean).at(-1) : undefined;
@@ -238,7 +239,7 @@ function workerKey(store, file, cache) {
   if (WORKER_HEAD_MARKS.some((m) => head.includes(m))) {
     n = Math.min(file.size, WORKER_SCAN);
     const buf = n > head.length ? store.readRange(file.fileId, 0, n) : head;
-    res = buf.includes(WORKER_MARK) ? firstUser(buf) : { found: n >= WORKER_SCAN, key: null };
+    res = WORKER_MARKS.some((m) => buf.includes(m)) ? firstUser(buf) : { found: n >= WORKER_SCAN, key: null };
   }
   const orca = WORKER_HEAD_MARKS.some((m) => head.includes(m));
   const settled = res.found || n >= WORKER_SCAN || (!orca && n < file.size);
@@ -298,13 +299,24 @@ function linkOrcaWorkers(list, store, cache) {
       if (!o || call.start < o.start) owner.set(task, { lead: l, start: call.start });
     }
   }
-  for (const { e, key: { task, dispatch, folder } } of workers) {
+  const linked = new Map(); // task and dispatch id -> the linked worker's key
+  for (const { e, key: { task, dispatch, folder, helper } } of workers) {
+    if (helper) continue;
     const key = owner.has(task) ? task : dispatch;
     const o = owner.get(key);
     if (!o) { rest.push(e); continue; }
     // the worker's own sub-agents come along (linked to its Agent calls by tool_use id)
     o.lead.subs.push({ ...e.main, agentId: key, metaFileId: null, mate: true, name: folder }, ...e.subs);
     o.lead.lastWrite = Math.max(o.lead.lastWrite, e.lastWrite);
+    linked.set(task, { o, key }).set(dispatch, { o, key });
+  }
+  // Orca's branch-name helper (a one-shot run quoting the worker's prompt) goes under that worker's node
+  for (const { e, key: { task, helper } } of workers) {
+    if (!helper) continue;
+    const w = linked.get(task);
+    if (!w) { rest.push(e); continue; }
+    w.o.lead.subs.push({ ...e.main, agentId: `${w.key}~branch~${e.id}`, metaFileId: null, mate: true, parent: w.key,
+      meta: { name: MSG.orcaBranchHelper, finished: true, spawnDepth: 2 } });
   }
   return rest;
 }
