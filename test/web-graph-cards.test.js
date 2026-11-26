@@ -111,8 +111,9 @@ test('callRows: a compact card gets the short model-call label', () => {
 
 test("a card's count and cost come from the server's totals, minus its child agents' (old calls may be gone here)", () => {
   const agents = [agent('a', 's'), agent('b', 'a'), agent('c', 'b')];
-  const t = (modelCalls, toolCalls, usd, priced) => ({ modelCalls, toolCalls, usd, priced });
-  const own = ownTotals(agents, { a: t(10, 5, 3, 10), b: t(4, 2, 1, 4), c: t(1, 0, 0, 0) });
+  // The server's shape (src/model/totals.js): usd is null when nothing was priced; there is no count of priced calls.
+  const t = (modelCalls, toolCalls, usd) => ({ modelCalls, toolCalls, usd, basis: usd == null ? 'unknown' : 'priced' });
+  const own = ownTotals(agents, { a: t(10, 5, 3), b: t(4, 2, 1), c: t(1, 0, null) });
   assert.deepEqual([own.get('a').modelCalls, own.get('a').toolCalls, own.get('a').usd], [6, 3, 2]);
   assert.deepEqual([own.get('b').modelCalls, own.get('c').modelCalls], [3, 1]);
   const info = cardInfo(agent('b', 'a'), [], 100, own.get('b')); // its calls were trimmed in the browser
