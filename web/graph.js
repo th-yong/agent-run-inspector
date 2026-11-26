@@ -10,6 +10,20 @@ export const FOLD_DELAY_MS = 1600; // a finished agent shows its Done / Failed b
 const FINISHED = new Set(['ok', 'error', 'cancelled']);
 const isFinished = (a) => FINISHED.has(a.status) && !a.external;
 
+/** Each agent's own totals from the server's (which are per subtree): minus its child agents'. The browser may
+ *  have dropped an old agent's calls (trimSpans), the server totals never do. */
+export function ownTotals(agents, byAgent) {
+  const out = new Map();
+  if (!byAgent) return out;
+  for (const a of agents) if (byAgent[a.id]) out.set(a.id, { ...byAgent[a.id] });
+  for (const a of agents) {
+    const o = out.get(a.parentId);
+    const t = byAgent[a.id];
+    if (o && t) for (const k of ['modelCalls', 'toolCalls', 'usd', 'priced']) o[k] -= t[k] ?? 0;
+  }
+  return out;
+}
+
 /** Agent spans (with callCount = their own llm + tool calls) and each agent's calls in start order. */
 export function prepareGraph(spans) {
   const calls = new Map();
@@ -193,6 +207,7 @@ export function createGraph({ onSelect }) {
   function render() {
     if (!props || lastWidth <= 0) return;
     const { agents, calls } = prepareGraph(props.spans);
+    const own = ownTotals(agents, props.totals?.byAgent);
     const selected = props.selectedId && agents.some((a) => a.id === props.selectedId) ? props.selectedId : null;
     const now = Date.now();
     const animate = !reduceMotion();
@@ -227,7 +242,7 @@ export function createGraph({ onSelect }) {
     for (const box of layout.cards) {
       seen.add(box.id);
       const agent = byId.get(box.id);
-      const own = calls.get(box.id) ?? [];
+      const mine = calls.get(box.id) ?? [];
       let c = cards.get(box.id);
       if (!c) {
         c = createCard();
@@ -237,8 +252,8 @@ export function createGraph({ onSelect }) {
         canvas.append(c.root);
       }
       updateCard(c, {
-        info: cardInfo(agent, own, now),
-        rows: callRows(own, box.shownCalls, box.w < COMPACT_W),
+        info: cardInfo(agent, mine, now, own.get(box.id)),
+        rows: callRows(mine, box.shownCalls, box.w < COMPACT_W),
         moreCalls: box.moreCalls,
         showTask: box.showTask,
         folded: box.folded,

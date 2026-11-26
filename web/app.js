@@ -147,7 +147,7 @@ function renderMain() {
     const agent = state.gsel ? spans.find((s) => s.id === state.gsel && s.kind === 'agent' && !s.external) : null;
     view.classList.toggle('with-panel', Boolean(agent));
     graph.panel.update({ agent, spans, totals: agent ? run.data?.totals?.byAgent?.[agent.id] : null, sessionId: state.s, openId: state.gopen });
-    graph.graph.update({ spans, selectedId: state.gsel, hide: state.hide, detailOpen: Boolean(agent) });
+    graph.graph.update({ spans, totals: run.data?.totals, selectedId: state.gsel, hide: state.hide, detailOpen: Boolean(agent) });
     return;
   }
   const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : S.views[state.tab];
