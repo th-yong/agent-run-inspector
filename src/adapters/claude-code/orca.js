@@ -26,6 +26,17 @@ const textOf = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? c.map((b) 
 
 /** The bot's slug when `cwd` is an Orca bot's home folder, else undefined. */
 export const botOf = (cwd) => (typeof cwd === 'string' ? BOT_CWD.exec(cwd)?.[1] : undefined);
+/** The bot's slug from Claude Code's project folder name (`-Users-me--orca-bots-<slug>`), for a file with no cwd. */
+export const botOfProject = (dir) => (typeof dir === 'string' ? /--orca-bots-(.+)$/.exec(dir)?.[1] : undefined);
+
+// Orca names each run of a bot with a `custom-title` record (its first line): "Home" for a chat, and its own
+// scheduled runs "Look around" (a short read-only pass that suggests next steps) and "Tidy-up" (memory upkeep).
+const ROUTINES = new Set(['Look around', 'Tidy-up']);
+/** The run's name when it is one of a bot's routine runs, from the file's first records, else undefined. */
+export const routineOf = (head) => {
+  const t = head.find((r) => r?.type === 'custom-title')?.customTitle;
+  return ROUTINES.has(t) ? t : undefined;
+};
 
 /** { task, dispatch } when this user record is Orca's dispatch prompt (call it on a file's first user record
  *  only); with `helper: true` when it is Orca's branch-name helper quoting that prompt. */

@@ -167,3 +167,24 @@ test('bot folders and dispatch prompts', () => {
   assert.deepEqual(workerOf({ type: 'user', message: { content: `Generate a short git branch name for the task below.\n${PROMPT}` } }), { task: 'task_0a1', dispatch: 'ctx_0f1', helper: true });
   assert.equal(workerOf({ type: 'user', message: { content: `Summarize this.\n${PROMPT}` } }), undefined);
 });
+
+test("an Orca bot's scheduled runs (Look around, Tidy-up) are named and marked; a bot file without cwd is still the bot's", () => {
+  const root = mkdtempSync(join(tmpdir(), 'ari-look-'));
+  const dir = join(root, '-Users-dev--orca-bots-demo');
+  mkdirSync(dir);
+  const [chat, look, failed] = ['d1', 'd2', 'd3'].map((x) => `00000000-0000-4000-8000-0000000000${x}`);
+  const named = (sid, customTitle) => ({ type: 'custom-title', customTitle, sessionId: sid });
+  const a = rec(chat, '/Users/dev/.orca/bots/demo');
+  const b = rec(look, '/Users/dev/.orca/bots/demo');
+  writeFileSync(join(dir, `${chat}.jsonl`), jl([named(chat, 'Home'), a.user(2, 'Ship the fix'), a.done(3)]));
+  writeFileSync(join(dir, `${look}.jsonl`), jl([named(look, 'Look around'), b.user(2, 'Look around: suggest next steps.'), b.done(3)]));
+  // a run that failed before writing any cwd
+  writeFileSync(join(dir, `${failed}.jsonl`), jl([named(failed, 'Tidy-up'), { sessionId: failed, type: 'user', timestamp: at(2), message: { role: 'user', content: 'Tidy-up: tidy your memory' } }, { sessionId: failed, type: 'assistant', timestamp: at(2), message: { id: 'e', model: '<synthetic>', stop_reason: 'stop_sequence', content: [{ type: 'text', text: 'API Error' }] } }]));
+  const idx = createIndex({ roots: { claude: [{ path: root }] }, source: 'claude', now: () => Date.now() });
+  const by = new Map(idx.list().map((s) => [s.id, s]));
+  assert.deepEqual([by.get(look).bot, by.get(look).title, by.get(look).routine], ['demo', 'Look around', true]);
+  assert.deepEqual([by.get(failed).bot, by.get(failed).title, by.get(failed).routine, by.get(failed).project], ['demo', 'Tidy-up', true, 'demo']);
+  assert.deepEqual([by.get(chat).bot, by.get(chat).routine], ['demo', undefined]);
+  const full = idx.open(look).summary;
+  assert.deepEqual([full.title, full.routine], ['Look around', true]);
+});
