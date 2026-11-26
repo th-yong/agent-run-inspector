@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.5] - 2026-11-26
+
+### Changed
+
+- An Orca bot's scheduled runs are named in the list by the name Orca gives them, "Look around" (a short read-only pass that suggests next steps) or "Tidy-up" (memory upkeep), instead of the bot's name, and their rows are dimmed until hovered or selected. They used to look like more copies of the bot.
+
+### Fixed
+
+- A bot's run that failed before writing its working folder is still shown as that bot's, with the bot's name as its project, not "Untitled session" under an encoded folder name.
+
 ## [0.10.4] - 2026-11-26
 
 ### Changed
@@ -288,7 +298,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.4...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.5...HEAD
+[0.10.5]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.4...v0.10.5
 [0.10.4]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.3...v0.10.4
 [0.10.3]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.1...v0.10.2
