@@ -25,8 +25,9 @@ export function statusKey(status) {
   return 'unknown';
 }
 
-/** Fields the card header and footer show. `calls` are the agent's own llm/tool spans. */
-export function cardInfo(agent, calls, now) {
+/** Fields the card header and footer show. `calls` are the agent's own llm/tool spans (old ones may have been
+ *  dropped in the browser, see trimSpans); `own`, the server's totals for this agent alone, wins for count and cost. */
+export function cardInfo(agent, calls, now, own = null) {
   const llms = calls.filter((c) => c.kind === 'llm');
   const real = llms.find((c) => c.model && !c.model.startsWith('<'));
   const model = agent.model ?? real?.model ?? null;
@@ -40,9 +41,9 @@ export function cardInfo(agent, calls, now) {
     modelForIcon: model ?? agent.name,
     status: statusKey(agent.status),
     task: agent.task ?? '',
-    usd: priced.length ? priced.reduce((s, c) => s + c.cost.usd, 0) : null,
+    usd: own ? (own.priced > 0 ? own.usd : null) : priced.length ? priced.reduce((s, c) => s + c.cost.usd, 0) : null,
     durationMs: known(agent.start) && end != null ? Math.max(0, end - agent.start) : null,
-    callCount: calls.length,
+    callCount: own ? own.modelCalls + own.toolCalls : calls.length,
     external: Boolean(agent.external),
     watcher: agent.role === 'watcher',
     bot: agent.role === 'bot',

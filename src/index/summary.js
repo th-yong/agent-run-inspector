@@ -47,6 +47,10 @@ function subFinished(store, sub) {
 
 // The record that says whether a Claude Code thread is mid-turn, and whether that turn ended.
 const turnRec = (tail) => lastOf(tail, (r) => (r.type === 'user' && !isLocalCommand(r)) || r.type === 'assistant' || (r.type === 'system' && r.subtype === 'turn_duration'));
+// One big record (an attachment, a long tool result) after the last turn can fill the whole tail:
+// then look further back. Call it only while the file is recent, so the list stays cheap.
+const lastTurn = (store, fileId, size, tail) => turnRec(tail)
+  ?? (size > TAIL_BYTES ? turnRec(readTail(store, fileId, size, TITLE_SCAN_BYTES)) : undefined);
 const ended = (r) => r?.type === 'system' || (r?.type === 'assistant' && ENDS_TURN.has(r.message?.stop_reason));
 
 // Teammates the lead stopped (TaskStop) or heard shut down, from the lead's tail: name -> time.
@@ -63,7 +67,7 @@ function stoppedMates(tail) {
 // after its last message.
 function mateDone(store, sub, stopped) {
   const { tail } = readEnds(store, sub.fileId, sub.size);
-  const r = turnRec(tail);
+  const r = lastTurn(store, sub.fileId, sub.size, tail);
   if (ended(r)) return true;
   if (stopped.get(sub.agentId.split('@')[0]) >= (ts(r) ?? Infinity)) return true;
   let down = false;
@@ -107,8 +111,8 @@ function quickClaude(entry, store, now) {
   // The main thread's last turn ended (a final answer or system/turn_duration last): it waits for the user.
   // No turn record at all: done when the tail holds only command records (a file /clear started); otherwise
   // the tail may just sit inside one huge record, so keep the old reading (not ended).
-  const lastTurn = turnRec(tail);
-  const turnEnded = lastTurn ? ended(lastTurn) : tail.some(isLocalCommand);
+  const turn = recent(last) ? lastTurn(store, entry.main.fileId, entry.main.size, tail) : turnRec(tail);
+  const turnEnded = turn ? ended(turn) : tail.some(isLocalCommand);
   // ...but a sub-agent or teammate still writing keeps the run going (same rule as the full parse).
   const stopped = entry.subs.some((s) => s.mate) ? stoppedMates(tail) : new Map();
   const childRunning = entry.subs.some((s) => recent(s.mtimeMs) && (s.mate ? !mateDone(store, s, stopped) : !subFinished(store, s)));
@@ -207,7 +211,8 @@ export function openEntry(entry, store, now) {
   if (entry.source === 'claude-code') {
     const subagents = entry.subs.map((s) => ({
       fileId: String(s.fileId), agentId: s.agentId, text: readText(store, s.fileId, s.size),
-      meta: s.name ? { name: s.name } : readMeta(store, s), mtime: s.mtimeMs, ...(s.mate ? { mate: true } : {}),
+      meta: s.meta ?? (s.name ? { name: s.name } : readMeta(store, s)), mtime: s.mtimeMs, ...(s.mate ? { mate: true } : {}),
+      ...(s.parent ? { parent: s.parent } : {}),
     }));
     const snap = buildSessionTree({
       main: { fileId: String(entry.main.fileId), text: readText(store, entry.main.fileId, entry.main.size) },

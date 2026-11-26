@@ -30,7 +30,10 @@ const rec = (sid, cwd) => ({
 // rivalFirst: another session with a genuine worker-start result naming the same task, before or after the bot.
 // busy: the worker is mid-turn (a tool call without its result).
 // grepped: the bot cut the result down to the dispatch id (no task id, no name, no workspace).
-function setup({ quoterFirst = false, rivalFirst = null, busy = false, grepped = false } = {}) {
+// helper: Orca's branch-name helper ran for the worker, ending with one big record after its answer.
+// titled: the worker's session has its own title.
+const HELPER = '00000000-0000-4000-8000-0000000000b6';
+function setup({ quoterFirst = false, rivalFirst = null, busy = false, grepped = false, helper = false, titled = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'ari-orca-'));
   const put = (dir, sid, rows) => { mkdirSync(join(root, dir), { recursive: true }); writeFileSync(join(root, dir, `${sid}.jsonl`), jl(rows)); };
   const b = rec(BOT, '/Users/dev/.orca/bots/shop-bot');
@@ -44,7 +47,15 @@ function setup({ quoterFirst = false, rivalFirst = null, busy = false, grepped =
   const w = rec(WORKER, '/Users/dev/orca/workspaces/shop/api-tests');
   // Orca's dispatch prompt sits behind ~64 KB of attachment records, as in real worker files
   const pad = { sessionId: WORKER, type: 'attachment', entrypoint: 'orca', timestamp: at(14), attachment: { content: 'x'.repeat(70 * 1024) } };
-  put('-Users-dev-orca-workspaces-shop-api-tests', WORKER, [pad, w.user(14, PROMPT), ...(busy ? [w.bash(15, 'wb', 'npm test')] : [w.done(20)])]);
+  put('-Users-dev-orca-workspaces-shop-api-tests', WORKER, [pad, w.user(14, PROMPT), ...(busy ? [w.bash(15, 'wb', 'npm test')] : [w.done(20)]),
+    ...(titled ? [{ type: 'ai-title', aiTitle: 'Login API tests', sessionId: WORKER }] : [])]);
+  if (helper) {
+    const h = rec(HELPER, '/Users/dev/orca/workspaces/shop/api-tests');
+    put('-Users-dev-orca-workspaces-shop-api-tests', HELPER, [
+      // it quotes a shortened prompt: no worker line, no dispatch id
+      { ...h.user(13, 'Generate a short git branch name for the task below.\nUser request:\nYou are working inside Orca, a multi-agent IDE. Your task ID is: task_0a1 === TASK === x'), entrypoint: 'sdk-cli' }, h.done(13.5),
+      { sessionId: HELPER, type: 'attachment', entrypoint: 'sdk-cli', timestamp: at(13.5), attachment: { content: 'y'.repeat(20 * 1024) } }]);
+  }
   if (rivalFirst !== null) {
     const r = rec(RIVAL, '/Users/dev/elsewhere');
     const t = rivalFirst ? 5 : 50;
@@ -107,6 +118,30 @@ test('a result cut down to the dispatch id still links; the worker folder names 
   assert.deepEqual([w.name, w.orca, w.external, w.status], ['api-tests', true, undefined, 'ok']);
 });
 
+test("Orca's branch-name helper folds under its worker; the worker's own title names it", () => {
+  const idx = setup({ helper: true, titled: true, grepped: true });
+  const list = idx.list();
+  assert.ok(!list.some((s) => s.id === HELPER || s.id === WORKER));
+  const bot = list.find((s) => s.id === BOT);
+  assert.equal(bot.agentCount, 3);
+  assert.equal(bot.status, 'ok', 'a finished helper does not keep the bot running');
+  const spans = idx.open(BOT).spans;
+  assert.equal(spans.find((s) => s.id === 'ext:ctx_0f1').name, 'Login API tests');
+  const h = spans.find((s) => s.kind === 'agent' && s.name === 'Branch name');
+  assert.deepEqual([h.parentId, h.status], ['ext:ctx_0f1', 'ok']);
+});
+
+test('a big record after the last answer does not make a session look busy', () => {
+  const root = mkdtempSync(join(tmpdir(), 'ari-tail-'));
+  const sid = '00000000-0000-4000-8000-0000000000c7';
+  const r = rec(sid, '/Users/dev/app');
+  mkdirSync(join(root, '-Users-dev-app'));
+  writeFileSync(join(root, '-Users-dev-app', `${sid}.jsonl`), jl([r.user(1, 'name it'), r.done(2),
+    { sessionId: sid, type: 'attachment', timestamp: at(2), attachment: { content: 'y'.repeat(40 * 1024) } }]));
+  const idx = createIndex({ roots: { claude: [{ path: root }] }, source: 'claude', now: () => Date.now() });
+  assert.equal(idx.list()[0].status, 'ok');
+});
+
 test('a busy worker keeps its bot running, in the list and the full parse', () => {
   const idx = setup({ busy: true });
   const l = idx.list().find((s) => s.id === BOT);
@@ -126,6 +161,7 @@ test('bot folders and dispatch prompts', () => {
   assert.equal(botOf('/Users/dev/orca/workspaces/x'), undefined);
   assert.deepEqual(workerOf({ type: 'user', message: { content: [{ type: 'text', text: PROMPT }] } }), { task: 'task_0a1', dispatch: 'ctx_0f1' });
   assert.equal(workerOf({ type: 'user', message: { content: 'Your task ID is: task_0a1' } }), undefined);
-  // Orca's branch-name helper quotes the whole prompt inside its own task: not a worker
-  assert.equal(workerOf({ type: 'user', message: { content: `Generate a short git branch name for the task below.\n${PROMPT}` } }), undefined);
+  // Orca's branch-name helper quotes the whole prompt inside its own task: not the worker, a helper for it
+  assert.deepEqual(workerOf({ type: 'user', message: { content: `Generate a short git branch name for the task below.\n${PROMPT}` } }), { task: 'task_0a1', dispatch: 'ctx_0f1', helper: true });
+  assert.equal(workerOf({ type: 'user', message: { content: `Summarize this.\n${PROMPT}` } }), undefined);
 });

@@ -231,7 +231,7 @@ async function main(argv, env) {
         if (v && !stopping) console.error(MSG.updateAvailable(version, v));
       }, () => {});
       check();
-      if (svc) setInterval(check, 6 * 60 * 60 * 1000).unref(); // a service runs for days; the check itself is cached a day
+      setInterval(check, 60 * 60 * 1000).unref(); // a long run (the service, the app) hears of a release within the hour
     }
   });
 }

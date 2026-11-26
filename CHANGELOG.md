@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.3] - 2026-11-26
+
+### Changed
+
+- Update checks run every hour instead of once a day (CLI) or every 6 hours (Mac app), and a running CLI checks again each hour too, so a new release shows up within the hour.
+- An Orca worker's card is named by the worker session's own title (the `--name` given to `worker-start` still wins; the workspace folder is the last fallback).
+
+### Fixed
+
+- A finished session no longer shows Running in the list when a large record follows its last answer (for example Orca's short branch-name helper sessions): the list looks further back for that answer.
+- Orca's branch-name helper sessions no longer show as "Untitled session" rows: each one folds under its worker as a "Branch name" node.
+- Graph cards of a long run show their call count and cost from the server's totals, so older cards no longer read "0 calls" after the browser drops old calls.
+
 ## [0.10.2] - 2026-11-25
 
 ### Fixed
@@ -265,7 +278,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.3...HEAD
+[0.10.3]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/th-yong/agent-run-inspector/compare/v0.9.4...v0.10.0

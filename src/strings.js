@@ -17,7 +17,7 @@ Options:
   --redact[=strict]     Hide message bodies (strict: hide more)
   --prices <file>       Price table that overrides the built-in one
   --session <id>        Open this session directly
-  --no-update-check     Do not check npm for a newer version (once a day)
+  --no-update-check     Do not check npm for a newer version (once an hour)
   -v, --version         Print the version
   -h, --help            Show this help
 
@@ -42,6 +42,7 @@ export const MSG = {
   untitledSession: 'Untitled session',
   toolFailed: 'Tool call failed',
   agentFailed: 'Agent call failed',
+  orcaBranchHelper: 'Branch name',
   mainAgent: 'Main agent',
   badPrices: (m) => `Error: ${m}`,
   unknownCommand: (c) => `Error: unknown command "${c}"`,

@@ -147,7 +147,7 @@ function renderMain() {
     const agent = state.gsel ? spans.find((s) => s.id === state.gsel && s.kind === 'agent' && !s.external) : null;
     view.classList.toggle('with-panel', Boolean(agent));
     graph.panel.update({ agent, spans, totals: agent ? run.data?.totals?.byAgent?.[agent.id] : null, sessionId: state.s, openId: state.gopen });
-    graph.graph.update({ spans, selectedId: state.gsel, hide: state.hide, detailOpen: Boolean(agent) });
+    graph.graph.update({ spans, totals: run.data?.totals, selectedId: state.gsel, hide: state.hide, detailOpen: Boolean(agent) });
     return;
   }
   const note = run.status === 'loading' ? S.run.loading : run.status === 'missing' ? S.run.notFound : run.status === 'error' ? S.run.loadFailed : S.views[state.tab];
@@ -258,7 +258,7 @@ if (state.mini) {
   applyTheme();
   startMini(document.body);
 } else {
-  // Version, and a newer one when the server's daily npm check found it (app users never see the terminal).
+  // Version, and a newer one when the server's hourly check found it (app users never see the terminal).
   const showMeta = () => fetchMeta().then((m) => {
     $('ver').textContent = m.version ? `v${m.version}` : '';
     const upd = $('upd');
