@@ -12,7 +12,13 @@ import { linkCodexAgents } from '../adapters/codex/agents.js';
 import { AgentCollector, buildSessionTree } from '../adapters/claude-code/agents.js';
 import { ENDS_TURN, isLocalCommand, shutdownSignal } from '../adapters/claude-code/index.js';
 import { BackgroundTasks } from '../adapters/claude-code/tools.js';
-import { botOf } from '../adapters/claude-code/orca.js';
+import { botOf, botOfProject, routineOf } from '../adapters/claude-code/orca.js';
+
+// One of a bot's routine runs (Look around, Tidy-up): named so, and shown quieter in the list.
+const routineFields = (bot, head) => {
+  const name = bot ? routineOf(head) : undefined;
+  return name ? { title: name, routine: true } : {};
+};
 import { mapUsage } from '../adapters/codex/llm.js';
 import { MSG } from '../strings.js';
 
@@ -124,11 +130,12 @@ function quickClaude(entry, store, now) {
     for (const r of readTail(store, entry.main.fileId, entry.main.size, TITLE_SCAN_BYTES)) if (r.type === 'assistant') bg.onAssistant(r); else if (r.type === 'user') bg.onUser(r);
   }
   const running = (recent(last) && (!turnEnded || bg.open.size > 0)) || childRunning;
-  const bot = botOf(cwd);
+  const bot = botOf(cwd) ?? (cwd ? undefined : botOfProject(entry.project));
   return base(entry, {
     ...(title ? { title } : {}),
     ...(bot ? { bot } : {}),
-    project: lastSeg(cwd) || entry.project || '',
+    ...routineFields(bot, head),
+    project: lastSeg(cwd) || bot || entry.project || '',
     ...(cwd ? { cwd } : {}),
     ...(branch ? { branch } : {}),
     start: first ?? entry.main.mtimeMs,
@@ -250,7 +257,9 @@ export function openEntry(entry, store, now) {
     const m = root.meta();
     meta = m ? { cwd: m.cwd, branch: m.branch, project: lastSeg(m.cwd) } : { title: MSG.unknownFormat };
   }
-  return { summary: fullSummary(entry, spans, meta), spans, markers, turns };
+  const summary = fullSummary(entry, spans, meta);
+  if (summary.bot) Object.assign(summary, routineFields(summary.bot, readHead(store, entry.main.fileId, entry.main.size)));
+  return { summary, spans, markers, turns };
 }
 
 export function fullSummary(entry, spans, meta) {
@@ -281,11 +290,11 @@ export function fullSummary(entry, spans, meta) {
   }
   totals.usd = llmCount > 0 && usdKnown ? usd : null;
   const title = meta.title;
-  const bot = entry.source === 'claude-code' ? botOf(meta.cwd) : undefined;
+  const bot = entry.source === 'claude-code' ? botOf(meta.cwd) ?? (meta.cwd ? undefined : botOfProject(entry.project)) : undefined;
   return base(entry, {
     ...(title ? { title } : {}),
     ...(bot ? { bot } : {}),
-    project: meta.project ?? '',
+    project: meta.project || bot || '',
     ...(meta.cwd ? { cwd: meta.cwd } : {}),
     ...(meta.branch ? { branch: meta.branch } : {}),
     start: session?.start ?? 0,

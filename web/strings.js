@@ -34,6 +34,7 @@ export const S = {
     untitled: 'Untitled session',
     bot: 'Bot',
     botTip: (name) => `Orca bot "${name}": its workers are folded into this run`,
+    routineTip: "One of the Orca bot's scheduled runs (Look around: a short read-only check that suggests next steps; Tidy-up: memory upkeep)",
     searchPlaceholder: 'Search title or project',
     sourceLabel: 'Tool',
     periodLabel: 'Period',

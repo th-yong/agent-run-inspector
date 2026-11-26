@@ -115,6 +115,9 @@ body.resizing { cursor: col-resize; user-select: none; }
 .pi { width: 12px; height: 12px; fill: light-dark(var(--il), var(--id)); flex: none; }
 .sess .proj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 12em; }
 .sess .t .dot { margin-left: auto; }
+/* An Orca bot's scheduled runs (Look around, Tidy-up): quieter, back to full on hover, focus or selection */
+.sess.routine:not([aria-current]):not(:hover):not(:focus-visible) { opacity: 0.55; }
+.sess.routine .t .name { font-weight: 400; }
 .origin { font-size: 11px; color: var(--faint); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 4px; }
 .link { color: var(--accent); text-decoration: underline; display: block; margin-top: 8px; }
 .link:hover { text-decoration: none; }

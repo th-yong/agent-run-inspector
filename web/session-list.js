@@ -117,6 +117,7 @@ export function sessionRow(s, { selected = false, now = Date.now(), group = null
   row.dataset.id = s.id;
   row.draggable = true; // onto a group chip
   if (selected) row.setAttribute('aria-current', 'true');
+  if (s.routine) { row.classList.add('routine'); row.title = S.list.routineTip; } // an Orca bot's scheduled run
   const t = el('div', 't');
   const badge = el('span', `badge ${s.source === 'codex' ? 'cx' : 'cc'}`, S.sourceBadge[s.source] ?? '?');
   badge.title = S.sourceTip(S.source[s.source] ?? s.source);
