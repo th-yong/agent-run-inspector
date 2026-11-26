@@ -41,7 +41,7 @@ export function cardInfo(agent, calls, now, own = null) {
     modelForIcon: model ?? agent.name,
     status: statusKey(agent.status),
     task: agent.task ?? '',
-    usd: own ? (own.priced > 0 ? own.usd : null) : priced.length ? priced.reduce((s, c) => s + c.cost.usd, 0) : null,
+    usd: own ? own.usd ?? null : priced.length ? priced.reduce((s, c) => s + c.cost.usd, 0) : null,
     durationMs: known(agent.start) && end != null ? Math.max(0, end - agent.start) : null,
     callCount: own ? own.modelCalls + own.toolCalls : calls.length,
     external: Boolean(agent.external),

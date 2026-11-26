@@ -19,7 +19,10 @@ export function ownTotals(agents, byAgent) {
   for (const a of agents) {
     const o = out.get(a.parentId);
     const t = byAgent[a.id];
-    if (o && t) for (const k of ['modelCalls', 'toolCalls', 'usd', 'priced']) o[k] -= t[k] ?? 0;
+    if (!o || !t) continue;
+    o.modelCalls -= t.modelCalls ?? 0;
+    o.toolCalls -= t.toolCalls ?? 0;
+    if (o.usd != null) o.usd = Math.max(0, o.usd - (t.usd ?? 0)); // null: nothing priced
   }
   return out;
 }

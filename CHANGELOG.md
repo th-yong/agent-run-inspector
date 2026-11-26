@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.4] - 2026-11-26
+
+### Changed
+
+- Orca's branch-name helper no longer has a card of its own in the graph: its one call counts on its worker's card. A big bot run had about as many "Branch name" cards as workers.
+
+### Fixed
+
+- Graph cards showed "—" for cost since 0.10.3; they show each agent's own cost again.
+
 ## [0.10.3] - 2026-11-26
 
 ### Changed
@@ -278,7 +288,8 @@ First release: the local server and live JSON API. The web UI follows in 0.2.0.
 - `--open` is accepted but the browser is not opened yet; open the printed address yourself.
 - Without a built web UI, `/` shows a short text note and the API stays available under `/api/`.
 
-[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.3...HEAD
+[Unreleased]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.4...HEAD
+[0.10.4]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.3...v0.10.4
 [0.10.3]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/th-yong/agent-run-inspector/compare/v0.10.0...v0.10.1

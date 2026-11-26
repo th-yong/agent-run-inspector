@@ -136,7 +136,7 @@ function quickClaude(entry, store, now) {
     status: running ? 'running' : 'ok',
     // a bot waiting on its workers is the bot at work: Running, not Background
     ...(running && turnEnded && !bot ? { background: true } : {}),
-    agentCount: 1 + entry.subs.length,
+    agentCount: 1 + entry.subs.filter((s) => !s.parent).length, // a helper run (with a parent) has no card
     totals, models,
   });
 }
