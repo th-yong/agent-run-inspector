@@ -14,7 +14,7 @@ test('isNewer compares x.y.z and ignores pre-releases and junk', () => {
   assert.equal(isNewer(null, '0.4.2'), false);
 });
 
-test('checkForUpdate: asks once a day, caches, stays quiet on failure or when turned off', async () => {
+test('checkForUpdate: asks once an hour, caches, stays quiet on failure or when turned off', async () => {
   const env = { HOME: mkdtempSync(join(tmpdir(), 'ari-up-')) };
   let calls = 0;
   const ok = async () => { calls++; return { ok: true, json: async () => ({ tag_name: 'v0.9.0' }) }; };

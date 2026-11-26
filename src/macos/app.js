@@ -17,7 +17,7 @@ ObjC.import('WebKit');
 const REFRESH_S = 10;
 const RELEASES = 'https://api.github.com/repos/th-yong/agent-run-inspector/releases/latest';
 const INSTALL = "agent-run-inspector"; // what "Update" installs (npm i -g ...): the latest npm release, never unreleased main
-const CHECK_EVERY = (6 * 3600) / REFRESH_S; // ticks between update checks (6 h)
+const CHECK_EVERY = 3600 / REFRESH_S; // ticks between update checks (1 h)
 const UPDATE_LOG = '~/Library/Logs/agent-run-inspector-update.log';
 let win = null;
 let web = null;

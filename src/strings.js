@@ -17,7 +17,7 @@ Options:
   --redact[=strict]     Hide message bodies (strict: hide more)
   --prices <file>       Price table that overrides the built-in one
   --session <id>        Open this session directly
-  --no-update-check     Do not check npm for a newer version (once a day)
+  --no-update-check     Do not check npm for a newer version (once an hour)
   -v, --version         Print the version
   -h, --help            Show this help
 

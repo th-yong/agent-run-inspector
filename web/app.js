@@ -258,7 +258,7 @@ if (state.mini) {
   applyTheme();
   startMini(document.body);
 } else {
-  // Version, and a newer one when the server's daily npm check found it (app users never see the terminal).
+  // Version, and a newer one when the server's hourly check found it (app users never see the terminal).
   const showMeta = () => fetchMeta().then((m) => {
     $('ver').textContent = m.version ? `v${m.version}` : '';
     const upd = $('upd');

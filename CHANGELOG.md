@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Update checks run every hour instead of once a day (CLI) or every 6 hours (Mac app), and a running CLI checks again each hour too, so a new release shows up within the hour.
 - An Orca worker's card is named by the worker session's own title (the `--name` given to `worker-start` still wins; the workspace folder is the last fallback).
 
 ### Fixed
