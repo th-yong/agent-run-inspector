@@ -262,8 +262,11 @@ export function buildSessionTree({ main, subagents = [], now }) {
   // a stopped teammate's file is still fresh, but a call it left open will never finish
   const doneMates = new Set(children.filter((c) => c.id.startsWith('ext:') && c.status !== 'running').map((c) => c.id));
   for (const c of children) if (c.status === 'running' && doneMates.has(c.parentId)) c.status = 'unknown';
+  // A run with a `parent` (Orca's one-call branch-name helper) has no card of its own: its calls go on the parent's
+  const into = new Map(parsed.filter((p) => p.f.parent && !p.entry.claimed).map((p) => [p.spanId, externalSpanId(p.f.parent)]));
+  for (const c of children) if (into.has(c.parentId)) c.parentId = into.get(c.parentId);
   for (const p of parsed) {
-    if (p.entry.claimed) continue;
+    if (p.entry.claimed || into.has(p.spanId)) continue;
     const m = p.entry.meta;
     const last = p.entry.mtime ?? p.entry.lastTs;
     let status; let end = null;

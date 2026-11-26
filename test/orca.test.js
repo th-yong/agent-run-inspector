@@ -118,17 +118,19 @@ test('a result cut down to the dispatch id still links; the worker folder names 
   assert.deepEqual([w.name, w.orca, w.external, w.status], ['api-tests', true, undefined, 'ok']);
 });
 
-test("Orca's branch-name helper folds under its worker; the worker's own title names it", () => {
+test("Orca's branch-name helper folds into its worker's card; the worker's own title names it", () => {
   const idx = setup({ helper: true, titled: true, grepped: true });
   const list = idx.list();
   assert.ok(!list.some((s) => s.id === HELPER || s.id === WORKER));
   const bot = list.find((s) => s.id === BOT);
-  assert.equal(bot.agentCount, 3);
+  assert.equal(bot.agentCount, 2, 'the helper has no card of its own');
   assert.equal(bot.status, 'ok', 'a finished helper does not keep the bot running');
   const spans = idx.open(BOT).spans;
   assert.equal(spans.find((s) => s.id === 'ext:ctx_0f1').name, 'Login API tests');
-  const h = spans.find((s) => s.kind === 'agent' && s.name === 'Branch name');
-  assert.deepEqual([h.parentId, h.status], ['ext:ctx_0f1', 'ok']);
+  assert.ok(!spans.some((s) => s.kind === 'agent' && s.name === 'Branch name'));
+  const ids = new Set(spans.map((s) => s.id));
+  assert.ok(spans.every((s) => s.parentId == null || ids.has(s.parentId)), 'no call is left without its agent');
+  assert.ok(spans.some((s) => s.kind === 'llm' && s.parentId === 'ext:ctx_0f1' && s.start >= T0 + 13000), "the helper's call is on the worker's card");
 });
 
 test('a big record after the last answer does not make a session look busy', () => {
